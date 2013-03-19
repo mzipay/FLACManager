@@ -14,7 +14,7 @@ alongside the *flacmanager.py* script in the file system.
    first run), it will be created with default/empty values. In this case, a
    configuration editor dialog will be opened immediately.
 
-The default configuration looks like this:
+The default configuration looks like this::
 
    [Logging]
    format = %%(asctime)s %%(levelname)s %%(threadName)s %%(name)s %%(funcName)s %%(message)s
