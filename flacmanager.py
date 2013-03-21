@@ -110,10 +110,9 @@ def get_disc_info() -> "the 2-tuple (device-name, mount-point) or None":
             StringIO(output.decode(sys.getfilesystemencoding())):
         if ("fsType = 'cddafs'" in disk_appeared):
             _logger.info(disk_appeared.rstrip())
-            match = re.match(
-                r"\*\*\*Disk Appeared \('(?P<disk>.+?)',"
-                    r"Mountpoint = '(?P<mountpoint>.+?)'",
-                disk_appeared)
+            match = re.search(r"Disk Appeared \('(.+)',"
+                              r"Mountpoint = '(.+)', fsType = 'cddafs'",
+                              disk_appeared)
             if (match is not None):
                 return match.groups()
             else:
@@ -1430,7 +1429,8 @@ class FLACManager(tk.Frame):
         """Cleanup up UI resources created for the metadata editor."""
         self._logger.debug("TRACE")
 
-        self.metadata_editor.destroy()
+        if (self.metadata_editor is not None):
+            self.metadata_editor.destroy()
         self.metadata_editor = None
         self._album_metadata = None
         self._tracks_metadata = None
