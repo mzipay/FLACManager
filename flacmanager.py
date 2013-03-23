@@ -26,7 +26,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.1"
+__version__ = "0.2"
 
 import atexit
 import cgi
@@ -1710,7 +1710,8 @@ class AboutDialog(simpledialog.Dialog):
         title_label.pack()
         text = scrolledtext.ScrolledText(frame, height=11, bd=0,
                                          relief=tk.FLAT)
-        text.insert(tk.END, __doc__)
+        with open("LICENSE.txt", 'r') as f:
+            text.insert(tk.END, f.read())
         text.pack()
         text.focus_set()
 
