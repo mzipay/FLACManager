@@ -3,26 +3,24 @@ Metadata aggregation API
 ========================
 
 .. autoclass:: flacmanager.TOC
-   :show-inheritance:
-   :members:
 
 .. autoclass:: flacmanager.MetadataError
-   :show-inheritance:
-   :members:
+
+   .. automethod:: flacmanager.MetadataError.__init__
 
 .. autoclass:: flacmanager.MetadataCollector
-   :show-inheritance:
-   :members:
+
+   .. automethod:: flacmanager.MetadataCollector.__init__
 
 .. autoclass:: flacmanager.GracenoteCDDBMetadataCollector
-   :show-inheritance:
-   :members:
+
+   .. automethod:: flacmanager.GracenoteCDDBMetadataCollector.__init__
 
 .. autoclass:: flacmanager.MusicBrainzMetadataCollector
-   :show-inheritance:
-   :members:
+
+   .. automethod:: flacmanager.MusicBrainzMetadataCollector.__init__
 
 .. autoclass:: flacmanager.MetadataAggregator
-   :show-inheritance:
-   :members:
+
+   .. automethod:: flacmanager.MetadataAggregator.__init__
 

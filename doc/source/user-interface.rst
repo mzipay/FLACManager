@@ -3,24 +3,18 @@ User interface API
 ==================
 
 .. autoexception:: flacmanager.FLACManagerError
-   :show-inheritance:
-   :members:
+
+   .. automethod:: flacmanager.FLACManagerError.__init__
 
 .. autoclass:: flacmanager.FLACManager
-   :show-inheritance:
-   :members:
+
+   .. automethod:: flacmanager.FLACManager.__init__
 
 .. autoclass:: flacmanager.AboutDialog
-   :show-inheritance:
-   :members:
 
 .. autoclass:: flacmanager.PrerequisitesDialog
-   :show-inheritance:
-   :members:
 
 .. autoclass:: flacmanager.EditConfigurationDialog
-   :show-inheritance:
-   :members:
 
 .. autofunction:: flacmanager.show_exception_dialog
 

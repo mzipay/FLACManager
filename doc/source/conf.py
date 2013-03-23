@@ -93,12 +93,18 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = 'haiku'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {
+    "textcolor": "#080706",
+    "headingcolor": "#504a3f",
+    "linkcolor": "#676b7b",
+    "visitedlinkcolor": "#3c4056",
+    "hoverlinkcolor": "#9295a1",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -246,3 +252,7 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/3': None}
+
+autodoc_member_order = 'bysource'
+autodoc_default_flags = ['show-inheritance', 'members']
+

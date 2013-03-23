@@ -13,12 +13,6 @@ freeform values), and then rips tracks to FLAC and MP3. The encoding options
 for FLAC and MP3 are fully configurable, and the directory/file naming scheme
 is customizable.
 
-Please note that FLAC Manager is released primarily as a reference application,
-not as software intended for general use (see the warning below). The source
-code includes a number of useful examples of using :py:mod:`ctypes`,
-:py:mod:`queue`, :py:mod:`threading`, :py:mod:`tkinter`, and other standard
-Python modules.
-
 .. warning::
 
    FLAC Manager was not originally intended for release; it was written as a
@@ -31,7 +25,7 @@ Python modules.
    and to contain only the features/functions I need to achieve my goal. I
    have no plans to release bugfixes or new features unless they directly
    impact my ability to achieve my goal. Once my library has been ripped in
-   its entirety, it is likely that I will no longer maintain FLAC Manager.
+   its entirety, it is unlikely that I will maintain FLAC Manager.
 
    In light of this, FLAC Manager has some limitations:
 
@@ -47,13 +41,11 @@ Python modules.
    3. FLAC Manager requires Python **3.3+** to run. It is not backward-
       compatible, and no attempt will be made to make it so.
 
-Download and Install
---------------------
-
-FLAC Manager can be downloaded or cloned from
-`<https://bitbucket.org/mzipay/sandbox/src/tip/python/flacmanager>`_. There is
-no installation process; simply drop *flacmanager.py* into a location of your
-choosing and run it.
+   Despite these limitations, the source code includes working examples of
+   using :py:mod:`ctypes`, :py:mod:`queue`, :py:mod:`threading`,
+   :py:mod:`tkinter`, and other standard Python modules under
+   `Python 3.3 <http://www.python.org/download/releases/3.3.0/>`_ , so I have
+   chosen to make the source code available for reference.
 
 Table of Contents
 -----------------
@@ -64,6 +56,14 @@ Table of Contents
    prerequisites
    usage
    api-ref
+
+Download and Install
+--------------------
+
+FLAC Manager can be downloaded or cloned from
+`<https://bitbucket.org/mzipay/sandbox/src/tip/python/flacmanager>`_. There is
+no installation process; simply drop *flacmanager.py* into a location of your
+choosing and run it.
 
 Indices and tables
 ==================

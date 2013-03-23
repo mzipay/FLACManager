@@ -1,31 +1,29 @@
 #!/usr/bin/env python3.3
 # -*- coding: UTF-8 -*-
 
-"""FLAC Manager -- an audio metadata aggregator and FLAC+MP3 encoder
-
-Copyright (c) 2013 Matthew Zipay <mattz@ninthtest.net>
-http://www.ninthtest.net/flac-mp3-audio-manager/
-
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be included
-in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-"""
+# FLAC Manager -- an audio metadata aggregator and FLAC+MP3 encoder
+#
+# Copyright (c) 2013 Matthew Zipay <mattz@ninthtest.net>
+# http://www.ninthtest.net/flac-mp3-audio-manager/
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
 __version__ = "0.1"
@@ -1103,11 +1101,14 @@ class FLACManager(tk.Frame):
             track_genre_var, self.track_genre_entry,
             self._track_genre_optionmenu, genres)
         self._track_genre_optionmenu["menu"].add_separator()
+        menu = tk.Menu(self._track_genre_optionmenu["menu"])
         for genre in get_lame_genres():
             if (genre not in genres):
-                self._track_genre_optionmenu["menu"].add_command(
+                menu.add_command(
                     label=genre,
-                    command=lambda:track_genre_var.set(genre))
+                    command=lambda v=track_genre_var, g=genre: v.set(g))
+        self._track_genre_optionmenu["menu"].add_cascade(label="LAME",
+                                                         menu=menu)
         if (len(choices) > 1):
             self._track_genre_optionmenu.pack(side=tk.LEFT)
 
@@ -1162,7 +1163,7 @@ class FLACManager(tk.Frame):
             disc_total=int(self.album_disc_total_var.get()),
             album_cover=self._album_covers.get(self.album_cover_var.get()),
             is_compilation=self.album_compilation_var.get(),
-            track_total = len(self.toc.track_offsets))
+            track_total=len(self.toc.track_offsets))
 
         track_vars = self._track_vars
         tagging_metadata = []
@@ -1292,8 +1293,8 @@ class FLACManager(tk.Frame):
             if (metadata is None):
                 continue
 
-            flac_dirname = self._generate_flac_dirname(library_root, metadata)
-            flac_basename = self._generate_flac_basename(metadata)
+            flac_dirname = generate_flac_dirname(library_root, metadata)
+            flac_basename = generate_flac_basename(metadata)
             flac_filename = os.path.join(flac_dirname, flac_basename)
             cdda_filename = os.path.join(self._mountpoint,
                                          disc_filenames[index])
@@ -1388,42 +1389,6 @@ class FLACManager(tk.Frame):
                 if (line.startswith(prefix)):
                     status_line = line.replace(prefix, "")
         return status_line
-
-    def _generate_flac_dirname(self,
-            library_root: "str FLAC library directory",
-            metadata: "dict final metadata for a single track") \
-            -> "str absolute directory path":
-        """Build the directory for a track's FLAC file."""
-        self._logger.debug("TRACE library_root = %r, metadata = %r",
-                           library_root, metadata)
-        if (not metadata["is_compilation"]):
-            folders = [metadata["album_artist"], metadata["album_title"]]
-        else:
-            folders = ["_COMPILATIONS_", metadata["album_title"]]
-        folders = [re.sub(r"[\\/:*?\"<>|]", '_', folder)
-                   for folder in folders]
-        folders_path = os.sep.join(folders)
-        album_path = os.path.join(library_root, folders_path)
-        # doesn't work as expected for external media
-        #os.makedirs(album_path, exist_ok=True)
-        subprocess.check_call(["mkdir", "-p", album_path])
-        self._logger.debug("RETURN %r", album_path)
-        return album_path
-
-    def _generate_flac_basename(self,
-            metadata: "dict final metadata for a single track") \
-            -> "str relative file name":
-        """Build the filename for track's FLAC file."""
-        self._logger.debug("TRACE metadata = %r", metadata)
-        if (metadata["disc_total"] == 1):
-            filename = "%(track_number)02d %(track_title)s.flac" % metadata
-        else:
-            filename = (
-                "%(disc_number)02d-%(track_number)02d %(track_title)s.flac" %
-                    metadata)
-        filename = re.sub(r"[\\/:*?\"<>|]", '_', filename)
-        self._logger.debug("RETURN %r", filename)
-        return filename
 
     def _destroy_metadata_editor(self):
         """Cleanup up UI resources created for the metadata editor."""
@@ -1596,6 +1561,81 @@ class FLACManager(tk.Frame):
         """Open the application description dialog."""
         self._logger.debug("TRACE")
         AboutDialog(self.master, title="About %s" % self.TITLE)
+
+
+#: A list of format strings for individual folder names that, joined, make up
+#: the *library_root*-relative directory path for a FLAC file.
+FLAC_FOLDERS_TEMPLATE = ["%(album_artist)s", "%(album_title)s"]
+
+#: A list of format strings for individual folder names that, joined, make up
+#: the *library_root*-relative directory path for a FLAC file that is part of a
+#: compilation.
+FLAC_FOLDERS_COMPILATION_TEMPLATE = ["_COMPILATIONS_", "%(album_title)s"]
+
+
+def generate_flac_dirname(
+        library_root: "str FLAC library directory",
+        metadata: "dict final metadata for a single track") \
+        -> "str absolute directory path":
+    """Build the directory for a track's FLAC file."""
+    _logger.debug("TRACE library_root = %r, metadata = %r",
+                  library_root, metadata)
+    folders_template = (
+        FLAC_FOLDERS_TEMPLATE if (not metadata["is_compilation"])
+        else FLAC_FOLDERS_COMPILATION_TEMPLATE)
+    _logger.debug("using template %r", folders_template)
+    folders = [format_string % metadata
+               for format_string in folders_template]
+    folders = [re.sub(r"[\\/:*?\"<>|]", '_', folder)
+               for folder in folders]
+    folders_path = os.sep.join(folders)
+    album_path = os.path.join(library_root, folders_path)
+    # doesn't work as expected for external media
+    #os.makedirs(album_path, exist_ok=True)
+    subprocess.check_call(["mkdir", "-p", album_path])
+    _logger.debug("RETURN %r", album_path)
+    return album_path
+
+
+#: The format string for a FLAC filename.
+FLAC_FILENAME_TEMPLATE = "%(track_number)02d %(track_title)s.flac"
+
+#: The format string for a FLAC filename that is part of a compilation.
+FLAC_FILENAME_COMPILATION_TEMPLATE = \
+    "%(track_number)02d %(track_title)s (%(track_artist)s).flac"
+
+#: The format string for a FLAC filename on an album of 2+ discs.
+FLAC_FILENAME_DISCN_TEMPLATE = \
+    "%(disc_number)02d-%(track_number)02d %(track_title)s.flac"
+
+#: The format string for a FLAC filename that is part of a compilation
+#: spanning 2+ discs.
+FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE = (
+    "%(disc_number)02d-%(track_number)02d "
+    "%(track_title)s (%(track_artist)s).flac")
+
+
+def generate_flac_basename(
+        metadata: "dict final metadata for a single track") \
+        -> "str relative file name":
+    """Build the filename for a track's FLAC file."""
+    _logger.debug("TRACE metadata = %r", metadata)
+    format_string = FLAC_FILENAME_TEMPLATE
+    if ((not metadata["is_compilation"]) and (metadata["disc_total"] == 1)):
+        # the most common case
+        format_string = FLAC_FILENAME_TEMPLATE
+    elif (metadata["is_compilation"] and (metadata["disc_total"] == 1)):
+        format_string = FLAC_FILENAME_COMPILATION_TEMPLATE
+    elif ((not metadata["is_compilation"]) and (metadata["disc_total"] > 1)):
+        format_string = FLAC_FILENAME_DISCN_TEMPLATE
+    else:
+        # is_compilation and disc_total > 1
+        format_string = FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE
+    _logger.debug("using template %r", format_string)
+    filename = format_string % metadata
+    filename = re.sub(r"[\\/:*?\"<>|]", '_', filename)
+    _logger.debug("RETURN %r", filename)
+    return filename
 
 
 def _font(widget: "a :py:class:`tkinter.Widget`"):
