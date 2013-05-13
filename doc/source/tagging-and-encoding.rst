@@ -73,6 +73,51 @@ spans two or more physical discs (affects file names only).
 
 .. autofunction:: flacmanager.generate_flac_basename
 
+.. data:: flacmanager.MP3_FOLDERS_TEMPLATE
+
+   ``["%(album_artist)s", "%(album_title)s"]``
+
+   A list of format strings for individual folder names that, joined, make
+   up the *library_root*-relative directory path for an MP3 file.
+
+
+.. data:: flacmanager.MP3_FOLDERS_COMPILATION_TEMPLATE
+
+   ``["_COMPILATIONS_", "%(album_title)s"]``
+
+   A list of format strings for individual folder names that, joined, make
+   up the *library_root*-relative directory path for an MP3 file that is
+   part of a compilation.
+
+.. autofunction:: flacmanager.generate_mp3_dirname
+
+.. data:: flacmanager.MP3_FILENAME_TEMPLATE
+
+   ``"%(track_number)02d %(track_title)s.mp3"``
+
+   The format string for an MP3 filename.
+
+.. data:: flacmanager.MP3_FILENAME_COMPILATION_TEMPLATE
+
+   ``"%(track_number)02d %(track_title)s (%(track_artist)s).mp3"``
+
+   The format string for an MP3 filename that is part of a compilation.
+
+.. data:: flacmanager.MP3_FILENAME_DISCN_TEMPLATE
+
+   ``"%(disc_number)02d-%(track_number)02d %(track_title)s.mp3"``
+
+   The format string for an MP3 filename on an album of 2+ discs.
+
+.. data:: flacmanager.MP3_FILENAME_DISCN_COMPILATION_TEMPLATE
+
+   ``"%(disc_number)02d-%(track_number)02d %(track_title)s (%(track_artist)s).mp3"``
+
+   The format string for an MP3 filename that is part of a compilation
+   spanning 2+ discs.
+
+.. autofunction:: flacmanager.generate_mp3_basename
+
 .. autoclass:: flacmanager.FLACEncoder
 
    .. automethod:: flacmanager.FLACEncoder.__init__

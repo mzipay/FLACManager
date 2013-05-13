@@ -26,7 +26,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.2"
+__version__ = "0.3"
 
 import atexit
 import cgi
@@ -68,8 +68,12 @@ __all__ = [
     "make_tempfile",
     "FLACManagerError",
     "FLACManager",
-    "AboutDialog",
+    "generate_flac_dirname",
+    "generate_flac_basename",
+    "generate_mp3_dirname",
+    "generate_mp3_basename",
     "PrerequisitesDialog",
+    "AboutDialog",
     "EditConfigurationDialog",
     "resolve_path",
     "encode_flac",
@@ -231,6 +235,7 @@ def get_config() -> "the global :py:class:`configparser.ConfigParser` object":
                         "--force --keep-foreign-metadata --verify",
                     flac_decode_options="--force")
                 _config["MP3"] = dict(
+                    library_root="",
                     lame_encode_options=
                         "--replaygain-accurate --clipdetect -q 2 -V2 -b 224")
                 with open("flacmanager.ini", 'w') as f:
@@ -1273,13 +1278,22 @@ class FLACManager(tk.Frame):
                                         self._mountpoint),
                 context_hint="FLAC ripping")
 
-        library_root = get_config().get("FLAC", "library_root")
+        flac_library_root = get_config().get("FLAC", "library_root")
         try:
-            library_root = resolve_path(library_root)
+            flac_library_root = resolve_path(flac_library_root)
         except Exception as e:
             raise FLACManagerError(
-                "Cannot use FLAC library root %s: %s" % (library_root, e),
+                "Cannot use FLAC library root %s: %s" % (flac_library_root, e),
                 context_hint="FLAC ripping",
+                cause=e)
+
+        mp3_library_root = get_config().get("MP3", "library_root")
+        try:
+            mp3_library_root = resolve_path(mp3_library_root)
+        except Exception as e:
+            raise FLACManagerError(
+                "Cannot use MP3 library root %s: %s" % (mp3_library_root, e),
+                context_hint="MP3 encoding",
                 cause=e)
 
         self.encoding_status_frame = self._create_encoder_status(self)
@@ -1292,16 +1306,21 @@ class FLACManager(tk.Frame):
         for (index, metadata) in enumerate(tracks_metadata):
             if (metadata is None):
                 continue
-
-            flac_dirname = generate_flac_dirname(library_root, metadata)
-            flac_basename = generate_flac_basename(metadata)
-            flac_filename = os.path.join(flac_dirname, flac_basename)
             cdda_filename = os.path.join(self._mountpoint,
                                          disc_filenames[index])
+
+            flac_dirname = generate_flac_dirname(flac_library_root, metadata)
+            flac_basename = generate_flac_basename(metadata)
+            flac_filename = os.path.join(flac_dirname, flac_basename)
             self._logger.info("%s -> %s", cdda_filename, flac_filename)
 
+            mp3_dirname = generate_mp3_dirname(mp3_library_root, metadata)
+            mp3_basename = generate_mp3_basename(metadata)
+            mp3_filename = os.path.join(mp3_dirname, mp3_basename)
+            self._logger.info("%s -> %s", flac_filename, mp3_filename)
+
             encoder.add_instruction(index, cdda_filename, flac_filename,
-                                    metadata)
+                                    mp3_filename, metadata)
 
         self._logger.debug("RETURN %r", encoder)
         return encoder
@@ -1366,7 +1385,7 @@ class FLACManager(tk.Frame):
                                                 {"fg": "dark violet"})
             else:   # state == "TRACK_COMPLETE"
                 encoding_status_list.delete(track_index)
-                encoding_status_list.insert(track_index, "%s (+MP3)" % flac_fn)
+                encoding_status_list.insert(track_index, "%s" % flac_fn)
                 encoding_status_list.itemconfig(track_index,
                                                 {"fg": "dark green"})
             # ensure that last track is always visible after delete/insert
@@ -1638,6 +1657,80 @@ def generate_flac_basename(
     return filename
 
 
+#: A list of format strings for individual folder names that, joined, make up
+#: the *library_root*-relative directory path for an MP3 file.
+MP3_FOLDERS_TEMPLATE = FLAC_FOLDERS_TEMPLATE.copy()
+
+#: A list of format strings for individual folder names that, joined, make up
+#: the *library_root*-relative directory path for an MP3 file that is part of a
+#: compilation.
+MP3_FOLDERS_COMPILATION_TEMPLATE = FLAC_FOLDERS_COMPILATION_TEMPLATE.copy()
+
+
+def generate_mp3_dirname(
+        library_root: "str MP3 library directory",
+        metadata: "dict final metadata for a single track") \
+        -> "str absolute directory path":
+    """Build the directory for a track's MP3 file."""
+    _logger.debug("TRACE library_root = %r, metadata = %r",
+                  library_root, metadata)
+    folders_template = (
+        MP3_FOLDERS_TEMPLATE if (not metadata["is_compilation"])
+        else MP3_FOLDERS_COMPILATION_TEMPLATE)
+    _logger.debug("using template %r", folders_template)
+    folders = [format_string % metadata
+               for format_string in folders_template]
+    folders = [re.sub(r"[\\/:*?\"<>|]", '_', folder)
+               for folder in folders]
+    folders_path = os.sep.join(folders)
+    album_path = os.path.join(library_root, folders_path)
+    # doesn't work as expected for external media
+    #os.makedirs(album_path, exist_ok=True)
+    subprocess.check_call(["mkdir", "-p", album_path])
+    _logger.debug("RETURN %r", album_path)
+    return album_path
+
+
+#: The format string for an MP3 filename.
+MP3_FILENAME_TEMPLATE = os.path.splitext(FLAC_FILENAME_TEMPLATE)[0] + ".mp3"
+
+#: The format string for an MP3 filename that is part of a compilation.
+MP3_FILENAME_COMPILATION_TEMPLATE = \
+    os.path.splitext(FLAC_FILENAME_COMPILATION_TEMPLATE)[0] + ".mp3"
+
+#: The format string for an MP3 filename on an album of 2+ discs.
+MP3_FILENAME_DISCN_TEMPLATE = \
+    os.path.splitext(FLAC_FILENAME_DISCN_TEMPLATE)[0] + ".mp3"
+
+#: The format string for an MP3 filename that is part of a compilation
+#: spanning 2+ discs.
+MP3_FILENAME_DISCN_COMPILATION_TEMPLATE = \
+    os.path.splitext(FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE)[0] + ".mp3"
+
+
+def generate_mp3_basename(
+        metadata: "dict final metadata for a single track") \
+        -> "str relative file name":
+    """Build the filename for a track's MP3 file."""
+    _logger.debug("TRACE metadata = %r", metadata)
+    format_string = MP3_FILENAME_TEMPLATE
+    if ((not metadata["is_compilation"]) and (metadata["disc_total"] == 1)):
+        # the most common case
+        format_string = MP3_FILENAME_TEMPLATE
+    elif (metadata["is_compilation"] and (metadata["disc_total"] == 1)):
+        format_string = MP3_FILENAME_COMPILATION_TEMPLATE
+    elif ((not metadata["is_compilation"]) and (metadata["disc_total"] > 1)):
+        format_string = MP3_FILENAME_DISCN_TEMPLATE
+    else:
+        # is_compilation and disc_total > 1
+        format_string = MP3_FILENAME_DISCN_COMPILATION_TEMPLATE
+    _logger.debug("using template %r", format_string)
+    filename = format_string % metadata
+    filename = re.sub(r"[\\/:*?\"<>|]", '_', filename)
+    _logger.debug("RETURN %r", filename)
+    return filename
+
+
 def _font(widget: "a :py:class:`tkinter.Widget`"):
     """Proxy *widget*'s font so that it can be configured.
 
@@ -1821,11 +1914,16 @@ class EditConfigurationDialog(simpledialog.Dialog):
         mp3_label = tk.Label(frame, text="MP3")
         _font(mp3_label).config(size=17, weight=tkfont.BOLD)
         mp3_label.grid(row=18, pady=11, sticky=tk.W)
-        tk.Label(frame, text="lame_encode_options").grid(row=19, sticky=tk.W)
+        tk.Label(frame, text="library_root").grid(row=19, sticky=tk.W)
+        self.mp3_library_root = tk.StringVar(self,
+                                    value=config.get("MP3", "library_root"))
+        tk.Entry(frame, textvariable=self.mp3_library_root,
+                 width=47).grid(row=19, column=1, sticky=tk.W)
+        tk.Label(frame, text="lame_encode_options").grid(row=20, sticky=tk.W)
         self.mp3_lame_encode_options = tk.StringVar(self,
             value=config.get("MP3", "lame_encode_options"))
         tk.Entry(frame, textvariable=self.mp3_lame_encode_options,
-                 width=59).grid(row=19, column=1, sticky=tk.W)
+                 width=59).grid(row=20, column=1, sticky=tk.W)
 
     def buttonbox(self):
         """Create the buttons to save and/or dismiss the dialog."""
@@ -2035,20 +2133,22 @@ class FLACEncoder(threading.Thread):
             track_index: "int index (not ordinal) of the track",
             cdda_filename: "str absolute CD-DA file name",
             flac_filename: "str absolute .flac file name",
+            mp3_filename: "str absolute .mp3 file name",
             track_metadata: "dict tagging fields for this track"):
         """Schedule a track for FLAC encoding."""
         self._logger.debug(
             "TRACE track_index = %r, cdda_filename = %r, flac_filename = %r, "
-                "track_metadata = %r",
-            track_index, cdda_filename, flac_filename, track_metadata)
+                "mp3_filename = %r, track_metadata = %r",
+            track_index, cdda_filename, flac_filename, mp3_filename,
+            track_metadata)
         self._instructions.append((track_index, cdda_filename, flac_filename,
-                                   track_metadata))
+                                   mp3_filename, track_metadata))
 
     def run(self):
         """Rip CD-DA tracks to FLAC."""
         self._logger.debug("TRACE")
         mp3_encoder_threads = []
-        for (index, cdda_fn, flac_fn, metadata) in self._instructions:
+        for (index, cdda_fn, flac_fn, mp3_fn, metadata) in self._instructions:
             stdout_fn = make_tempfile(suffix=".out")
 
             # the FLAC encoding must block because it needs exclusive access to
@@ -2075,8 +2175,8 @@ class FLACEncoder(threading.Thread):
                 # run the MP3 encoding in a separate thread so we can move on
                 # to the next CD-DA -> FLAC encoding; the MP3 encoder will
                 # enqueue the "TRACK_COMPLETE" state when it's finished
-                mp3_encoder = MP3Encoder(index, cdda_fn, flac_fn, stdout_fn,
-                                         metadata)
+                mp3_encoder = MP3Encoder(index, cdda_fn, flac_fn, mp3_fn,
+                                         stdout_fn, metadata)
                 mp3_encoder.start()
                 mp3_encoder_threads.append(mp3_encoder)
             else:
@@ -2138,18 +2238,20 @@ class MP3Encoder(threading.Thread):
             track_index: "int index (not ordinal) of the track",
             cdda_filename: "str absolute CD-DA file name",
             flac_filename: "str absolute .flac file name",
+            mp3_filename: "str absolute .mp3 file name",
             stdout_filename: "str absolute file name for redirected stdout",
             track_metadata: "dict tagging fields for this track"):
         """Initialize as a daemon thread."""
         self._logger.debug(
             "TRACE track_index = %r, cdda_filename = %r, flac_filename = %r, "
-                "stdout_filename = %r, track_metadata = %r",
-            track_index, cdda_filename, flac_filename, stdout_filename,
-            track_metadata)
+                "mp3_filename = %r, stdout_filename = %r, track_metadata = %r",
+            track_index, cdda_filename, flac_filename, mp3_filename,
+            stdout_filename, track_metadata)
         super().__init__(daemon=True)
         self.track_index = track_index
         self.cdda_filename = cdda_filename
         self.flac_filename = flac_filename
+        self.mp3_filename = mp3_filename
         self.stdout_filename = stdout_filename
         self.track_metadata = track_metadata
 
@@ -2178,8 +2280,6 @@ class MP3Encoder(threading.Thread):
             _ENCODING_QUEUE.put((2, status))
             return
 
-        mp3_filename = os.path.splitext(self.flac_filename)[0] + ".mp3"
-
         # make sure the UI gets a status update for encoding WAV to MP3
         status = (self.track_index, self.cdda_filename, self.flac_filename,
                   self.stdout_filename, "ENCODING_MP3")
@@ -2187,7 +2287,7 @@ class MP3Encoder(threading.Thread):
         _ENCODING_QUEUE.put((5, status))
 
         try:
-            encode_mp3(wav_filename, mp3_filename, self.track_metadata,
+            encode_mp3(wav_filename, self.mp3_filename, self.track_metadata,
                        stdout_filename=self.stdout_filename)
         except Exception as e:
             status = (self.track_index, self.cdda_filename, self.flac_filename,

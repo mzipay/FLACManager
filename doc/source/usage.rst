@@ -40,11 +40,13 @@ The default configuration looks like this::
    flac_decode_options = --force
 
    [MP3]
+   library_root = 
    lame_encode_options = --replaygain-accurate --clipdetect -q 2 -V2 -b 224
 
 You **must** provide values for the Gracenote *client_id*, MusicBrainz
-*libdiscid_location* and *contact_url_or_email*, and FLAC *library_root*. All
-other configuration settings may be left as-is or changed to your preferences.
+*libdiscid_location* and *contact_url_or_email*, FLAC *library_root*, and MP3
+*library_root*. All other configuration settings may be left as-is or changed
+to your preferences.
 
 To obtain a Gracenote *client_id*, you must register for a
 `Gracenote Developer <https://developer.gracenote.com/>`_ account and create an
