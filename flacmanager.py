@@ -26,7 +26,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.4"
+__version__ = "0.4.1"
 
 import atexit
 import cgi
@@ -3203,8 +3203,8 @@ class MetadataPersistence(MetadataCollector):
 
            Only the **first** value (i.e. the **entered** or
            **selected** value) for each metadata field is persisted.
-           This value is assumed to be the the preferred/intended value
-           for the field.
+           This value is assumed to be the preferred/intended value for
+           the field.
 
         """
         self._logger.debug("TRACE metadata = %r", metadata)

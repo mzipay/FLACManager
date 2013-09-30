@@ -20,6 +20,10 @@ Metadata aggregation API
 
    .. automethod:: flacmanager.MusicBrainzMetadataCollector.__init__
 
+.. autoclass:: flacmanager.MetadataPersistence
+
+   .. automethod:: flacmanager.MetadataPersistence.__init__
+
 .. autoclass:: flacmanager.MetadataAggregator
 
    .. automethod:: flacmanager.MetadataAggregator.__init__
