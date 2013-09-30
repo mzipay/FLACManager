@@ -26,16 +26,18 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.3"
+__version__ = "0.4"
 
 import atexit
 import cgi
 from collections import namedtuple, OrderedDict
 from configparser import ConfigParser
 import ctypes as C
+import datetime
 from http.client import HTTPConnection, HTTPSConnection
 import imghdr
 from io import BytesIO, StringIO
+import json
 import logging
 import os
 import plistlib
@@ -87,6 +89,7 @@ __all__ = [
     "MetadataCollector",
     "GracenoteCDDBMetadataCollector",
     "MusicBrainzMetadataCollector",
+    "MetadataPersistence",
     "MetadataAggregator",
     "get_lame_genres",
     "show_exception_dialog",
@@ -462,6 +465,13 @@ class FLACManager(tk.Frame):
         self.metadata_editor = metadata_editor
         self.rip_and_tag_button.pack(side=tk.RIGHT, padx=7, pady=5)
 
+        # if persisted data was restored, manually select the cover image so
+        # that it opens in Preview automatically
+        if (self._persistence.restored and (len(self._album_covers) > 1)):
+            # first cover is always "--none--"
+            preferred_album_cover = list(self._album_covers.keys())[1]
+            self.choose_cover_image(preferred_album_cover)
+
     def _create_track_vars(self):
         """Create metadata variables for each track."""
         self._logger.debug("TRACE")
@@ -474,8 +484,8 @@ class FLACManager(tk.Frame):
             "year": [None],
         }
         for track_metadata in self._tracks_metadata[1:]:
-            # tracks are included by default
-            track_vars["include"].append(tk.BooleanVar(value=True))
+            track_vars["include"].append(
+                tk.BooleanVar(value=track_metadata["include"]))
             track_vars["title"].append(tk.StringVar())
             track_vars["artist"].append(tk.StringVar())
             track_vars["performer"].append(tk.StringVar())
@@ -644,20 +654,28 @@ class FLACManager(tk.Frame):
             -> "customized list of values for the album genre":
         """Create a custom genre list from a list of aggregated genres.
 
-        If *choices* has two or more items, combined them
-        (comma-separated) and insert this value as the first item in the
-        list.
+        If a genre choice has been restored from persisted data, it will
+        always remain in place as the *first* choice.
 
         If *choices* is empty, add "Other" to the list.
 
         """
         self._logger.debug("TRACE choices = %r", choices)
-        genres = list(choices)
+        genres = []
+        for choice in choices:
+            for single_genre in [genre.strip() for genre in choice.split(',')]:
+                if (single_genre not in genres):
+                    genres.append(single_genre)
         if (len(genres) > 1):
-            combined = ", ".join(choices)
+            combined = ", ".join(genres)
             genres.insert(0, combined)
         elif (len(genres) == 0):
             genres.append("Other")
+        if (self._persistence.restored and choices and
+                (genres[0] != choices[0])):
+            if (choices[0] in genres):
+                genres.remove(choices[0])
+            genres.insert(0, choices[0])
         self._logger.debug("RETURN %r", genres)
         return genres
 
@@ -1141,6 +1159,62 @@ class FLACManager(tk.Frame):
                 combined.append(choice)
         return combined
 
+    def _persist_metadata(self):
+        """Store the current metadata field/value pairs."""
+        self._logger.debug("TRACE")
+        number_of_tracks = len(self.toc.track_offsets)
+        album_metadata = {
+            "title": [self.album_title_var.get()]
+                if self.album_title_var.get() else [],
+            "artist": [self.album_artist_var.get()]
+                if self.album_artist_var.get() else [],
+            "performer": [self.album_performer_var.get()]
+                if self.album_performer_var.get() else [],
+            "year": [self.album_year_var.get()]
+                if self.album_year_var.get() else [],
+            "genre": [self.album_genre_var.get()]
+                if self.album_genre_var.get() else [],
+            "cover": [self._album_covers.get(self.album_cover_var.get())]
+                if (self.album_cover_var.get() != "--none--") else [],
+            "number_of_tracks": number_of_tracks,
+            "is_compilation": self.album_compilation_var.get(),
+            "disc_number": int(self.album_disc_number_var.get())
+                if self.album_disc_number_var.get() else 1,
+            "disc_total": int(self.album_disc_total_var.get())
+                if self.album_disc_total_var.get() else 1,
+        }
+
+        # for persistence, replace temporary cover filenames with raw image
+        # data (byte strings)
+        for i in range(len(album_metadata["cover"])):
+            with open(album_metadata["cover"][i], "rb") as fp:
+                album_metadata["cover"][i] = fp.read()
+
+        track_vars = self._track_vars
+        # 1-based indexing for tracks
+        tracks_metadata = [None]
+        for i in range(number_of_tracks):
+            track_number = i + 1
+            tracks_metadata.append({
+                "include": track_vars["include"][track_number].get(),
+                "number": track_number,
+                "title": [track_vars["title"][track_number].get()]
+                    if track_vars["title"][track_number].get() else [],
+                "artist": [track_vars["artist"][track_number].get()]
+                    if track_vars["artist"][track_number].get() else [],
+                "performer": [track_vars["performer"][track_number].get()]
+                    if track_vars["performer"][track_number].get() else [],
+                "year": [track_vars["year"][track_number].get()]
+                    if track_vars["year"][track_number].get() else [],
+                "genre": [track_vars["genre"][track_number].get()]
+                    if track_vars["genre"][track_number].get() else [],
+            })
+
+        self._persistence.store({
+            "album": album_metadata,
+            "tracks": tracks_metadata,
+        })
+
     def _prepare_tagging_metadata(self) \
             -> "list of dicts of track tagging metadata":
         """Build the track-centric data structure that contains the
@@ -1256,6 +1330,7 @@ class FLACManager(tk.Frame):
             self.disc_eject_button.config(state=tk.NORMAL)
             self.rip_and_tag_button.config(state=tk.NORMAL)
         else:
+            self._persist_metadata()
             encoder.start()
             self._monitor_encoding_progress()
         self._logger.debug("RETURN")
@@ -1416,6 +1491,7 @@ class FLACManager(tk.Frame):
         if (self.metadata_editor is not None):
             self.metadata_editor.destroy()
         self.metadata_editor = None
+        self._persistence = None
         self._album_metadata = None
         self._tracks_metadata = None
 
@@ -1522,6 +1598,7 @@ class FLACManager(tk.Frame):
                 self.retry_aggregation_button.pack()
                 return
 
+            self._persistence = aggregator.persistence
             self._album_metadata = aggregator.album
             self._tracks_metadata = aggregator.tracks
             try:
@@ -1962,6 +2039,8 @@ class EditConfigurationDialog(simpledialog.Dialog):
         config.set("FLAC", "flac_decode_options",
                    self.flac_decode_options.get())
 
+        config.set("MP3", "library_root",
+                   self.mp3_library_root.get())
         config.set("MP3", "lame_encode_options",
                    self.mp3_lame_encode_options.get())
 
@@ -2313,7 +2392,10 @@ class MetadataCollector:
     def __init__(self, toc: "a :data:`TOC` object"):
         """Initialize the metadata structures to empty."""
         self.toc = toc
-        number_of_tracks = len(toc.track_offsets)
+
+    def reset(self):
+        """Initialize all collection fields to default (empty)."""
+        number_of_tracks = len(self.toc.track_offsets)
         self.album = {
             "title": [],
             "artist": [],
@@ -2330,6 +2412,7 @@ class MetadataCollector:
         tracks = [None]
         for i in range(number_of_tracks):
             tracks.append({
+                "include": True,
                 "number": i + 1,
                 "title": [],
                 "artist": [],
@@ -2341,7 +2424,7 @@ class MetadataCollector:
 
     def collect(self):
         """Fetch metadata from a service."""
-        raise NotImplementedError()
+        self.reset()
 
 
 @logged
@@ -2449,6 +2532,8 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
     def collect(self):
         """Populate all Gracenote album metadata choices."""
         self._logger.debug("TRACE")
+        super().collect()
+
         if (not self._user_id):
             self._register()
 
@@ -2689,25 +2774,94 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         "mb": "http://musicbrainz.org/ns/mmd-2.0#",
     }
 
+    #: A reference to the ``libdiscid`` shared library.
+    _LIBDISCID = None
+
+    @classmethod
+    def initialize_libdiscid(cls):
+        """Load the ``libdiscid`` shared library."""
+        cls._logger.debug("TRACE")
+
+        config = get_config()
+        try:
+            libdiscid_location = resolve_path(
+                config.get("MusicBrainz", "libdiscid_location"))
+        except Exception as e:
+            raise MetadataError(
+                "MusicBrainz libdiscid_location is not valid in "
+                    "flacmanager.ini",
+                context_hint="MusicBrainz configuration")
+
+        try:
+            # http://jonnyjd.github.com/libdiscid/discid_8h.html
+            libdiscid = C.CDLL(libdiscid_location)
+
+            # Return a handle for a new DiscId object.
+            libdiscid.discid_new.argtypes = ()
+            libdiscid.discid_new.restype = C.c_void_p
+
+            # Provides the TOC of a known CD.
+            libdiscid.discid_put.argtypes = (C.c_void_p, C.c_int, C.c_int,
+                                             C.c_void_p)
+            libdiscid.discid_put.restype = C.c_int
+
+            # Return a MusicBrainz DiscID.
+            libdiscid.discid_get_id.argtypes = (C.c_void_p,)
+            libdiscid.discid_get_id.restype = C.c_char_p
+
+            # Release the memory allocated for the DiscId object.
+            libdiscid.discid_free.argtypes = (C.c_void_p,)
+            libdiscid.discid_free.restype = None
+
+            cls._LIBDISCID = libdiscid
+        except Exception as e:
+            raise MetadataError(str(e),
+                                context_hint="libdiscid initialization")
+
+    @classmethod
+    def calculate_disc_id(cls, toc: "a :data:`TOC` object"):
+        """Return the MusicBrainz Disc ID for the disc :data:`TOC`."""
+        cls._logger.debug("TRACE toc = %r", toc)
+        if (cls._LIBDISCID is None):
+            cls.initialize_libdiscid()
+        handle = None
+        try:
+            handle = C.c_void_p(cls._LIBDISCID.discid_new())
+            if (handle is None):
+                raise MetadataError(
+                        "Failed to create a new libdiscid DiscId handle!",
+                        context_hint="MusicBrainz libdiscid")
+            offsets = [toc.leadout_track_offset] + list(toc.track_offsets)
+            c_int_array = C.c_int * len(offsets)
+            c_offsets = c_int_array(*offsets)
+            res = cls._LIBDISCID.discid_put(handle,
+                                            toc.first_track_number,
+                                            toc.last_track_number,
+                                            c_offsets)
+            if (res != 1):
+                cls._logger.error(
+                    "%d return from libdiscid.discid_put(handle, %d, %d, %r)",
+                    res, toc.first_track_number, toc.last_track_number,
+                    offsets)
+                raise MetadataError(
+                        "libdiscid.discid_put returned %d (expected 1)" % res,
+                        context_hint="MusicBrainz libdiscid")
+            disc_id = cls._LIBDISCID.discid_get_id(handle)
+
+            disc_id = disc_id.decode("us-ascii")
+            cls._logger.debug("RETURN %r", disc_id)
+            return disc_id
+        finally:
+            if (handle is not None):
+                cls._LIBDISCID.discid_free(handle)
+                handle = None
+
     def __init__(self, toc: "a :data:`TOC` object"):
         self._logger.debug("TRACE toc = %r", toc)
         super().__init__(toc)
 
         config = get_config()
         self._logger.debug("MusicBrainz config = %r", dict(config["MusicBrainz"]))
-        libdiscid_location = config.get("MusicBrainz", "libdiscid_location")
-        try:
-            libdiscid_location = resolve_path(libdiscid_location)
-        except Exception as e:
-            raise MetadataError(
-                "MusicBrainz libdiscid_location is not valid in "
-                    "flacmanager.ini",
-                context_hint="MusicBrainz configuration")
-        try:
-            self._initialize_libdiscid(libdiscid_location)
-        except Exception as e:
-            raise MetadataError(str(e),
-                                context_hint="libdiscid initialization")
 
         contact_url_or_email = config.get("MusicBrainz", "contact_url_or_email")
         if (not contact_url_or_email):
@@ -2720,41 +2874,15 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         self.timeout = config.getfloat("HTTP", "timeout")
         self._conx = HTTPConnection(self.API_HOST, timeout=self.timeout)
 
-    def _initialize_libdiscid(self,
-            libdiscid_location: "str file system path to libdiscid library"):
-        """Load the ``libdiscid`` shared library."""
-        self._logger.debug("TRACE libdiscid_location = %r", libdiscid_location)
-
-        # http://jonnyjd.github.com/libdiscid/discid_8h.html
-        libdiscid = C.CDLL(libdiscid_location)
-
-        # Return a handle for a new DiscId object.
-        libdiscid.discid_new.argtypes = ()
-        libdiscid.discid_new.restype = C.c_void_p
-
-        # Provides the TOC of a known CD.
-        libdiscid.discid_put.argtypes = (C.c_void_p, C.c_int, C.c_int,
-                                         C.c_void_p)
-        libdiscid.discid_put.restype = C.c_int
-
-        # Return a MusicBrainz DiscID.
-        libdiscid.discid_get_id.argtypes = (C.c_void_p,)
-        libdiscid.discid_get_id.restype = C.c_char_p
-
-        # Release the memory allocated for the DiscId object.
-        libdiscid.discid_free.argtypes = (C.c_void_p,)
-        libdiscid.discid_free.restype = None
-
-        self._libdiscid = libdiscid
-
     def collect(self):
         """Populate all MusicBrainz album metadata choices."""
         self._logger.debug("TRACE")
+        super().collect()
 
         nsmap = self.NAMESPACES.copy()
         self._logger.debug("using namespace map %r", nsmap)
 
-        disc_id = self._calculate_disc_id()
+        disc_id = self.calculate_disc_id(self.toc)
         discid_request_path = self._prepare_discid_request(disc_id)
         mb_metadata = self._get_response(discid_request_path, nsmap,
                                          http_keep_alive=False)
@@ -2903,42 +3031,6 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         self._logger.debug("RETURN %r", request_path)
         return request_path
 
-    def _calculate_disc_id(self):
-        """Return the MusicBrainz Disc ID for the disc :data:`TOC`."""
-        self._logger.debug("TRACE")
-        handle = None
-        try:
-            handle = C.c_void_p(self._libdiscid.discid_new())
-            if (handle is None):
-                raise MetadataError(
-                        "Failed to create a new libdiscid DiscId handle!",
-                        context_hint="MusicBrainz libdiscid")
-            offsets = \
-                [self.toc.leadout_track_offset] + list(self.toc.track_offsets)
-            c_int_array = C.c_int * len(offsets)
-            c_offsets = c_int_array(*offsets)
-            res = self._libdiscid.discid_put(handle,
-                                             self.toc.first_track_number,
-                                             self.toc.last_track_number,
-                                             c_offsets)
-            if (res != 1):
-                self._logger.error(
-                    "%d return from libdiscid.discid_put(handle, %d, %d, %r)",
-                    res, self.toc.first_track_number,
-                    self.toc.last_track_number, offsets)
-                raise MetadataError(
-                        "libdiscid.discid_put returned %d (expected 1)" % res,
-                        context_hint="MusicBrainz libdiscid")
-            disc_id = self._libdiscid.discid_get_id(handle)
-
-            disc_id = disc_id.decode("us-ascii")
-            self._logger.debug("RETURN %r", disc_id)
-            return disc_id
-        finally:
-            if (handle is not None):
-                self._libdiscid.discid_free(handle)
-                handle = None
-
     def _get_response(self,
             request_path: "a MusicBrainz HTTP request path",
             nsmap: "map of namespace prefixes to URIs",
@@ -3038,6 +3130,118 @@ class MusicBrainzMetadataCollector(MetadataCollector):
                     data.decode(encoding)))
 
 
+@logged
+class MetadataPersistence(MetadataCollector):
+    """A pseudo-client that populates **persisted** album and track
+    metadata choices for a disc.
+
+    """
+
+    def __init__(self, toc: "a :data:`TOC` object"):
+        self._logger.debug("TRACE toc = %r", toc)
+        super().__init__(toc)
+
+        flac_library_root = get_config().get("FLAC", "library_root")
+        try:
+            flac_library_root = resolve_path(flac_library_root)
+        except Exception as e:
+            raise MetadataError(
+                "Cannot use FLAC library root %s: %s" % (flac_library_root, e),
+                context_hint="Metadata persistence",
+                cause=e)
+
+        self.metadata_persistence_root = os.path.join(flac_library_root,
+                                                      ".metadata")
+        self.disc_id = MusicBrainzMetadataCollector.calculate_disc_id(toc)
+        self.metadata_filename = "%s.json" % self.disc_id
+        self.metadata_path = os.path.join(self.metadata_persistence_root,
+                                          self.metadata_filename)
+
+    def reset(self):
+        """Initialize all collection fields to default (empty)."""
+        super().reset()
+        self.restored = False
+
+    def collect(self):
+        """Populate metadata choices from persisted data."""
+        self._logger.debug("TRACE")
+        super().collect()
+
+        if (os.path.isfile(self.metadata_path)):
+            self._logger.debug("found %r", self.metadata_path)
+            with open(self.metadata_path) as fp:
+                disc_metadata = json.load(fp)
+            # convert album cover to byte string (raw image data) by encoding
+            # the string to "Latin-1"
+            # (see comment in the _convert_to_json_serializable(obj) method)
+            for i in range(len(disc_metadata["album"]["cover"])):
+                disc_metadata["album"]["cover"][i] = \
+                    disc_metadata["album"]["cover"][i].encode("Latin-1")
+            self.album = disc_metadata["album"]
+            self.tracks = disc_metadata["tracks"]
+            self.restored = True
+            self._logger.info("restored metadata for DiscId %s from %s",
+                              self.disc_id, disc_metadata["timestamp"])
+        else:
+            self._logger.info("did not find %r", self.metadata_path)
+
+    def store(self,
+            metadata: "dict the metadata field values chosen for a disc"):
+        """Persist a disc's metadata field values.
+
+        Persisting the metadata field values allows for easy error
+        recovery in the event that ripping/encoding fails (i.e. the user
+        will not need to re-choose and/or re-enter values).
+
+        .. note::
+
+           The presence of persisted metadata for a disc does *not*
+           prevent metadata aggregation. Metadata is still aggregated,
+           but any persisted values take precedence.
+
+        .. warning::
+
+           Only the **first** value (i.e. the **entered** or
+           **selected** value) for each metadata field is persisted.
+           This value is assumed to be the the preferred/intended value
+           for the field.
+
+        """
+        self._logger.debug("TRACE metadata = %r", metadata)
+
+        if (not os.path.isdir(self.metadata_persistence_root)):
+            # doesn't work as expected for external media
+            #os.makedirs(metadata_persistence_root, exist_ok=True)
+            subprocess.check_call(["mkdir", "-p",
+                                   self.metadata_persistence_root])
+            self._logger.debug("created %s", self.metadata_persistence_root)
+
+        ordered_metadata = OrderedDict()
+        ordered_metadata["timestamp"] = datetime.datetime.now().isoformat()
+        ordered_metadata["TOC"] = self.toc
+        ordered_metadata["album"] = metadata["album"]
+        ordered_metadata["tracks"] = metadata["tracks"]
+
+        with open(self.metadata_path, 'w') as fp:
+            json.dump(ordered_metadata, fp, separators=(',', ':'),
+                      default=self._convert_to_json_serializable)
+        self._logger.info("wrote %s", self.metadata_path)
+
+
+    def _convert_to_json_serializable(self,
+            obj: "object to be converted into a serializable JSON value") \
+            -> "str a JSON-serializable representation of `obj`":
+        """Return a JSON-serializable representation of `obj`."""
+        if (isinstance(obj, bytes)):
+            # JSON does not directly support binary data, so instead use the
+            # Latin-1-decoded value, which will be properly converted to use
+            # Unicode escape sequences by the json library.
+            # (Unicode code points 0-255 are identical to the Latin-1 values.)
+            return obj.decode("Latin-1")
+        else:
+            raise TypeError(repr(obj) + " is not JSON serializable")
+
+
 #: Used to pass data between a :class:`MetadataAggregator` thread and the main
 #: thread.
 _AGGREGATOR_QUEUE = queue.Queue(1)
@@ -3051,7 +3255,9 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
         self._logger.debug("TRACE toc = %r", toc)
         threading.Thread.__init__(self, daemon=True)
         MetadataCollector.__init__(self, toc)
+        self.persistence = MetadataPersistence(toc)
         self._collectors = [
+            self.persistence, # must be first
             GracenoteCDDBMetadataCollector(toc),
             MusicBrainzMetadataCollector(toc),
         ]
@@ -3071,12 +3277,17 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
     def collect(self):
         """Populate metadata from all music databases."""
         self._logger.debug("TRACE")
+        MetadataCollector.collect(self)
+
         for collector in self._collectors:
             collector.collect()
 
             self._merge_metadata(["title", "artist", "performer", "year",
                                   "genre", "cover"],
                                  collector.album, self.album)
+            for field in ["disc_number", "disc_total"]:
+                if (collector.album[field] > self.album[field]):
+                    self.album[field] = collector.album[field]
 
             track_ordinal = 1
             for track_metadata in collector.tracks[1:]:
@@ -3086,10 +3297,17 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                                      self.tracks[track_ordinal])
                 track_ordinal += 1
 
-            for field in ["disc_number", "disc_total"]:
-                if ((self.album[field] == 1) and
-                        (collector.album[field] > 1)):
-                    self.album[field] = collector.album[field]
+        # persisted metadata takes precedence
+        if (self.persistence.restored):
+            self.album["disc_number"] = self.persistence.album["disc_number"]
+            self.album["disc_total"] = self.persistence.album["disc_total"]
+            # persisted data stores the "include" flag for tracks
+            # (regular collectors do not)
+            track_ordinal = 1
+            for track_metadata in self.persistence.tracks[1:]:
+                self.tracks[track_ordinal]["include"] = \
+                    self.persistence.tracks[track_ordinal]["include"]
+                track_ordinal += 1
 
     def _merge_metadata(self,
             fields: "list of metadata field names",
