@@ -90,6 +90,15 @@ and MP3. To exclude a track, simply uncheck the box.
 When you are satisfied with the metadata values, click the "Rip and tag" button
 to begin the encoding process:
 
+.. versionchanged:: 0.4
+
+   As soon as the "Rip and tag" button is clicked to begin the encoding
+   process, all album and track metadata field values are automatically
+   saved. If ripping fails for any reason, re-inserting the disc will cause
+   that persisted metadata to be restored so that you don't have to re-enter
+   the information by hand. If a cover image was persisted, it will be
+   opened in Preview automatically when the metadata is restored.
+
 .. image:: ripping.png
 
 Once all included tracks have been encoded to FLAC and MP3, the "Eject" button
