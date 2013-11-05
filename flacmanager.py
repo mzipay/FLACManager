@@ -26,7 +26,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 import atexit
 import cgi
@@ -1481,7 +1481,12 @@ class FLACManager(tk.Frame):
             for line in f:
                 line = line.strip()
                 if (line.startswith(prefix)):
-                    status_line = line.replace(prefix, "")
+                    # remove the prefix, then split on ASCII BS (Backspace) and
+                    # take the last component
+                    #
+                    # output line looks like this:
+                    #   ${prefix}${status1}(BS)+${status2}(BS)+..${statusN}
+                    status_line = line.replace(prefix, "").split('\x08')[-1]
         return status_line
 
     def _destroy_metadata_editor(self):
