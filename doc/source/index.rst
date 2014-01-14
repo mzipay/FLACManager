@@ -2,7 +2,6 @@
 FLAC Manager --- an audio metadata aggregator and FLAC+MP3 encoder
 ==================================================================
 
-:Version: |version|
 :Release: |release|
 
 FLAC Manager is a plain :py:mod:`tkinter` GUI (i.e. no :py:mod:`tkinter.tix` or

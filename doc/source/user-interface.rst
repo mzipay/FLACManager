@@ -4,11 +4,7 @@ User interface API
 
 .. autoexception:: flacmanager.FLACManagerError
 
-   .. automethod:: flacmanager.FLACManagerError.__init__
-
 .. autoclass:: flacmanager.FLACManager
-
-   .. automethod:: flacmanager.FLACManager.__init__
 
 .. autoclass:: flacmanager.AboutDialog
 

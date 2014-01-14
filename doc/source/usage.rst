@@ -71,12 +71,22 @@ Gracenote and MusicBrainz:
 
 .. image:: aggregating.png
 
-You can abort the aggregation process by ejecting the disc. If aggregation
-fails, an error message will be shown, and a button appears allowing you to
-retry.
+You can abort the aggregation process by ejecting the disc.
 
-Once metadata aggregation has completed, you will be presented with the tagging
-interface:
+.. versionadded:: 0.5
+   If aggregation fails, an error dialog will describe the failure. Once this
+   dialog is dismissed, you will be presented with options to either retry the
+   metadata aggregation or edit the metadata offline:
+
+   .. image:: aggregation-failure.png
+
+   If you choose to edit the metadata offline, the editor will not contain any
+   information other than the number of tracks:
+
+   .. image:: offline-editing.png
+
+If metadata aggregation completes successfully, you will be presented with the
+editor interface prepopulated with the aggregated metadata values:
 
 .. image:: tagging.png
 
@@ -90,8 +100,7 @@ and MP3. To exclude a track, simply uncheck the box.
 When you are satisfied with the metadata values, click the "Rip and tag" button
 to begin the encoding process:
 
-.. versionchanged:: 0.4
-
+.. versionadded:: 0.4
    As soon as the "Rip and tag" button is clicked to begin the encoding
    process, all album and track metadata field values are automatically
    saved. If ripping fails for any reason, re-inserting the disc will cause

@@ -29,16 +29,14 @@ compilation (affects directory and file names), and whether or not the album
 spans two or more physical discs (affects file names only).
 
 .. data:: flacmanager.FLAC_FOLDERS_TEMPLATE
-
-   ``["%(album_artist)s", "%(album_title)s"]``
+   :annotation: = ["%(album_artist)s", "%(album_title)s"]
 
    A list of format strings for individual folder names that, joined, make
    up the *library_root*-relative directory path for a FLAC file.
 
 
 .. data:: flacmanager.FLAC_FOLDERS_COMPILATION_TEMPLATE
-
-   ``["_COMPILATIONS_", "%(album_title)s"]``
+   :annotation: = ["_COMPILATIONS_", "%(album_title)s"]
 
    A list of format strings for individual folder names that, joined, make
    up the *library_root*-relative directory path for a FLAC file that is
@@ -47,26 +45,22 @@ spans two or more physical discs (affects file names only).
 .. autofunction:: flacmanager.generate_flac_dirname
 
 .. data:: flacmanager.FLAC_FILENAME_TEMPLATE
-
-   ``"%(track_number)02d %(track_title)s.flac"``
+   :annotation: = "%(track_number)02d %(track_title)s.flac"
 
    The format string for a FLAC filename.
 
 .. data:: flacmanager.FLAC_FILENAME_COMPILATION_TEMPLATE
-
-   ``"%(track_number)02d %(track_title)s (%(track_artist)s).flac"``
+   :annotation: = "%(track_number)02d %(track_title)s (%(track_artist)s).flac"
 
    The format string for a FLAC filename that is part of a compilation.
 
 .. data:: flacmanager.FLAC_FILENAME_DISCN_TEMPLATE
-
-   ``"%(disc_number)02d-%(track_number)02d %(track_title)s.flac"``
+   :annotation: = "%(disc_number)02d-%(track_number)02d %(track_title)s.flac"
 
    The format string for a FLAC filename on an album of 2+ discs.
 
 .. data:: flacmanager.FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE
-
-   ``"%(disc_number)02d-%(track_number)02d %(track_title)s (%(track_artist)s).flac"``
+   :annotation: = "%(disc_number)02d-%(track_number)02d %(track_title)s (%(track_artist)s).flac"
 
    The format string for a FLAC filename that is part of a compilation
    spanning 2+ discs.
@@ -74,16 +68,14 @@ spans two or more physical discs (affects file names only).
 .. autofunction:: flacmanager.generate_flac_basename
 
 .. data:: flacmanager.MP3_FOLDERS_TEMPLATE
-
-   ``["%(album_artist)s", "%(album_title)s"]``
+   :annotation: = ["%(album_artist)s", "%(album_title)s"]
 
    A list of format strings for individual folder names that, joined, make
    up the *library_root*-relative directory path for an MP3 file.
 
 
 .. data:: flacmanager.MP3_FOLDERS_COMPILATION_TEMPLATE
-
-   ``["_COMPILATIONS_", "%(album_title)s"]``
+   :annotation: = ["_COMPILATIONS_", "%(album_title)s"]
 
    A list of format strings for individual folder names that, joined, make
    up the *library_root*-relative directory path for an MP3 file that is
@@ -92,26 +84,22 @@ spans two or more physical discs (affects file names only).
 .. autofunction:: flacmanager.generate_mp3_dirname
 
 .. data:: flacmanager.MP3_FILENAME_TEMPLATE
-
-   ``"%(track_number)02d %(track_title)s.mp3"``
+   :annotation: = "%(track_number)02d %(track_title)s.mp3"
 
    The format string for an MP3 filename.
 
 .. data:: flacmanager.MP3_FILENAME_COMPILATION_TEMPLATE
-
-   ``"%(track_number)02d %(track_title)s (%(track_artist)s).mp3"``
+   :annotation: = "%(track_number)02d %(track_title)s (%(track_artist)s).mp3"
 
    The format string for an MP3 filename that is part of a compilation.
 
 .. data:: flacmanager.MP3_FILENAME_DISCN_TEMPLATE
-
-   ``"%(disc_number)02d-%(track_number)02d %(track_title)s.mp3"``
+   :annotation: = "%(disc_number)02d-%(track_number)02d %(track_title)s.mp3"
 
    The format string for an MP3 filename on an album of 2+ discs.
 
 .. data:: flacmanager.MP3_FILENAME_DISCN_COMPILATION_TEMPLATE
-
-   ``"%(disc_number)02d-%(track_number)02d %(track_title)s (%(track_artist)s).mp3"``
+   :annotation: = "%(disc_number)02d-%(track_number)02d %(track_title)s (%(track_artist)s).mp3"
 
    The format string for an MP3 filename that is part of a compilation
    spanning 2+ discs.
@@ -120,15 +108,11 @@ spans two or more physical discs (affects file names only).
 
 .. autoclass:: flacmanager.FLACEncoder
 
-   .. automethod:: flacmanager.FLACEncoder.__init__
-
 .. autofunction:: flacmanager.make_vorbis_comments
 
 .. autofunction:: flacmanager.encode_flac
 
 .. autoclass:: flacmanager.MP3Encoder
-
-   .. automethod:: flacmanager.MP3Encoder.__init__
 
 .. autofunction:: flacmanager.decode_wav
 
