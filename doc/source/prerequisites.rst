@@ -24,7 +24,7 @@ the original project pages to download sources and build/install yourself.
 Additionally, FLAC Manager calls the following programs which are available in
 Mac OS X and should not require any special/additional configuration:
 
-* disktool - Disk Arbitration Command Tool
-* `open - open files and directories <http://developer.apple.com/library/mac/#documentation/Darwin/Reference/ManPages/10.6/man1/open.1.html>`_
-* `mkdir - make directories <http://developer.apple.com/library/mac/#documentation/Darwin/Reference/ManPages/10.6/man1/mkdir.1.html>`_
+* `diskutil - manage local disks and volumes <https://developer.apple.com/library/mac/documentation/Darwin/Reference/Manpages/man8/diskutil.8.html>`_
+* `open - open files and directories <https://developer.apple.com/library/mac/documentation/Darwin/Reference/Manpages/man1/open.1.html>`_
+* `mkdir - make directories <https://developer.apple.com/library/mac/documentation/Darwin/Reference/Manpages/man1/mkdir.1.html>`_
 

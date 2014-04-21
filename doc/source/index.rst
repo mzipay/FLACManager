@@ -47,6 +47,9 @@ is customizable.
    `Python 3.3 <http://www.python.org/download/releases/3.3.0/>`_ , so I have
    chosen to make the source code available for reference.
 
+.. versionchanged:: 0.6.0
+   FLAC Manager now runs on Mac OS X 10.9.2.
+
 Table of Contents
 -----------------
 
