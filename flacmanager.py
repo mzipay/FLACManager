@@ -26,7 +26,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 import atexit
 import cgi
@@ -120,21 +120,42 @@ def get_disc_info():
     """
     # minimal tracing/logging here - can be called repeatedly (indefinitely) by
     # a DiscCheck thread
-    output = subprocess.check_output(["disktool", "-l"],
+    output = subprocess.check_output(["diskutil", "list"],
                                      stderr=subprocess.STDOUT)
-    for disk_appeared in \
-            StringIO(output.decode(sys.getfilesystemencoding())):
-        if ("fsType = 'cddafs'" in disk_appeared):
-            _logger.info(disk_appeared.rstrip())
-            match = re.search(r"Disk Appeared \('(.+)',"
-                              r"Mountpoint = '(.+)', fsType = 'cddafs'",
-                              disk_appeared)
+    output = output.decode(sys.getfilesystemencoding())
+
+    device = None
+    is_cd_partition_scheme = False
+    is_cd_da = False
+    for line in StringIO(output):
+        if (line.startswith("/dev/")):
+            device = line.strip()
+            is_cd_partition_scheme = False
+            is_cd_da = False
+            continue
+
+        tokens = line.split()
+        if ("CD_partition_scheme" in tokens):
+            _logger.debug("%s: %s", device, line)
+            is_cd_partition_scheme = True
+            continue
+        elif ("CD_DA" in tokens):
+            is_cd_da = True
+            break
+
+    if (is_cd_partition_scheme and is_cd_da):
+        output = subprocess.check_output(["diskutil", "info", device],
+                                         stderr=subprocess.STDOUT)
+        output = output.decode(sys.getfilesystemencoding())
+
+        for line in StringIO(output):
+            match = re.search(r"\s+Mount Point:\s+(.*?)$", line)
             if (match is not None):
-                return match.groups()
+                mountpoint = match.group(1)
+                return (device, mountpoint)
             else:
-                _logger.warning(
-                    "expected to match disk and mountpoint in %r",
-                    disk_appeared)
+                _logger.warning("expected to find a mountpoint for device %s",
+                                device)
 
 
 #: Used to pass data between a :class:`DiscCheck` thread and the main thread.
@@ -1676,7 +1697,7 @@ class FLACManager(tk.Frame):
     def _eject_disc(self):
         """Eject the current CD-DA disc and update the UI."""
         self.__logger.debug("TRACE")
-        status = subprocess.call(["disktool", "-e", self._disk],
+        status = subprocess.call(["diskutil", "eject", self._disk],
                                  stdout=subprocess.DEVNULL,
                                  stderr=subprocess.DEVNULL)
         if (status == 0):
@@ -1920,7 +1941,7 @@ class PrerequisitesDialog(simpledialog.Dialog):
         "(http://www.macports.org/).\n\n"
         "In addition to the software listed above, %(title)s relies on the "
         "following Mac OS X command line utilties:\n"
-        "* disktool\n"
+        "* diskutil\n"
         "* open\n\n"
         "You must register for a Gracenote developer account "
         "(https://developer.gracenote.com/) in order for %(title)s's metadata "
