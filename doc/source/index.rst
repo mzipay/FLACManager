@@ -19,7 +19,7 @@ is customizable.
    personal utility to address an immediate need - to rip and tag my entire
    music collection to FLAC (for archiving) and MP3 (for import into
    `iTunes <http://www.apple.com/itunes/>`_ and upload to
-   `Google Play <https://play.google.com/>`_).
+   `Google play Music <https://play.google.com/store/music>`_).
 
    As such, FLAC Manager is developed specifically to run on my personal Mac,
    and to contain only the features/functions I need to achieve my goal. I
@@ -30,9 +30,8 @@ is customizable.
    In light of this, FLAC Manager has some limitations:
 
    1. FLAC Manager is a Mac OS X-**only** application. It will not run on
-      Windows or Linux, and *may* not run on versions of Mac OS X earlier or
-      later than 10.6.8 (my current version). I do not, nor do I plan to,
-      test on other OSes or other versions of Mac OS X.
+      Windows or Linux, and *may* not run on versions of Mac OS X earlier than
+      10.6.8.
    2. The UI is not "polished." There are some quirks, and the UI is anything
       but attractive. Function outweighs form for FLAC Manager, and that isn't
       going to change; as long as the application allows me to rip and tag
@@ -44,11 +43,8 @@ is customizable.
    Despite these limitations, the source code includes working examples of
    using :py:mod:`ctypes`, :py:mod:`queue`, :py:mod:`threading`,
    :py:mod:`tkinter`, and other standard Python modules under
-   `Python 3.3 <http://www.python.org/download/releases/3.3.0/>`_ , so I have
-   chosen to make the source code available for reference.
-
-.. versionchanged:: 0.6.0
-   FLAC Manager now runs on Mac OS X 10.9.2.
+   `Python 3.3+ <http://docs.python.org/3>`_ , so I have chosen to make the
+   source code available for reference.
 
 Table of Contents
 -----------------
@@ -57,6 +53,7 @@ Table of Contents
    :maxdepth: 2
 
    prerequisites
+   whats-new
    usage
    api-ref
 

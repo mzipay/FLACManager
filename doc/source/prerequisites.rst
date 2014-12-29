@@ -3,9 +3,9 @@ Prerequisites for running FLAC Manager
 ======================================
 
 .. note::
-
-   FLAC Manager requires `Python 3.3+ <http://www.python.org/>`_ and the
-   :py:mod:`tkinter` module to run.
+   FLAC Manager requires `Python 3.3+
+   <https://www.python.org/downloads/mac-osx/>`_ and the :py:mod:`tkinter`
+   module to run.
 
 FLAC Manager has several software prerequisites. Each of the following can be
 installed via `MacPorts <http://www.macports.org/>`_, or follow the links to

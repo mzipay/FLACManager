@@ -7,7 +7,6 @@ Metadata aggregation API
 .. autoclass:: flacmanager.MetadataCollector
 
 .. autoclass:: flacmanager.GracenoteCDDBMetadataCollector
-
 .. autoclass:: flacmanager.MusicBrainzMetadataCollector
 
 .. autoclass:: flacmanager.MetadataPersistence

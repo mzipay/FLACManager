@@ -2,8 +2,9 @@
 Miscellaneous API
 =================
 
-.. autofunction:: flacmanager.get_config
+.. autodata:: flacmanager.QUEUE_GET_NOWAIT_AFTER
 
+.. autofunction:: flacmanager.get_config
 .. autofunction:: flacmanager.save_config
 
 .. autofunction:: flacmanager.make_tempfile

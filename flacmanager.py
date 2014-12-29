@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.3
+#!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
 # FLAC Manager -- an audio metadata aggregator and FLAC+MP3 encoder
@@ -26,7 +26,16 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.6.0"
+__version__ = "0.7.0"
+
+"""
+Please read the following articles before using FLAC Manager!
+
+http://www.ninthtest.net/flac-mp3-audio-manager/prerequisites.html
+http://www.ninthtest.net/flac-mp3-audio-manager/whats-new.html
+http://www.ninthtest.net/flac-mp3-audio-manager/usage.html
+
+"""
 
 import atexit
 import cgi
@@ -34,6 +43,7 @@ from collections import namedtuple, OrderedDict
 from configparser import ConfigParser
 import ctypes as C
 import datetime
+from functools import total_ordering
 from http.client import HTTPConnection, HTTPSConnection
 import imghdr
 from io import BytesIO, StringIO
@@ -61,6 +71,7 @@ from urllib.request import urlopen
 import xml.etree.ElementTree as ET
 
 __all__ = [
+    "QUEUE_GET_NOWAIT_AFTER",
     "get_disc_info",
     "DiscCheck",
     "TOC",
@@ -70,6 +81,15 @@ __all__ = [
     "make_tempfile",
     "FLACManagerError",
     "FLACManager",
+    "TrackState",
+    "TRACK_EXCLUDED",
+    "TRACK_PENDING",
+    "TRACK_ENCODING_FLAC",
+    "TRACK_DECODING_WAV",
+    "TRACK_ENCODING_MP3",
+    "TRACK_FAILED",
+    "TRACK_COMPLETE",
+    "TrackEncodingStatus",
     "generate_flac_dirname",
     "generate_flac_basename",
     "generate_mp3_dirname",
@@ -109,6 +129,11 @@ def logged(cls):
     """
     setattr(cls, "_%s__logger" % cls.__name__, logging.getLogger(cls.__name__))
     return cls
+
+
+#: The amount of time (in milliseconds) to wait before attempting
+#: another call to any :meth:`queue.Queue.get_nowait` method.
+QUEUE_GET_NOWAIT_AFTER = 625
 
 
 def get_disc_info():
@@ -167,7 +192,6 @@ class DiscCheck(threading.Thread):
     """A thread that checks for the presence of a CD-DA disc."""
 
     def __init__(self):
-        """Initialize as a daemon thread."""
         self.__logger.debug("TRACE")
         # kill this thread if the program exits
         super().__init__(daemon=True)
@@ -442,8 +466,6 @@ class FLACManager(tk.Frame):
     def _create_metadata_editor(self):
         """Create the metadata editor."""
         self.__logger.debug("TRACE")
-        #raise RuntimeError(
-        #    "Exception handling test: _create_metadata_editor failure")
 
         self._current_track_number = 1
         # tracks indexing is 1-based
@@ -1353,12 +1375,7 @@ class FLACManager(tk.Frame):
                              for (i, v) in enumerate(track_titles)]
         track_include_flags = [var.get()
                                for var in self._track_vars["include"][1:]]
-        encoding_statuses = []
-        for (i, label) in enumerate(self.track_labels):
-            if (track_include_flags[i]):
-                encoding_statuses.append("{%s: pending\u2026}" % label)
-            else:
-                encoding_statuses.append("{%s: excluded}" % label)
+        self._initialize_track_encoding_statuses(track_include_flags)
 
         track_total = len(self.toc.track_offsets)
         list_frame = tk.Frame(encoding_status_frame)
@@ -1374,7 +1391,10 @@ class FLACManager(tk.Frame):
         self._encoding_status_list = tk.Listbox(
             list_frame, exportselection=tk.NO, activestyle=tk.NONE,
             selectmode=tk.SINGLE, bd=1, height=visible_tracks,
-            listvariable=tk.StringVar(value=' '.join(encoding_statuses)),
+            listvariable=tk.StringVar(
+                value=' '.join("{%s}" % track_encoding_status.describe()
+                               for track_encoding_status in
+                                    self._track_encoding_statuses)),
             **cfg)
         if (vscrollbar is not None):
             vscrollbar.config(command=self._encoding_status_list.yview)
@@ -1387,6 +1407,13 @@ class FLACManager(tk.Frame):
 
         self.__logger.debug("RETURN")
         return encoding_status_frame
+
+    def _initialize_track_encoding_statuses(self, track_include_flags):
+        """Create the state machines for each track's encoding status."""
+        self._track_encoding_statuses = []
+        for (i, label) in enumerate(self.track_labels):
+            self._track_encoding_statuses.append(
+                TrackEncodingStatus(label, pending=track_include_flags[i]))
 
     def rip_and_tag(self):
         """Create tagged FLAC and MP3 files of all included tracks."""
@@ -1412,8 +1439,6 @@ class FLACManager(tk.Frame):
     def _prepare_encoder(self) -> "a populated :class:`FLACEncoder` object":
         """Populate a :class:`FLACEncoder` object for the album."""
         self.__logger.debug("TRACE")
-        #raise RuntimeError(
-        #    "Exception handling test: _prepare_encoder failure")
 
         disc_filenames = [name for name in os.listdir(self._mountpoint)
                           if ((not name.startswith('.')) and
@@ -1481,17 +1506,18 @@ class FLACManager(tk.Frame):
         try:
             (priority, status) = _ENCODING_QUEUE.get_nowait()
         except queue.Empty:
-            self.after(750, self._monitor_encoding_progress)
+            self.after(QUEUE_GET_NOWAIT_AFTER, self._monitor_encoding_progress)
         else:
             _ENCODING_QUEUE.task_done()
             self.__logger.debug("dequeued %r", status)
 
-            (track_index, cdda_fn, flac_fn, stdout_fn, state) = status
-            if (state == "FINISHED"):
+            (track_index, cdda_fn, flac_fn, stdout_fn, target_state) = status
+            if (target_state == "FINISHED"):
                 # all tracks have been processed
                 while (_ENCODING_QUEUE.qsize() > 0):
                     try:
-                        _ENCODING_QUEUE.get_nowait()
+                        self.__logger.debug("finished; discarding %r",
+                                            _ENCODING_QUEUE.get_nowait())
                     except queue.Empty:
                         break
                     else:
@@ -1500,48 +1526,53 @@ class FLACManager(tk.Frame):
                 self.rip_and_tag_button.pack_forget()
                 self.rip_and_tag_button.config(state=tk.NORMAL)
                 self.master.bell()
+                # break out of the monitoring loop
                 return
 
             track_label = self.track_labels[track_index]
-            cdda_basename = os.path.basename(cdda_fn)
-            stdout_message = self._read_current_status(cdda_basename,
-                                                       stdout_fn)
-            encoding_status_list = self._encoding_status_list
-            if (isinstance(state, Exception)):
-                status_message = "%s: %s" % (track_label, stdout_message)
-                encoding_status_list.delete(track_index)
-                encoding_status_list.insert(track_index, status_message)
-                encoding_status_list.itemconfig(track_index, {"fg": "red"})
-            elif (state == "ENCODING_FLAC"):
-                encoding_status_list.see(track_index)
-                status_message = "%s: %s" % (
-                    track_label, stdout_message if stdout_message
-                                 else "encoding CDDA to FLAC\u2026")
-                encoding_status_list.delete(track_index)
-                encoding_status_list.insert(track_index, status_message)
-                encoding_status_list.itemconfig(track_index, {"fg": "blue"})
-            elif (state == "DECODING_WAV"):
-                status_message = "%s: decoding FLAC to WAV\u2026" % track_label
-                encoding_status_list.delete(track_index)
-                encoding_status_list.insert(track_index, status_message)
-                encoding_status_list.itemconfig(track_index,
-                                                {"fg": "dark violet"})
-            elif (state == "ENCODING_MP3"):
-                status_message = "%s: encoding WAV to MP3\u2026" % track_label
-                encoding_status_list.delete(track_index)
-                encoding_status_list.insert(track_index, status_message)
-                encoding_status_list.itemconfig(track_index,
-                                                {"fg": "dark violet"})
-            else:   # state == "TRACK_COMPLETE"
-                encoding_status_list.delete(track_index)
-                encoding_status_list.insert(track_index, "%s" % flac_fn)
-                encoding_status_list.itemconfig(track_index,
-                                                {"fg": "dark green"})
-            # ensure that last track is always visible after delete/insert
-            if (track_index == (encoding_status_list.index(tk.END) - 1)):
-                encoding_status_list.see(track_index)
+            track_encoding_status = self._track_encoding_statuses[track_index]
 
-            self.after(750, self._monitor_encoding_progress)
+            # only process "expected" state transitions
+            if (track_encoding_status.transition_to(target_state)):
+                if (track_encoding_status.state == TRACK_FAILED):
+                    status_message = track_encoding_status.describe(
+                        message=("%s: %s" % (target_state.__class__.__name__,
+                                             target_state)
+                                 if isinstance(target_state, Exception)
+                                 else None))
+                    item_config = {"fg": "red"}
+                elif (track_encoding_status.state == TRACK_ENCODING_FLAC):
+                    # ensure that the currently-ripping track is always visible
+                    self._encoding_status_list.see(track_index)
+                    # read encoding interval status from flac's stdout
+                    cdda_basename = os.path.basename(cdda_fn)
+                    stdout_message = self._read_current_status(cdda_basename,
+                                                               stdout_fn)
+                    status_message = track_encoding_status.describe(
+                        message=stdout_message if stdout_message else None)
+                    item_config = {"fg": "blue"}
+                elif (track_encoding_status.state in (TRACK_DECODING_WAV,
+                                                      TRACK_ENCODING_MP3)):
+                    status_message = track_encoding_status.describe()
+                    item_config = {"fg": "dark violet"}
+                elif (track_encoding_status.state == TRACK_COMPLETE):
+                    status_message = flac_fn
+                    item_config = {"fg": "dark green"}
+                else:   # unexpected state
+                    status_message = "%s (unexpected target state %s)" % (
+                                        track_encoding_status.describe(),
+                                        target_state)
+                    item_config = {"fg": "red"}
+
+                self._encoding_status_list.delete(track_index)
+                self._encoding_status_list.insert(track_index, status_message)
+                self._encoding_status_list.itemconfig(track_index, item_config)
+                # ensure that last track is always visible after delete/insert
+                if (track_index ==
+                        (self._encoding_status_list.index(tk.END) - 1)):
+                    self._encoding_status_list.see(track_index)
+
+            self.after(QUEUE_GET_NOWAIT_AFTER, self._monitor_encoding_progress)
 
     def _read_current_status(self,
             cdda_basename: "string, basically a grep pattern for *stdout_fn*",
@@ -1614,7 +1645,7 @@ class FLACManager(tk.Frame):
         try:
             disc_info = _DISC_QUEUE.get_nowait()
         except queue.Empty:
-            self.after(750, self._check_for_disc)
+            self.after(QUEUE_GET_NOWAIT_AFTER, self._check_for_disc)
         else:
             _DISC_QUEUE.task_done()
             self.__logger.debug("dequeued %r", disc_info)
@@ -1743,6 +1774,147 @@ class FLACManager(tk.Frame):
         """Open the application description dialog."""
         self.__logger.debug("TRACE")
         AboutDialog(self.master, title="About %s" % self.TITLE)
+
+
+@total_ordering
+class TrackState:
+    """Represents the state of a single track at any given time during
+    the rip-and-tag operation.
+
+    """
+
+    def __init__(self, ordinal, key, text):
+        """
+        :param int ordinal: this state's relative value
+        :param str key: uniquely identifies this state
+        :param str text: a short description of this state
+
+        """
+        self._ordinal = ordinal
+        self._key = key
+        self._text = text
+
+    @property
+    def text(self):
+        """The track-independent short description of this state."""
+        return self._text
+
+    def __int__(self):
+        """Return the relative (ordinal) value of this state."""
+        return self._ordinal
+
+    def __str__(self):
+        """Return the unique identifier for this state."""
+        return self._key
+
+    def __repr__(self):
+        """Return a string that is unique for this track state."""
+        return "%s(%d, %r, %r)" % (self.__class__.__name__, self._ordinal,
+                                   self._key, self._text)
+
+    def __lt__(self, other):
+        """Return ``True`` if this state's ordinal value is less than
+        *other* state's ordinal value, otherwise ``False``.
+
+        :param flacmanager.TrackState other: the state being compared
+
+        """
+        return int(self) < int(other)
+
+    def __eq__(self, other):
+        """Return ``True`` if this state's ordinal value and key are
+        equal to *other* state's ordinal value and key, otherwise
+        ``False``.
+
+        :param flacmanager.TrackState other: the state being compared
+
+        """
+        return (isinstance(other, self.__class__) and
+                (self._ordinal == other._ordinal) and
+                (self._key == other._key))
+
+    def __hash__(self):
+        return hash(repr(self))
+
+
+#: Indicates that a track is excluded from the rip-and-tag operation.
+TRACK_EXCLUDED = TrackState(-1, "EXCLUDED", "excluded")
+
+#: Indicates that the rip-and-tag process has not yet begun for a track.
+TRACK_PENDING = TrackState(0, "PENDING", "pending\u2026")
+
+#: Indicates that a track is being encoded from CDDA to FLAC format.
+TRACK_ENCODING_FLAC = TrackState(1, "ENCODING_FLAC",
+                                 "encoding CDDA to FLAC\u2026")
+
+#: Indicates that a track is being decoded from FLAC to WAV format.
+TRACK_DECODING_WAV = TrackState(2, "DECODING_WAV",
+                                "decoding FLAC to WAV\u2026")
+
+#: Indicates that a track is being encoded from WAV to MP3 format.
+TRACK_ENCODING_MP3 = TrackState(3, "ENCODING_MP3", "encoding WAV to MP3\u2026")
+
+#: Indicates that an error occurred while processing a track.
+TRACK_FAILED = TrackState(99, "FAILED", "failed")
+
+#: Indicates that the rip-and-tag process has finished for a track.
+TRACK_COMPLETE = TrackState(99, "COMPLETE", "complete")
+
+
+@logged
+class TrackEncodingStatus:
+    """A simple state machine for a single track's encoding status."""
+
+    def __init__(self, track_label, pending=True):
+        """
+        :param str track_label: the track's display label
+        :keyword bool pending:\
+           the default ``True`` initializes status as\
+           :data:`TRACK_PENDING`; set to ``False`` to initialize status\
+           as :data:`TRACK_EXCLUDED`
+
+        """
+        self.track_label = track_label
+        self.__state = TRACK_PENDING if pending else TRACK_EXCLUDED
+
+    @property
+    def state(self):
+        """The current state of encoding for this track."""
+        return self.__state
+
+    def transition_to(self, to_state):
+        """Advance this track's encoding state from its current state to
+        *to_state*, if permitted.
+
+        :param to_state: the target encoding state, or any\
+                         :class:`Exception` to transition to\
+                         :data:`TRACK_FAILED`
+        :return: ``True`` if the transition is successful,\
+                 otherwise ``False``
+
+        """
+        from_state = self.__state
+        if (isinstance(to_state, Exception)):
+            to_state = TRACK_FAILED
+        if ((from_state in (TRACK_EXCLUDED, TRACK_FAILED, TRACK_COMPLETE)) or
+                (to_state < from_state)):
+            self.__logger.warning("%s: illegal transition from %s to %s",
+                                  self.track_label, from_state, to_state)
+            return False
+        self.__state = to_state
+        return True
+
+    def describe(self, message=None):
+        """Return a short display string for this track and its current
+        status.
+
+        :param str message: short piece of text to use with the track\
+                            label (instead of the default message for\
+                            the current state)
+
+        """
+        return "%s: %s" % (self.track_label, message if (message is not None)
+                                             else self.__state.text)
 
 
 #: A list of format strings for individual folder names that, joined, make up
@@ -1942,7 +2114,8 @@ class PrerequisitesDialog(simpledialog.Dialog):
         "In addition to the software listed above, %(title)s relies on the "
         "following Mac OS X command line utilties:\n"
         "* diskutil\n"
-        "* open\n\n"
+        "* open\n"
+        "* mkdir\n\n"
         "You must register for a Gracenote developer account "
         "(https://developer.gracenote.com/) in order for %(title)s's metadata "
         "aggregation to function properly:\n"
@@ -2335,7 +2508,6 @@ class FLACEncoder(threading.Thread):
     """A thread that rips CD-DA tracks to FLAC."""
 
     def __init__(self):
-        """Initialize as a daemon thread."""
         self.__logger.debug("TRACE")
         super().__init__(daemon=True)
         self._instructions = []
@@ -2404,12 +2576,9 @@ class FLACEncoder(threading.Thread):
         for mp3_encoder_thread in mp3_encoder_threads:
             mp3_encoder_thread.join()
 
-        # effecively "flush" all queued status updates before sending the final
-        # terminating status update
-        _ENCODING_QUEUE.join()
         status = (index, cdda_fn, flac_fn, stdout_fn, "FINISHED")
         self.__logger.info("enqueueing %r", status)
-        _ENCODING_QUEUE.put((11, status))
+        _ENCODING_QUEUE.put((13, status))
         # do not terminate until "FINISHED" status has been processed
         _ENCODING_QUEUE.join()
         self.__logger.debug("RETURN")
@@ -2428,7 +2597,7 @@ class FLACEncoder(threading.Thread):
         # enqueueing this status causes UI to read latest status line from the
         # stdout file
         status = (track_index, cdda_filename, flac_filename, stdout_filename,
-                  "ENCODING_FLAC")
+                  TRACK_ENCODING_FLAC)
 
         # when the FLAC encoding is complete, this file will be created whether
         # an error occurred or not
@@ -2483,9 +2652,9 @@ class MP3Encoder(threading.Thread):
 
         # make sure the UI gets a status update for decoding FLAC to WAV
         status = (self.track_index, self.cdda_filename, self.flac_filename,
-                  self.stdout_filename, "DECODING_WAV")
+                  self.stdout_filename, TRACK_DECODING_WAV)
         self.__logger.info("enqueueing %r", status)
-        _ENCODING_QUEUE.put((5, status))
+        _ENCODING_QUEUE.put((3, status))
 
         try:
             decode_wav(self.flac_filename, wav_filename,
@@ -2500,7 +2669,7 @@ class MP3Encoder(threading.Thread):
 
         # make sure the UI gets a status update for encoding WAV to MP3
         status = (self.track_index, self.cdda_filename, self.flac_filename,
-                  self.stdout_filename, "ENCODING_MP3")
+                  self.stdout_filename, TRACK_ENCODING_MP3)
         self.__logger.info("enqueueing %r", status)
         _ENCODING_QUEUE.put((5, status))
 
@@ -2514,9 +2683,9 @@ class MP3Encoder(threading.Thread):
             _ENCODING_QUEUE.put((2, status))
         else:
             status = (self.track_index, self.cdda_filename, self.flac_filename,
-                      self.stdout_filename, "TRACK_COMPLETE")
+                      self.stdout_filename, TRACK_COMPLETE)
             self.__logger.info("enqueueing %r", status)
-            _ENCODING_QUEUE.put((3, status))
+            _ENCODING_QUEUE.put((11, status))
         finally:
             del wav_tempdir
 
