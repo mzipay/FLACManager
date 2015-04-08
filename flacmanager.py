@@ -26,7 +26,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.7.0"
+__version__ = "0.7.0+doc.1"
 
 """
 Please read the following articles before using FLAC Manager!

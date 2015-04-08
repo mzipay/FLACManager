@@ -2,6 +2,8 @@
 Disc information API
 ====================
 
+:Release: |release|
+
 .. autofunction:: flacmanager.get_disc_info
 .. autofunction:: flacmanager.read_disc_toc
 

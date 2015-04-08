@@ -2,6 +2,8 @@
 Using FLAC Manager
 ==================
 
+:Release: |release|
+
 Configuring FLAC Manager
 ------------------------
 

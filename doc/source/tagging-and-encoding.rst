@@ -2,6 +2,8 @@
 Audio tagging and encoding API
 ==============================
 
+:Release: |release|
+
 The ``FLAC_*_TEMPLATE`` and ``MP3_*_TEMPLATE`` string formats are used to
 create the directory and file names for *.flac* and *.mp3* files, respectively.
 These string formats take their substitution values from a dictionary of

@@ -2,6 +2,8 @@
 Metadata aggregation API
 ========================
 
+:Release: |release|
+
 .. autoclass:: flacmanager.MetadataError
 
 .. autoclass:: flacmanager.MetadataCollector
