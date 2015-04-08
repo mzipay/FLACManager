@@ -1,0 +1,11 @@
+syntax: glob
+*.pyc
+*.pyo
+*.bak
+__pycache__
+NOTES.txt
+flacmanager-dev-env
+flacmanager.ini
+flacmanager.log
+doc/build
+doc/bootswatch
