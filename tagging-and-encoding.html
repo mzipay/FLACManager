@@ -1,0 +1,680 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Audio tagging and encoding API &mdash; FLAC Manager 0.7.0+doc.2 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.0+doc.2 documentation" href="_static/opensearch.xml"/>
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="FLAC Manager 0.7.0+doc.2 documentation" href="index.html"/>
+        <link rel="up" title="FLAC Manager API reference" href="api-ref.html"/>
+        <link rel="next" title="Miscellaneous API" href="miscellaneous.html"/>
+        <link rel="prev" title="Metadata aggregation API" href="metadata-aggregation.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+          <a href="index.html" class="fa fa-home"> FLAC Manager</a>
+        
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="whats-new.html#current-release-release">Current release: 0.7.0+doc.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="whats-new.html#previous-releases">Previous releases</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#configuring-flac-manager">Configuring FLAC Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#running-flac-manager">Running FLAC Manager</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="user-interface.html">User interface API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="disc-info.html">Disc information API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metadata-aggregation.html">Metadata aggregation API</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Audio tagging and encoding API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="miscellaneous.html">Miscellaneous API</a></li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">FLAC Manager</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="api-ref.html">FLAC Manager API reference</a> &raquo;</li>
+      
+    <li>Audio tagging and encoding API</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="audio-tagging-and-encoding-api">
+<h1>Audio tagging and encoding API<a class="headerlink" href="#audio-tagging-and-encoding-api" title="Permalink to this headline">¶</a></h1>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.0+doc.2</td>
+</tr>
+</tbody>
+</table>
+<p>The <code class="docutils literal"><span class="pre">FLAC_*_TEMPLATE</span></code> and <code class="docutils literal"><span class="pre">MP3_*_TEMPLATE</span></code> string formats are used to
+create the directory and file names for <em>.flac</em> and <em>.mp3</em> files, respectively.
+These string formats take their substitution values from a dictionary of
+metadata items containing the following keys:</p>
+<ul class="simple">
+<li>album_title</li>
+<li>album_artist</li>
+<li>album_performer</li>
+<li>album_genre</li>
+<li>album_year</li>
+<li>album_cover</li>
+<li>is_compilation</li>
+<li>disc_number</li>
+<li>disc_total</li>
+<li>track_number</li>
+<li>track_total</li>
+<li>track_title</li>
+<li>track_artist</li>
+<li>track_performer</li>
+<li>track_genre</li>
+<li>track_year</li>
+</ul>
+<p>The default string formats are chosen based on whether or not the album is a
+compilation (affects directory and file names), and whether or not the album
+spans two or more physical discs (affects file names only).</p>
+<dl class="data">
+<dt id="flacmanager.FLAC_FOLDERS_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">FLAC_FOLDERS_TEMPLATE</code><em class="property"> = ['%(album_artist)s', '%(album_title)s']</em><a class="headerlink" href="#flacmanager.FLAC_FOLDERS_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of format strings for individual folder names that, joined, make up
+the <em>library_root</em>-relative directory path for a FLAC file.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.FLAC_FOLDERS_COMPILATION_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">FLAC_FOLDERS_COMPILATION_TEMPLATE</code><em class="property"> = ['_COMPILATIONS_', '%(album_title)s']</em><a class="headerlink" href="#flacmanager.FLAC_FOLDERS_COMPILATION_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of format strings for individual folder names that, joined, make up
+the <em>library_root</em>-relative directory path for a FLAC file that is part of a
+compilation.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.generate_flac_dirname">
+<code class="descclassname">flacmanager.</code><code class="descname">generate_flac_dirname</code><span class="sig-paren">(</span><em>library_root</em>, <em>metadata</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#generate_flac_dirname"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.generate_flac_dirname" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build the directory for a track&#8217;s FLAC file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>library_root</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; the FLAC library directory</li>
+<li><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">an absolute directory path</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.FLAC_FILENAME_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">FLAC_FILENAME_TEMPLATE</code><em class="property"> = '%(track_number)02d %(track_title)s.flac'</em><a class="headerlink" href="#flacmanager.FLAC_FILENAME_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The format string for a FLAC filename.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.FLAC_FILENAME_COMPILATION_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">FLAC_FILENAME_COMPILATION_TEMPLATE</code><em class="property"> = '%(track_number)02d %(track_title)s (%(track_artist)s).flac'</em><a class="headerlink" href="#flacmanager.FLAC_FILENAME_COMPILATION_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The format string for a FLAC filename that is part of a compilation.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.FLAC_FILENAME_DISCN_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">FLAC_FILENAME_DISCN_TEMPLATE</code><em class="property"> = '%(disc_number)02d-%(track_number)02d %(track_title)s.flac'</em><a class="headerlink" href="#flacmanager.FLAC_FILENAME_DISCN_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The format string for a FLAC filename on an album of 2+ discs.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE</code><em class="property"> = '%(disc_number)02d-%(track_number)02d %(track_title)s (%(track_artist)s).flac'</em><a class="headerlink" href="#flacmanager.FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The format string for a FLAC filename that is part of a compilation
+spanning 2+ discs.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.generate_flac_basename">
+<code class="descclassname">flacmanager.</code><code class="descname">generate_flac_basename</code><span class="sig-paren">(</span><em>metadata</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#generate_flac_basename"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.generate_flac_basename" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build the filename for a track&#8217;s FLAC file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a relative file name</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.MP3_FOLDERS_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">MP3_FOLDERS_TEMPLATE</code><em class="property"> = ['%(album_artist)s', '%(album_title)s']</em><a class="headerlink" href="#flacmanager.MP3_FOLDERS_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of format strings for individual folder names that, joined, make up
+the <em>library_root</em>-relative directory path for an MP3 file.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.MP3_FOLDERS_COMPILATION_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">MP3_FOLDERS_COMPILATION_TEMPLATE</code><em class="property"> = ['_COMPILATIONS_', '%(album_title)s']</em><a class="headerlink" href="#flacmanager.MP3_FOLDERS_COMPILATION_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of format strings for individual folder names that, joined, make up
+the <em>library_root</em>-relative directory path for an MP3 file that is part of a
+compilation.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.generate_mp3_dirname">
+<code class="descclassname">flacmanager.</code><code class="descname">generate_mp3_dirname</code><span class="sig-paren">(</span><em>library_root</em>, <em>metadata</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#generate_mp3_dirname"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.generate_mp3_dirname" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build the directory for a track&#8217;s MP3 file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>library_root</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; the MP3 library directory</li>
+<li><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">an absolute directory path</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.MP3_FILENAME_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">MP3_FILENAME_TEMPLATE</code><em class="property"> = '%(track_number)02d %(track_title)s.mp3'</em><a class="headerlink" href="#flacmanager.MP3_FILENAME_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The format string for an MP3 filename.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.MP3_FILENAME_COMPILATION_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">MP3_FILENAME_COMPILATION_TEMPLATE</code><em class="property"> = '%(track_number)02d %(track_title)s (%(track_artist)s).mp3'</em><a class="headerlink" href="#flacmanager.MP3_FILENAME_COMPILATION_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The format string for an MP3 filename that is part of a compilation.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.MP3_FILENAME_DISCN_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">MP3_FILENAME_DISCN_TEMPLATE</code><em class="property"> = '%(disc_number)02d-%(track_number)02d %(track_title)s.mp3'</em><a class="headerlink" href="#flacmanager.MP3_FILENAME_DISCN_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The format string for an MP3 filename on an album of 2+ discs.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.MP3_FILENAME_DISCN_COMPILATION_TEMPLATE">
+<code class="descclassname">flacmanager.</code><code class="descname">MP3_FILENAME_DISCN_COMPILATION_TEMPLATE</code><em class="property"> = '%(disc_number)02d-%(track_number)02d %(track_title)s (%(track_artist)s).mp3'</em><a class="headerlink" href="#flacmanager.MP3_FILENAME_DISCN_COMPILATION_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The format string for an MP3 filename that is part of a compilation
+spanning 2+ discs.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.generate_mp3_basename">
+<code class="descclassname">flacmanager.</code><code class="descname">generate_mp3_basename</code><span class="sig-paren">(</span><em>metadata</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#generate_mp3_basename"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.generate_mp3_basename" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build the filename for a track&#8217;s MP3 file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a relative file name</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="flacmanager.TrackState">
+<em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">TrackState</code><span class="sig-paren">(</span><em>ordinal</em>, <em>key</em>, <em>text</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#TrackState"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.TrackState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="http://docs.python.org/3/library/functions.html#object" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Represents the state of a single track at any given time during
+the rip-and-tag operation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>ordinal</strong> (<a class="reference external" href="http://docs.python.org/3/library/functions.html#int" title="(in Python v3.4)"><em>int</em></a>) &#8211; this state&#8217;s relative value</li>
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; uniquely identifies this state</li>
+<li><strong>text</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; a short description of this state</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="flacmanager.TrackState.text">
+<code class="descname">text</code><a class="headerlink" href="#flacmanager.TrackState.text" title="Permalink to this definition">¶</a></dt>
+<dd><p>The track-independent short description of this state.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.TRACK_EXCLUDED">
+<code class="descclassname">flacmanager.</code><code class="descname">TRACK_EXCLUDED</code><em class="property"> = TrackState(-1, 'EXCLUDED', 'excluded')</em><a class="headerlink" href="#flacmanager.TRACK_EXCLUDED" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that a track is excluded from the rip-and-tag operation.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.TRACK_PENDING">
+<code class="descclassname">flacmanager.</code><code class="descname">TRACK_PENDING</code><em class="property"> = TrackState(0, 'PENDING', 'pending…')</em><a class="headerlink" href="#flacmanager.TRACK_PENDING" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the rip-and-tag process has not yet begun for a track.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.TRACK_ENCODING_FLAC">
+<code class="descclassname">flacmanager.</code><code class="descname">TRACK_ENCODING_FLAC</code><em class="property"> = TrackState(1, 'ENCODING_FLAC', 'encoding CDDA to FLAC…')</em><a class="headerlink" href="#flacmanager.TRACK_ENCODING_FLAC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that a track is being encoded from CDDA to FLAC format.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.TRACK_DECODING_WAV">
+<code class="descclassname">flacmanager.</code><code class="descname">TRACK_DECODING_WAV</code><em class="property"> = TrackState(2, 'DECODING_WAV', 'decoding FLAC to WAV…')</em><a class="headerlink" href="#flacmanager.TRACK_DECODING_WAV" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that a track is being decoded from FLAC to WAV format.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.TRACK_ENCODING_MP3">
+<code class="descclassname">flacmanager.</code><code class="descname">TRACK_ENCODING_MP3</code><em class="property"> = TrackState(3, 'ENCODING_MP3', 'encoding WAV to MP3…')</em><a class="headerlink" href="#flacmanager.TRACK_ENCODING_MP3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that a track is being encoded from WAV to MP3 format.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.TRACK_FAILED">
+<code class="descclassname">flacmanager.</code><code class="descname">TRACK_FAILED</code><em class="property"> = TrackState(99, 'FAILED', 'failed')</em><a class="headerlink" href="#flacmanager.TRACK_FAILED" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that an error occurred while processing a track.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="flacmanager.TRACK_COMPLETE">
+<code class="descclassname">flacmanager.</code><code class="descname">TRACK_COMPLETE</code><em class="property"> = TrackState(99, 'COMPLETE', 'complete')</em><a class="headerlink" href="#flacmanager.TRACK_COMPLETE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the rip-and-tag process has finished for a track.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flacmanager.TrackEncodingStatus">
+<em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">TrackEncodingStatus</code><span class="sig-paren">(</span><em>track_label</em>, <em>pending=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#TrackEncodingStatus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.TrackEncodingStatus" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="http://docs.python.org/3/library/functions.html#object" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>A simple state machine for a single track&#8217;s encoding status.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>track_label</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; the track&#8217;s display label</li>
+<li><strong>pending</strong> (<a class="reference external" href="http://docs.python.org/3/library/functions.html#bool" title="(in Python v3.4)"><em>bool</em></a>) &#8211; the default <code class="docutils literal"><span class="pre">True</span></code> initializes status as           <code class="xref py py-data docutils literal"><span class="pre">TRACK_PENDING</span></code>; set to <code class="docutils literal"><span class="pre">False</span></code> to initialize status           as <code class="xref py py-data docutils literal"><span class="pre">TRACK_EXCLUDED</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="flacmanager.TrackEncodingStatus.state">
+<code class="descname">state</code><a class="headerlink" href="#flacmanager.TrackEncodingStatus.state" title="Permalink to this definition">¶</a></dt>
+<dd><p>The current state of encoding for this track.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.TrackEncodingStatus.transition_to">
+<code class="descname">transition_to</code><span class="sig-paren">(</span><em>to_state</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#TrackEncodingStatus.transition_to"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.TrackEncodingStatus.transition_to" title="Permalink to this definition">¶</a></dt>
+<dd><p>Advance this track&#8217;s encoding state from its current state to
+<em>to_state</em>, if permitted.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>to_state</strong> &#8211; the target encoding state, or any                         <a class="reference external" href="http://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">Exception</span></code></a> to transition to                         <code class="xref py py-data docutils literal"><span class="pre">TRACK_FAILED</span></code></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><code class="docutils literal"><span class="pre">True</span></code> if the transition is successful,                 otherwise <code class="docutils literal"><span class="pre">False</span></code></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.TrackEncodingStatus.describe">
+<code class="descname">describe</code><span class="sig-paren">(</span><em>message=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#TrackEncodingStatus.describe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.TrackEncodingStatus.describe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a short display string for this track and its current
+status.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>message</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; short piece of text to use with the track                            label (instead of the default message for                            the current state)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flacmanager.FLACEncoder">
+<em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">FLACEncoder</code><a class="reference internal" href="_modules/flacmanager.html#FLACEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACEncoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="http://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
+<p>A thread that rips CD-DA tracks to FLAC.</p>
+<dl class="method">
+<dt id="flacmanager.FLACEncoder.add_instruction">
+<code class="descname">add_instruction</code><span class="sig-paren">(</span><em>track_index</em>, <em>cdda_filename</em>, <em>flac_filename</em>, <em>mp3_filename</em>, <em>track_metadata</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACEncoder.add_instruction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACEncoder.add_instruction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Schedule a track for FLAC encoding.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>track_index</strong> (<a class="reference external" href="http://docs.python.org/3/library/functions.html#int" title="(in Python v3.4)"><em>int</em></a>) &#8211; index (not ordinal) of the track</li>
+<li><strong>cdda_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute CD-DA file name</li>
+<li><strong>flac_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
+<li><strong>mp3_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.mp3</em> file name</li>
+<li><strong>track_metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACEncoder.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACEncoder.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACEncoder.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rip CD-DA tracks to FLAC.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.make_vorbis_comments">
+<code class="descclassname">flacmanager.</code><code class="descname">make_vorbis_comments</code><span class="sig-paren">(</span><em>metadata</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#make_vorbis_comments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.make_vorbis_comments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create Vorbis comments for tagging from <em>metadata</em>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the metadata for a single track</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Vorbis comment name/value pairs</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">dict</span></code></a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.encode_flac">
+<code class="descclassname">flacmanager.</code><code class="descname">encode_flac</code><span class="sig-paren">(</span><em>cdda_filename</em>, <em>flac_filename</em>, <em>track_metadata</em>, <em>stdout_filename=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#encode_flac"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.encode_flac" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rip a CDDA file to a tagged FLAC file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cdda_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute CD-DA file name</li>
+<li><strong>flac_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
+<li><strong>track_metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
+<li><strong>stdout_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="flacmanager.MP3Encoder">
+<em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">MP3Encoder</code><span class="sig-paren">(</span><em>track_index</em>, <em>cdda_filename</em>, <em>flac_filename</em>, <em>mp3_filename</em>, <em>stdout_filename</em>, <em>track_metadata</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#MP3Encoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.MP3Encoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="http://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
+<p>A thread that converts WAV files to MP3 files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>track_index</strong> (<a class="reference external" href="http://docs.python.org/3/library/functions.html#int" title="(in Python v3.4)"><em>int</em></a>) &#8211; index (not ordinal) of the track</li>
+<li><strong>cdda_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute CD-DA file name</li>
+<li><strong>flac_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
+<li><strong>stdout_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
+<li><strong>track_metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="flacmanager.MP3Encoder.run">
+<code class="descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#MP3Encoder.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.MP3Encoder.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decode FLAC to WAV, then encode WAV to MP3.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.decode_wav">
+<code class="descclassname">flacmanager.</code><code class="descname">decode_wav</code><span class="sig-paren">(</span><em>flac_filename</em>, <em>wav_filename</em>, <em>stdout_filename=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#decode_wav"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.decode_wav" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a FLAC file to a WAV file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>flac_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
+<li><strong>wav_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.wav</em> file name</li>
+<li><strong>stdout_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.make_id3v2_tags">
+<code class="descclassname">flacmanager.</code><code class="descname">make_id3v2_tags</code><span class="sig-paren">(</span><em>metadata</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#make_id3v2_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.make_id3v2_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create ID3v2 frames for tagging from <em>metadata</em>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the metadata for a single track</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">ID3v2 frame name/value pairs</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">dict</span></code></a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.encode_mp3">
+<code class="descclassname">flacmanager.</code><code class="descname">encode_mp3</code><span class="sig-paren">(</span><em>wav_filename</em>, <em>mp3_filename</em>, <em>track_metadata</em>, <em>stdout_filename=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#encode_mp3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.encode_mp3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a WAV file to an MP3 file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>wav_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.wav</em> file name</li>
+<li><strong>mp3_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.mp3</em> file name</li>
+<li><strong>track_metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
+<li><strong>stdout_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.get_lame_genres">
+<code class="descclassname">flacmanager.</code><code class="descname">get_lame_genres</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#get_lame_genres"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.get_lame_genres" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the list of genres recognized by LAME.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="miscellaneous.html" class="btn btn-neutral float-right" title="Miscellaneous API">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="metadata-aggregation.html" class="btn btn-neutral" title="Metadata aggregation API"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2013 - 2015, Matthew Zipay.
+    </p>
+  </div>
+
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.7.0+doc.2',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

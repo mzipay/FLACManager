@@ -1,0 +1,330 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Using FLAC Manager &mdash; FLAC Manager 0.7.0+doc.2 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.0+doc.2 documentation" href="_static/opensearch.xml"/>
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="FLAC Manager 0.7.0+doc.2 documentation" href="index.html"/>
+        <link rel="next" title="FLAC Manager API reference" href="api-ref.html"/>
+        <link rel="prev" title="What’s new in FLAC Manager" href="whats-new.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+          <a href="index.html" class="fa fa-home"> FLAC Manager</a>
+        
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="whats-new.html#current-release-release">Current release: 0.7.0+doc.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="whats-new.html#previous-releases">Previous releases</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Using FLAC Manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuring-flac-manager">Configuring FLAC Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-flac-manager">Running FLAC Manager</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user-interface.html">User interface API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="disc-info.html">Disc information API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metadata-aggregation.html">Metadata aggregation API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tagging-and-encoding.html">Audio tagging and encoding API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="miscellaneous.html">Miscellaneous API</a></li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">FLAC Manager</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Using FLAC Manager</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="using-flac-manager">
+<h1>Using FLAC Manager<a class="headerlink" href="#using-flac-manager" title="Permalink to this headline">¶</a></h1>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.0+doc.2</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="configuring-flac-manager">
+<h2>Configuring FLAC Manager<a class="headerlink" href="#configuring-flac-manager" title="Permalink to this headline">¶</a></h2>
+<p>FLAC Manager depends on a configuration file, <em>flacmanager.ini</em>, which resides
+alongside the <em>flacmanager.py</em> script in the file system.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If <em>flacmanager.ini</em> does not exist when FLAC Manager is run (e.g. on the
+first run), it will be created with default/empty values. In this case, a
+configuration editor dialog will be opened immediately.</p>
+</div>
+<p>The default configuration looks like this:</p>
+<div class="highlight-python"><div class="highlight"><pre>[Logging]
+format = %%(asctime)s %%(levelname)s %%(threadName)s %%(name)s %%(funcName)s %%(message)s
+level = WARNING
+filemode = w
+filename = flacmanager.log
+
+[HTTP]
+timeout = 5.0
+debuglevel = 0
+
+[Gracenote]
+client_id =
+user_id =
+
+[MusicBrainz]
+libdiscid_location =
+contact_url_or_email =
+
+[FLAC]
+library_root =
+flac_encode_options = --force --keep-foreign-metadata --verify
+flac_decode_options = --force
+
+[MP3]
+library_root =
+lame_encode_options = --replaygain-accurate --clipdetect -q 2 -V2 -b 224
+</pre></div>
+</div>
+<p>You <strong>must</strong> provide values for the Gracenote <em>client_id</em>, MusicBrainz
+<em>libdiscid_location</em> and <em>contact_url_or_email</em>, FLAC <em>library_root</em>, and MP3
+<em>library_root</em>. All other configuration settings may be left as-is or changed
+to your preferences.</p>
+<p>To obtain a Gracenote <em>client_id</em>, you must register for a
+<a class="reference external" href="https://developer.gracenote.com/">Gracenote Developer</a> account and create an
+application (you can call it &#8220;FLAC Manager&#8221;). Copy the Client ID for the
+created application and paste it into the <em>flacmanager.ini</em> file. FLAC Manager
+will take care of registering the application and persisting the <em>user_id</em> for
+you.</p>
+</div>
+<div class="section" id="running-flac-manager">
+<h2>Running FLAC Manager<a class="headerlink" href="#running-flac-manager" title="Permalink to this headline">¶</a></h2>
+<p>When you launch FLAC Manager (assuming you have already created/populated the
+<em>flacmanager.ini</em> file with valid values), it looks for an inserted CD-DA disc:</p>
+<img alt="_images/waiting.png" src="_images/waiting.png" />
+<p>FLAC Manager is polling your optical drive in the background, and will continue
+to do so until it detects that a disc has been inserted.</p>
+<p>Once a disc has been detected, FLAC Manager begins aggregating metadata from
+Gracenote and MusicBrainz:</p>
+<img alt="_images/aggregating.png" src="_images/aggregating.png" />
+<p>You can abort the aggregation process by ejecting the disc.</p>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 0.5: </span>If aggregation fails, an error dialog will describe the failure. Once this
+dialog is dismissed, you will be presented with options to either retry the
+metadata aggregation or edit the metadata offline:</p>
+<img alt="_images/aggregation-failure.png" src="_images/aggregation-failure.png" /><p>If you choose to edit the metadata offline, the editor will not contain any
+information other than the number of tracks:</p>
+<img alt="_images/offline-editing.png" src="_images/offline-editing.png" /></div>
+<p>If metadata aggregation completes successfully, you will be presented with the
+editor interface prepopulated with the aggregated metadata values:</p>
+<img alt="_images/tagging.png" src="_images/tagging.png" />
+<p>Here you can select from the aggregated metadata values or enter your own. Some
+fields present the option to &#8220;Apply to all tracks,&#8221; which does exactly as it
+suggests - copies the current value to the corresponding field of every track.</p>
+<p>By default, all tracks are &#8220;included,&#8221; which means they will be ripped to FLAC
+and MP3. To exclude a track, simply uncheck the box.</p>
+<p>When you are satisfied with the metadata values, click the &#8220;Rip and tag&#8221; button
+to begin the encoding process:</p>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 0.4: </span>As soon as the &#8220;Rip and tag&#8221; button is clicked to begin the encoding
+process, all album and track metadata field values are automatically
+saved. If ripping fails for any reason, re-inserting the disc will cause
+that persisted metadata to be restored so that you don&#8217;t have to re-enter
+the information by hand. If a cover image was persisted, it will be
+opened in Preview automatically when the metadata is restored.</p>
+</div>
+<img alt="_images/ripping.png" src="_images/ripping.png" />
+<p>Once all included tracks have been encoded to FLAC and MP3, the &#8220;Eject&#8221; button
+is enabled and you can eject the disc. FLAC Manager then waits for another
+disc to be inserted.</p>
+<div class="section" id="mapping-of-flac-manager-metadata-fields-to-itunes-metadata-fields">
+<h3>Mapping of FLAC Manager metadata fields to iTunes metadata fields<a class="headerlink" href="#mapping-of-flac-manager-metadata-fields-to-itunes-metadata-fields" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="46%" />
+<col width="54%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">FLAC Manager field</th>
+<th class="head">iTunes metadata field</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Album</td>
+<td>Album</td>
+</tr>
+<tr class="row-odd"><td>Disc # of #</td>
+<td>Disc Number</td>
+</tr>
+<tr class="row-even"><td>Album Artist</td>
+<td>Album Artist</td>
+</tr>
+<tr class="row-odd"><td>Track Title</td>
+<td>Name</td>
+</tr>
+<tr class="row-even"><td>Track # of #</td>
+<td>Track Number</td>
+</tr>
+<tr class="row-odd"><td>Track Artist</td>
+<td>Artist</td>
+</tr>
+<tr class="row-even"><td>Track Genre</td>
+<td>Genre</td>
+</tr>
+<tr class="row-odd"><td>Track Year</td>
+<td>Year</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="api-ref.html" class="btn btn-neutral float-right" title="FLAC Manager API reference">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="whats-new.html" class="btn btn-neutral" title="What’s new in FLAC Manager"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2013 - 2015, Matthew Zipay.
+    </p>
+  </div>
+
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.7.0+doc.2',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -1,0 +1,467 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>User interface API &mdash; FLAC Manager 0.7.0+doc.2 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.0+doc.2 documentation" href="_static/opensearch.xml"/>
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="FLAC Manager 0.7.0+doc.2 documentation" href="index.html"/>
+        <link rel="up" title="FLAC Manager API reference" href="api-ref.html"/>
+        <link rel="next" title="Disc information API" href="disc-info.html"/>
+        <link rel="prev" title="FLAC Manager API reference" href="api-ref.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+          <a href="index.html" class="fa fa-home"> FLAC Manager</a>
+        
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="whats-new.html#current-release-release">Current release: 0.7.0+doc.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="whats-new.html#previous-releases">Previous releases</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#configuring-flac-manager">Configuring FLAC Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#running-flac-manager">Running FLAC Manager</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="">User interface API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="disc-info.html">Disc information API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metadata-aggregation.html">Metadata aggregation API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tagging-and-encoding.html">Audio tagging and encoding API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="miscellaneous.html">Miscellaneous API</a></li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">FLAC Manager</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="api-ref.html">FLAC Manager API reference</a> &raquo;</li>
+      
+    <li>User interface API</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="user-interface-api">
+<h1>User interface API<a class="headerlink" href="#user-interface-api" title="Permalink to this headline">¶</a></h1>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.0+doc.2</td>
+</tr>
+</tbody>
+</table>
+<dl class="exception">
+<dt id="flacmanager.FLACManagerError">
+<em class="property">exception </em><code class="descclassname">flacmanager.</code><code class="descname">FLACManagerError</code><span class="sig-paren">(</span><em>message</em>, <em>context_hint=None</em>, <em>cause=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManagerError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManagerError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="http://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">Exception</span></code></a></p>
+<p>The type of exception raised when FLAC Manager operations fail.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>message</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; error message for logging or display</li>
+<li><strong>context_hint</strong> &#8211; describes the error context</li>
+<li><strong>cause</strong> (<a class="reference external" href="http://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.4)"><em>Exception</em></a>) &#8211; the exception that caused this error</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The optional <em>context_hint</em> is not part of the message, and may
+take any type or form. Exception handlers that catch
+<code class="docutils literal"><span class="pre">FLACManagerError</span></code> may choose to do something with the context
+hint, or may ignore it.</p>
+<p>The optional <em>cause</em> is the (caught) exception that caused this
+<code class="docutils literal"><span class="pre">FLACManagerError</span></code>.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="flacmanager.FLACManager">
+<em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">FLACManager</code><span class="sig-paren">(</span><em>master=None</em>, <em>need_config=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">tkinter.Frame</span></code></p>
+<p>The FLAC Manager user interface.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>master</strong> &#8211; the parent object of this frame</li>
+<li><strong>need_config</strong> (<a class="reference external" href="http://docs.python.org/3/library/functions.html#bool" title="(in Python v3.4)"><em>bool</em></a>) &#8211; <code class="docutils literal"><span class="pre">True</span></code> if <em>flacmanager.ini</em> is missing</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="flacmanager.FLACManager.TITLE">
+<code class="descname">TITLE</code><em class="property"> = 'FLAC Manager'</em><a class="headerlink" href="#flacmanager.FLACManager.TITLE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The user-friendly application name.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="flacmanager.FLACManager.USER_AGENT">
+<code class="descname">USER_AGENT</code><em class="property"> = 'FLACManager/0.7.0+doc.2 Python/3.4'</em><a class="headerlink" href="#flacmanager.FLACManager.USER_AGENT" title="Permalink to this definition">¶</a></dt>
+<dd><p>Any HTTP(S) request issued by FLAC Manager uses this value for the HTTP
+User-Agent header value.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.apply_album_artist_to_tracks">
+<code class="descname">apply_album_artist_to_tracks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.apply_album_artist_to_tracks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.apply_album_artist_to_tracks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set each track artist to the album artist.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.apply_album_performer_to_tracks">
+<code class="descname">apply_album_performer_to_tracks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.apply_album_performer_to_tracks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.apply_album_performer_to_tracks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set each track performer to the album performer.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.apply_album_genre_to_tracks">
+<code class="descname">apply_album_genre_to_tracks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.apply_album_genre_to_tracks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.apply_album_genre_to_tracks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set each track genre to the album genre.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.apply_album_year_to_tracks">
+<code class="descname">apply_album_year_to_tracks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.apply_album_year_to_tracks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.apply_album_year_to_tracks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set each track genre to the album genre.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.choose_cover_image">
+<code class="descname">choose_cover_image</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.choose_cover_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.choose_cover_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select the named cover image and open in Mac OS X Preview.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; label for the image</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.choose_cover_image_from_url">
+<code class="descname">choose_cover_image_from_url</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.choose_cover_image_from_url"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.choose_cover_image_from_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>Download a cover image from a user-provided URL and open in
+Mac OS X Preview.</p>
+<p>The downloaded cover image is made available in the cover image
+dropdown.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.choose_cover_image_from_file">
+<code class="descname">choose_cover_image_from_file</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.choose_cover_image_from_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.choose_cover_image_from_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open a user-defined cover image in Mac OS X Preview.</p>
+<p>The cover image is made available in the cover image dropdown.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.apply_include_to_tracks">
+<code class="descname">apply_include_to_tracks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.apply_include_to_tracks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.apply_include_to_tracks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set each track to be included/excluded based on the current
+track&#8217;s include/exclude state.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.toggle_track_editors_states">
+<code class="descname">toggle_track_editors_states</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.toggle_track_editors_states"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.toggle_track_editors_states" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enable/disable editors for the current track based on whether
+it is include or excluded, respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.refresh_track_editors">
+<code class="descname">refresh_track_editors</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.refresh_track_editors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.refresh_track_editors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Populate track editors with metadata for the current track.</p>
+<p>This method is called when navigating to another track. If
+navigation is at either end of the track list already (i.e.
+navigating &#8220;down&#8221; from track 1 or &#8220;up&#8221; from the last track),
+then this method is a no-op.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.rip_and_tag">
+<code class="descname">rip_and_tag</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.rip_and_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.rip_and_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create tagged FLAC and MP3 files of all included tracks.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.edit_config">
+<code class="descname">edit_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.edit_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.edit_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open the configuration editor dialog.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.prerequisites">
+<code class="descname">prerequisites</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.prerequisites"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.prerequisites" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open the prerequisites information dialog.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.FLACManager.about">
+<code class="descname">about</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#FLACManager.about"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACManager.about" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open the application description dialog.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flacmanager.AboutDialog">
+<em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">AboutDialog</code><span class="sig-paren">(</span><em>parent</em>, <em>title=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#AboutDialog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.AboutDialog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">tkinter.simpledialog.Dialog</span></code></p>
+<p>A dialog that describes FLAC Manager.</p>
+<p>Initialize a dialog.</p>
+<p>Arguments:</p>
+<blockquote>
+<div><p>parent &#8211; a parent window (the application window)</p>
+<p>title &#8211; the dialog title</p>
+</div></blockquote>
+<dl class="method">
+<dt id="flacmanager.AboutDialog.body">
+<code class="descname">body</code><span class="sig-paren">(</span><em>frame</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#AboutDialog.body"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.AboutDialog.body" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the content of the dialog.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.AboutDialog.buttonbox">
+<code class="descname">buttonbox</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#AboutDialog.buttonbox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.AboutDialog.buttonbox" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the button to dismiss the dialog.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flacmanager.PrerequisitesDialog">
+<em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">PrerequisitesDialog</code><span class="sig-paren">(</span><em>parent</em>, <em>title=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#PrerequisitesDialog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.PrerequisitesDialog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">tkinter.simpledialog.Dialog</span></code></p>
+<p>A dialog that describes all FLAC Manager prerequisites.</p>
+<p>Initialize a dialog.</p>
+<p>Arguments:</p>
+<blockquote>
+<div><p>parent &#8211; a parent window (the application window)</p>
+<p>title &#8211; the dialog title</p>
+</div></blockquote>
+<dl class="attribute">
+<dt id="flacmanager.PrerequisitesDialog.TEXT">
+<code class="descname">TEXT</code><em class="property"> = 'FLAC Manager runs on Python 3.3+.\n\nFLAC Manager requires the following external software components:\n* libdiscid (http://musicbrainz.org/doc/libdiscid)\n* flac (http://flac.sourceforge.net/)\n* lame (http://lame.sourceforge.net/)\n\nThe flac and lame command-line binaries must exist on your $PATH. Each of these components is also available through MacPorts (http://www.macports.org/).\n\nIn addition to the software listed above, FLAC Manager relies on the following Mac OS X command line utilties:\n* diskutil\n* open\n* mkdir\n\nYou must register for a Gracenote developer account (https://developer.gracenote.com/) in order for FLAC Manager\'s metadata aggregation to function properly:\n1. Create your Gracenote developer account.\n2. Create an app named &quot;FLAC Manager.&quot;\n3. Save your Gracenote Client ID in FLAC Manager\'s configuration file.\nFLAC Manager will automatically obtain and store the Gracenote User ID in the flacmanager.ini file.\n\n'</em><a class="headerlink" href="#flacmanager.PrerequisitesDialog.TEXT" title="Permalink to this definition">¶</a></dt>
+<dd><p>The content of the dialog.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.PrerequisitesDialog.body">
+<code class="descname">body</code><span class="sig-paren">(</span><em>frame</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#PrerequisitesDialog.body"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.PrerequisitesDialog.body" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the content of the dialog.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.PrerequisitesDialog.buttonbox">
+<code class="descname">buttonbox</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#PrerequisitesDialog.buttonbox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.PrerequisitesDialog.buttonbox" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the button to dismiss the dialog.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="flacmanager.EditConfigurationDialog">
+<em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">EditConfigurationDialog</code><span class="sig-paren">(</span><em>parent</em>, <em>title=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#EditConfigurationDialog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.EditConfigurationDialog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">tkinter.simpledialog.Dialog</span></code></p>
+<p>A dialog that allows the user to edit the <em>flacmanager.ini</em> file.</p>
+<p>Initialize a dialog.</p>
+<p>Arguments:</p>
+<blockquote>
+<div><p>parent &#8211; a parent window (the application window)</p>
+<p>title &#8211; the dialog title</p>
+</div></blockquote>
+<dl class="method">
+<dt id="flacmanager.EditConfigurationDialog.body">
+<code class="descname">body</code><span class="sig-paren">(</span><em>frame</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#EditConfigurationDialog.body"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.EditConfigurationDialog.body" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the content of the dialog.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.EditConfigurationDialog.buttonbox">
+<code class="descname">buttonbox</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#EditConfigurationDialog.buttonbox"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.EditConfigurationDialog.buttonbox" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the buttons to save and/or dismiss the dialog.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.EditConfigurationDialog.apply">
+<code class="descname">apply</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#EditConfigurationDialog.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.EditConfigurationDialog.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save changes to the <em>flacmanager.ini</em> file.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="flacmanager.show_exception_dialog">
+<code class="descclassname">flacmanager.</code><code class="descname">show_exception_dialog</code><span class="sig-paren">(</span><em>e</em>, <em>aborting=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#show_exception_dialog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.show_exception_dialog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open a dialog to display exception information.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>e</strong> (<a class="reference external" href="http://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.4)"><em>Exception</em></a>) &#8211; a caught exception</li>
+<li><strong>aborting</strong> (<a class="reference external" href="http://docs.python.org/3/library/functions.html#bool" title="(in Python v3.4)"><em>bool</em></a>) &#8211; <code class="docutils literal"><span class="pre">True</span></code> if the application will terminate</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="disc-info.html" class="btn btn-neutral float-right" title="Disc information API">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="api-ref.html" class="btn btn-neutral" title="FLAC Manager API reference"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2013 - 2015, Matthew Zipay.
+    </p>
+  </div>
+
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.7.0+doc.2',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

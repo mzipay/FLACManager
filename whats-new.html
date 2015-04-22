@@ -1,0 +1,265 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>What’s new in FLAC Manager &mdash; FLAC Manager 0.7.0+doc.2 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.0+doc.2 documentation" href="_static/opensearch.xml"/>
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="FLAC Manager 0.7.0+doc.2 documentation" href="index.html"/>
+        <link rel="next" title="Using FLAC Manager" href="usage.html"/>
+        <link rel="prev" title="Prerequisites for running FLAC Manager" href="prerequisites.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+          <a href="index.html" class="fa fa-home"> FLAC Manager</a>
+        
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">What&#8217;s new in FLAC Manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#current-release-release">Current release: 0.7.0+doc.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#previous-releases">Previous releases</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#configuring-flac-manager">Configuring FLAC Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#running-flac-manager">Running FLAC Manager</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user-interface.html">User interface API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="disc-info.html">Disc information API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="metadata-aggregation.html">Metadata aggregation API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tagging-and-encoding.html">Audio tagging and encoding API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="miscellaneous.html">Miscellaneous API</a></li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">FLAC Manager</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>What&#8217;s new in FLAC Manager</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="what-s-new-in-flac-manager">
+<h1>What&#8217;s new in FLAC Manager<a class="headerlink" href="#what-s-new-in-flac-manager" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="current-release-release">
+<h2>Current release: 0.7.0+doc.2<a class="headerlink" href="#current-release-release" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>fixed a priority queueing bug where relatively small encoded files would
+misreport their actual statuses</li>
+<li>the wait time between all <a class="reference external" href="http://docs.python.org/3/library/queue.html#queue.Queue.get_nowait" title="(in Python v3.4)"><code class="xref py py-meth docutils literal"><span class="pre">queue.Queue.get_nowait()</span></code></a> calls is now
+configurable via <a class="reference internal" href="miscellaneous.html#flacmanager.QUEUE_GET_NOWAIT_AFTER" title="flacmanager.QUEUE_GET_NOWAIT_AFTER"><code class="xref py py-data docutils literal"><span class="pre">flacmanager.QUEUE_GET_NOWAIT_AFTER</span></code></a></li>
+<li>tested on Mac OS X 10.10.1</li>
+</ul>
+</div>
+<div class="section" id="previous-releases">
+<h2>Previous releases<a class="headerlink" href="#previous-releases" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="release-0-6-0">
+<h3>Release 0.6.0<a class="headerlink" href="#release-0-6-0" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>updated to use Mac OS X <a class="reference external" href="https://developer.apple.com/library/mac/documentation/Darwin/Reference/Manpages/man8/diskutil.8.html">diskutil</a>
+instead of <code class="docutils literal"><span class="pre">disktool</span></code></li>
+<li>updated documentation to reflect necessary changes caused by Mac OS X 10.9.2
+upgrade</li>
+<li>tested on Mac OS X 10.9.2</li>
+</ul>
+</div>
+<div class="section" id="release-0-5-0">
+<h3>Release 0.5.0<a class="headerlink" href="#release-0-5-0" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>added offline metadata editing support</li>
+</ul>
+</div>
+<div class="section" id="release-0-4-2">
+<h3>Release 0.4.2<a class="headerlink" href="#release-0-4-2" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>added a note in <a class="reference internal" href="usage.html"><em>Using FLAC Manager</em></a> regarding metadata persistence</li>
+<li>fixed a bug in FLAC encoding status reporting where the status updates would
+accumulate, incrementally growing the status line in length rather than
+&#8220;refreshing&#8221; the percent complete and ratio display (caused by recent updates
+to python3.3 and/or flac ports)</li>
+</ul>
+</div>
+<div class="section" id="release-0-4-1">
+<h3>Release 0.4.1<a class="headerlink" href="#release-0-4-1" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>updated documentation to reflect correct version</li>
+</ul>
+</div>
+<div class="section" id="release-0-4-0">
+<h3>Release 0.4.0<a class="headerlink" href="#release-0-4-0" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>added ability persist and restore user-specified metadata per disc (easier
+recovery from ripping errors - no need to re-enter information)</li>
+<li>fixed a bug in configuration editor where the MP3 <code class="docutils literal"><span class="pre">library_root</span></code> setting
+was not being updated</li>
+</ul>
+</div>
+<div class="section" id="release-0-3-0">
+<h3>Release 0.3.0<a class="headerlink" href="#release-0-3-0" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>support for encoding MP3s in a location different than for FLACs (easier
+uploading via Google Play Music Manager)</li>
+</ul>
+</div>
+<div class="section" id="release-0-2-0">
+<h3>Release 0.2.0<a class="headerlink" href="#release-0-2-0" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>fixed missing blockquote of configuration sample on the <a class="reference internal" href="usage.html"><em>Using FLAC Manager</em></a> page</li>
+<li>fixed a bug in <a class="reference internal" href="disc-info.html#flacmanager.get_disc_info" title="flacmanager.get_disc_info"><code class="xref py py-func docutils literal"><span class="pre">flacmanager.get_disc_info()</span></code></a> (faulty regex) where an
+inserted disc with an apostrophe in the disc title would cause the mountpoint
+to be misreported</li>
+<li>new default naming for album folder and file names based on disc number,
+track number, compilation</li>
+<li>fixed <a class="reference internal" href="user-interface.html#flacmanager.AboutDialog" title="flacmanager.AboutDialog"><code class="xref py py-class docutils literal"><span class="pre">flacmanager.AboutDialog</span></code></a> to read license from <em>LICENSE.txt</em>
+instead of <code class="docutils literal"><span class="pre">flacmanager.__doc__</span></code></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="usage.html" class="btn btn-neutral float-right" title="Using FLAC Manager">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="prerequisites.html" class="btn btn-neutral" title="Prerequisites for running FLAC Manager"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2013 - 2015, Matthew Zipay.
+    </p>
+  </div>
+
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.7.0+doc.2',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
