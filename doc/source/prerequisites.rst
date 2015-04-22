@@ -4,13 +4,17 @@ Prerequisites for running FLAC Manager
 
 :Release: |release|
 
-.. note::
-   FLAC Manager requires `Python 3.3+
-   <https://www.python.org/downloads/mac-osx/>`_ and the :py:mod:`tkinter`
-   module to run.
+FLAC Manager requires `Python 3.3+
+<https://www.python.org/downloads/mac-osx/>`_ and the :py:mod:`tkinter` module
+to run.
 
-FLAC Manager has several software prerequisites. Each of the following can be
-installed via `MacPorts <http://www.macports.org/>`_, or follow the links to
+Additionally, you **must** register for a
+`Gracenote Developer <https://developer.gracenote.com/>`_ account to obtain a
+user ID and client ID (which you must then provide in the *flacmanager.ini*
+configuration file).
+
+FLAC Manager also has several software prerequisites. Each of the following can
+be installed via `MacPorts <http://www.macports.org/>`_, or follow the links to
 the original project pages to download sources and build/install yourself.
 
 * `flac - Command-line FLAC encoder/decoder <http://flac.sourceforge.net/>`_

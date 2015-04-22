@@ -60,10 +60,14 @@ Table of Contents
 Download and Install
 --------------------
 
-FLAC Manager can be downloaded or cloned from
-`<https://bitbucket.org/mzipay/flac-manager>`_. There is
-no installation process; simply drop *flacmanager.py* into a location of your
-choosing and run it.
+Clone or fork the repository from GitHub::
+
+   $ git clone https://github.com/mzipay/FLACManager.git
+
+Alternatively, download a *.tar.gz* or *.zip* source archive from
+https://github.com/mzipay/FLACManager/releases.
+
+There is no installation process; simply run ``python flacmanager.py``.
 
 Indices and tables
 ==================
