@@ -8,6 +8,14 @@ FLAC Manager requires `Python 3.3+
 <https://www.python.org/downloads/mac-osx/>`_ and the :py:mod:`tkinter` module
 to run.
 
+.. warning::
+
+   `Apple no longer includes X11 with OS X
+   <https://support.apple.com/en-us/HT201341>`_. If you encounter an error
+   message indicating that the ``DISPLAY`` environment variable is undefined
+   when attempting to run FLAC Manager, you will need to install `XQuartz
+   <http://xquartz.macosforge.org/>`_.
+
 Additionally, you **must** register for a
 `Gracenote Developer <https://developer.gracenote.com/>`_ account to obtain a
 user ID and client ID (which you must then provide in the *flacmanager.ini*
