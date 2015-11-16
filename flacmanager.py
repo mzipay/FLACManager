@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
 # FLAC Manager -- an audio metadata aggregator and FLAC+MP3 encoder
@@ -26,7 +26,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.7.0+doc.2"
+__version__ = "0.7.1"
 
 """
 Please read the following articles before using FLAC Manager!
@@ -153,13 +153,11 @@ def get_disc_info():
     is_cd_partition_scheme = False
     is_cd_da = False
     for line in StringIO(output):
-        if (line.startswith("/dev/")):
-            device = line.strip()
-            is_cd_partition_scheme = False
-            is_cd_da = False
+        tokens = line.split()
+        if (tokens[0].startswith("/dev/")):
+            device = tokens[0]
             continue
 
-        tokens = line.split()
         if ("CD_partition_scheme" in tokens):
             _logger.debug("%s: %s", device, line)
             is_cd_partition_scheme = True
@@ -2824,7 +2822,7 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
         api_host = self.API_HOST_TEMPLATE % self._client_id.split('-', 1)[0]
         self.timeout = config.getfloat("HTTP", "timeout")
         self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-        self._ssl_context.verify_mode = ssl.CERT_REQUIRED
+        self._ssl_context.verify_mode = ssl.CERT_NONE
         self._ssl_context.set_default_verify_paths()
         self._conx = HTTPSConnection(api_host, context=self._ssl_context,
                                      timeout=self.timeout)
