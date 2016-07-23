@@ -5,21 +5,21 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
+  
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Audio tagging and encoding API &mdash; FLAC Manager 0.7.0+doc.2 documentation</title>
+  <title>Audio tagging and encoding API &mdash; FLAC Manager 0.7.2 documentation</title>
   
 
   
   
 
   
-  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
 
   
   
     
-      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.0+doc.2 documentation" href="_static/opensearch.xml"/>
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.2 documentation" href="_static/opensearch.xml"/>
     
 
   
@@ -32,13 +32,13 @@
   
 
   
-    <link rel="top" title="FLAC Manager 0.7.0+doc.2 documentation" href="index.html"/>
+    <link rel="top" title="FLAC Manager 0.7.2 documentation" href="index.html"/>
         <link rel="up" title="FLAC Manager API reference" href="api-ref.html"/>
         <link rel="next" title="Miscellaneous API" href="miscellaneous.html"/>
         <link rel="prev" title="Metadata aggregation API" href="metadata-aggregation.html"/> 
 
   
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+  <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
@@ -48,11 +48,27 @@
 
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-nav-search">
-        
-          <a href="index.html" class="fa fa-home"> FLAC Manager</a>
-        
-        
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> FLAC Manager
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.7.2
+              </div>
+            
+          
+
+          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -60,38 +76,32 @@
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-      </div>
 
-      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-        
           
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
-              <ul class="current">
+            
+            
+                <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="whats-new.html#current-release-release">Current release: 0.7.0+doc.2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="whats-new.html#previous-releases">Previous releases</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#configuring-flac-manager">Configuring FLAC Manager</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#running-flac-manager">Running FLAC Manager</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="user-interface.html">User interface API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="disc-info.html">Disc information API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="metadata-aggregation.html">Metadata aggregation API</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="">Audio tagging and encoding API</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Audio tagging and encoding API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="miscellaneous.html">Miscellaneous API</a></li>
 </ul>
 </li>
 </ul>
 
+            
           
-        
+        </div>
       </div>
-      &nbsp;
     </nav>
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
@@ -106,7 +116,13 @@
       
       <div class="wy-nav-content">
         <div class="rst-content">
-          <div role="navigation" aria-label="breadcrumbs navigation">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
@@ -115,11 +131,14 @@
     <li>Audio tagging and encoding API</li>
       <li class="wy-breadcrumbs-aside">
         
+          
+        
       </li>
   </ul>
   <hr/>
 </div>
-          <div role="main" class="document">
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   <div class="section" id="audio-tagging-and-encoding-api">
 <h1>Audio tagging and encoding API<a class="headerlink" href="#audio-tagging-and-encoding-api" title="Permalink to this headline">¶</a></h1>
@@ -127,7 +146,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.0+doc.2</td>
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.2</td>
 </tr>
 </tbody>
 </table>
@@ -180,15 +199,15 @@ compilation.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>library_root</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; the FLAC library directory</li>
-<li><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</li>
+<li><strong>library_root</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; the FLAC library directory</li>
+<li><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">an absolute directory path</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></p>
 </td>
 </tr>
 </tbody>
@@ -228,11 +247,11 @@ spanning 2+ discs.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a relative file name</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></td>
 </tr>
 </tbody>
 </table>
@@ -262,15 +281,15 @@ compilation.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>library_root</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; the MP3 library directory</li>
-<li><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</li>
+<li><strong>library_root</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; the MP3 library directory</li>
+<li><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">an absolute directory path</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></p>
 </td>
 </tr>
 </tbody>
@@ -310,11 +329,11 @@ spanning 2+ discs.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; the finalized metadata for a single track</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a relative file name</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></td>
 </tr>
 </tbody>
 </table>
@@ -323,7 +342,7 @@ spanning 2+ discs.</p>
 <dl class="class">
 <dt id="flacmanager.TrackState">
 <em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">TrackState</code><span class="sig-paren">(</span><em>ordinal</em>, <em>key</em>, <em>text</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#TrackState"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.TrackState" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="http://docs.python.org/3/library/functions.html#object" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <p>Represents the state of a single track at any given time during
 the rip-and-tag operation.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -331,9 +350,9 @@ the rip-and-tag operation.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>ordinal</strong> (<a class="reference external" href="http://docs.python.org/3/library/functions.html#int" title="(in Python v3.4)"><em>int</em></a>) &#8211; this state&#8217;s relative value</li>
-<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; uniquely identifies this state</li>
-<li><strong>text</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; a short description of this state</li>
+<li><strong>ordinal</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) &#8211; this state&#8217;s relative value</li>
+<li><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; uniquely identifies this state</li>
+<li><strong>text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; a short description of this state</li>
 </ul>
 </td>
 </tr>
@@ -392,15 +411,15 @@ the rip-and-tag operation.</p>
 <dl class="class">
 <dt id="flacmanager.TrackEncodingStatus">
 <em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">TrackEncodingStatus</code><span class="sig-paren">(</span><em>track_label</em>, <em>pending=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#TrackEncodingStatus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.TrackEncodingStatus" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="http://docs.python.org/3/library/functions.html#object" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <p>A simple state machine for a single track&#8217;s encoding status.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>track_label</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; the track&#8217;s display label</li>
-<li><strong>pending</strong> (<a class="reference external" href="http://docs.python.org/3/library/functions.html#bool" title="(in Python v3.4)"><em>bool</em></a>) &#8211; the default <code class="docutils literal"><span class="pre">True</span></code> initializes status as           <code class="xref py py-data docutils literal"><span class="pre">TRACK_PENDING</span></code>; set to <code class="docutils literal"><span class="pre">False</span></code> to initialize status           as <code class="xref py py-data docutils literal"><span class="pre">TRACK_EXCLUDED</span></code></li>
+<li><strong>track_label</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; the track&#8217;s display label</li>
+<li><strong>pending</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.5)"><em>bool</em></a>) &#8211; the default <code class="docutils literal"><span class="pre">True</span></code> initializes status as           <code class="xref py py-data docutils literal"><span class="pre">TRACK_PENDING</span></code>; set to <code class="docutils literal"><span class="pre">False</span></code> to initialize status           as <code class="xref py py-data docutils literal"><span class="pre">TRACK_EXCLUDED</span></code></li>
 </ul>
 </td>
 </tr>
@@ -421,7 +440,7 @@ the rip-and-tag operation.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>to_state</strong> &#8211; the target encoding state, or any                         <a class="reference external" href="http://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">Exception</span></code></a> to transition to                         <code class="xref py py-data docutils literal"><span class="pre">TRACK_FAILED</span></code></td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>to_state</strong> &#8211; the target encoding state, or any                         <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">Exception</span></code></a> to transition to                         <code class="xref py py-data docutils literal"><span class="pre">TRACK_FAILED</span></code></td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><code class="docutils literal"><span class="pre">True</span></code> if the transition is successful,                 otherwise <code class="docutils literal"><span class="pre">False</span></code></td>
 </tr>
@@ -438,7 +457,7 @@ status.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>message</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; short piece of text to use with the track                            label (instead of the default message for                            the current state)</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>message</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; short piece of text to use with the track                            label (instead of the default message for                            the current state)</td>
 </tr>
 </tbody>
 </table>
@@ -449,7 +468,7 @@ status.</p>
 <dl class="class">
 <dt id="flacmanager.FLACEncoder">
 <em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">FLACEncoder</code><a class="reference internal" href="_modules/flacmanager.html#FLACEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.FLACEncoder" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="http://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
 <p>A thread that rips CD-DA tracks to FLAC.</p>
 <dl class="method">
 <dt id="flacmanager.FLACEncoder.add_instruction">
@@ -460,11 +479,11 @@ status.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>track_index</strong> (<a class="reference external" href="http://docs.python.org/3/library/functions.html#int" title="(in Python v3.4)"><em>int</em></a>) &#8211; index (not ordinal) of the track</li>
-<li><strong>cdda_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute CD-DA file name</li>
-<li><strong>flac_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
-<li><strong>mp3_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.mp3</em> file name</li>
-<li><strong>track_metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
+<li><strong>track_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) &#8211; index (not ordinal) of the track</li>
+<li><strong>cdda_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute CD-DA file name</li>
+<li><strong>flac_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
+<li><strong>mp3_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute <em>.mp3</em> file name</li>
+<li><strong>track_metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
 </ul>
 </td>
 </tr>
@@ -488,11 +507,11 @@ status.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the metadata for a single track</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; the metadata for a single track</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Vorbis comment name/value pairs</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">dict</span></code></a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><code class="xref py py-obj docutils literal"><span class="pre">dict</span></code></a></td>
 </tr>
 </tbody>
 </table>
@@ -507,10 +526,10 @@ status.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>cdda_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute CD-DA file name</li>
-<li><strong>flac_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
-<li><strong>track_metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
-<li><strong>stdout_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
+<li><strong>cdda_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute CD-DA file name</li>
+<li><strong>flac_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
+<li><strong>track_metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
+<li><strong>stdout_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
 </ul>
 </td>
 </tr>
@@ -521,18 +540,18 @@ status.</p>
 <dl class="class">
 <dt id="flacmanager.MP3Encoder">
 <em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">MP3Encoder</code><span class="sig-paren">(</span><em>track_index</em>, <em>cdda_filename</em>, <em>flac_filename</em>, <em>mp3_filename</em>, <em>stdout_filename</em>, <em>track_metadata</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#MP3Encoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.MP3Encoder" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="http://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
 <p>A thread that converts WAV files to MP3 files.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>track_index</strong> (<a class="reference external" href="http://docs.python.org/3/library/functions.html#int" title="(in Python v3.4)"><em>int</em></a>) &#8211; index (not ordinal) of the track</li>
-<li><strong>cdda_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute CD-DA file name</li>
-<li><strong>flac_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
-<li><strong>stdout_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
-<li><strong>track_metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
+<li><strong>track_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.5)"><em>int</em></a>) &#8211; index (not ordinal) of the track</li>
+<li><strong>cdda_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute CD-DA file name</li>
+<li><strong>flac_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
+<li><strong>stdout_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
+<li><strong>track_metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
 </ul>
 </td>
 </tr>
@@ -555,9 +574,9 @@ status.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>flac_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
-<li><strong>wav_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.wav</em> file name</li>
-<li><strong>stdout_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
+<li><strong>flac_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute <em>.flac</em> file name</li>
+<li><strong>wav_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute <em>.wav</em> file name</li>
+<li><strong>stdout_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
 </ul>
 </td>
 </tr>
@@ -573,11 +592,11 @@ status.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the metadata for a single track</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; the metadata for a single track</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">ID3v2 frame name/value pairs</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">dict</span></code></a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><code class="xref py py-obj docutils literal"><span class="pre">dict</span></code></a></td>
 </tr>
 </tbody>
 </table>
@@ -592,10 +611,10 @@ status.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>wav_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.wav</em> file name</li>
-<li><strong>mp3_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute <em>.mp3</em> file name</li>
-<li><strong>track_metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
-<li><strong>stdout_filename</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
+<li><strong>wav_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute <em>.wav</em> file name</li>
+<li><strong>mp3_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute <em>.mp3</em> file name</li>
+<li><strong>track_metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; tagging fields for this track</li>
+<li><strong>stdout_filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; absolute file name for redirected stdout</li>
 </ul>
 </td>
 </tr>
@@ -612,15 +631,16 @@ status.</p>
 </div>
 
 
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="miscellaneous.html" class="btn btn-neutral float-right" title="Miscellaneous API">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="miscellaneous.html" class="btn btn-neutral float-right" title="Miscellaneous API" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="metadata-aggregation.html" class="btn btn-neutral" title="Metadata aggregation API"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="metadata-aggregation.html" class="btn btn-neutral" title="Metadata aggregation API" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -629,13 +649,14 @@ status.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2013 - 2015, Matthew Zipay.
+        &copy; Copyright 2013 - 2016, Matthew Zipay.
+
     </p>
   </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
-  
 </footer>
+
         </div>
       </div>
 
@@ -650,7 +671,7 @@ status.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.7.0+doc.2',
+            VERSION:'0.7.2',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

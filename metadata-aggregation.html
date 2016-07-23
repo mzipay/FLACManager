@@ -5,21 +5,21 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
+  
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Metadata aggregation API &mdash; FLAC Manager 0.7.0+doc.2 documentation</title>
+  <title>Metadata aggregation API &mdash; FLAC Manager 0.7.2 documentation</title>
   
 
   
   
 
   
-  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
 
   
   
     
-      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.0+doc.2 documentation" href="_static/opensearch.xml"/>
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.2 documentation" href="_static/opensearch.xml"/>
     
 
   
@@ -32,13 +32,13 @@
   
 
   
-    <link rel="top" title="FLAC Manager 0.7.0+doc.2 documentation" href="index.html"/>
+    <link rel="top" title="FLAC Manager 0.7.2 documentation" href="index.html"/>
         <link rel="up" title="FLAC Manager API reference" href="api-ref.html"/>
         <link rel="next" title="Audio tagging and encoding API" href="tagging-and-encoding.html"/>
         <link rel="prev" title="Disc information API" href="disc-info.html"/> 
 
   
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+  <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
@@ -48,11 +48,27 @@
 
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-nav-search">
-        
-          <a href="index.html" class="fa fa-home"> FLAC Manager</a>
-        
-        
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> FLAC Manager
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.7.2
+              </div>
+            
+          
+
+          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -60,38 +76,32 @@
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-      </div>
 
-      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-        
           
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
-              <ul class="current">
+            
+            
+                <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="whats-new.html#current-release-release">Current release: 0.7.0+doc.2</a></li>
-<li class="toctree-l2"><a class="reference internal" href="whats-new.html#previous-releases">Previous releases</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#configuring-flac-manager">Configuring FLAC Manager</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#running-flac-manager">Running FLAC Manager</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="user-interface.html">User interface API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="disc-info.html">Disc information API</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="">Metadata aggregation API</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Metadata aggregation API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tagging-and-encoding.html">Audio tagging and encoding API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="miscellaneous.html">Miscellaneous API</a></li>
 </ul>
 </li>
 </ul>
 
+            
           
-        
+        </div>
       </div>
-      &nbsp;
     </nav>
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
@@ -106,7 +116,13 @@
       
       <div class="wy-nav-content">
         <div class="rst-content">
-          <div role="navigation" aria-label="breadcrumbs navigation">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
@@ -115,11 +131,14 @@
     <li>Metadata aggregation API</li>
       <li class="wy-breadcrumbs-aside">
         
+          
+        
       </li>
   </ul>
   <hr/>
 </div>
-          <div role="main" class="document">
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   <div class="section" id="metadata-aggregation-api">
 <h1>Metadata aggregation API<a class="headerlink" href="#metadata-aggregation-api" title="Permalink to this headline">¶</a></h1>
@@ -127,7 +146,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.0+doc.2</td>
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.2</td>
 </tr>
 </tbody>
 </table>
@@ -141,9 +160,9 @@
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>message</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><em>str</em></a>) &#8211; error message for logging or display</li>
+<li><strong>message</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; error message for logging or display</li>
 <li><strong>context_hint</strong> &#8211; describes the error context</li>
-<li><strong>cause</strong> (<a class="reference external" href="http://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.4)"><em>Exception</em></a>) &#8211; the exception that caused this error</li>
+<li><strong>cause</strong> (<a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.5)"><em>Exception</em></a>) &#8211; the exception that caused this error</li>
 </ul>
 </td>
 </tr>
@@ -160,7 +179,7 @@ hint, or may ignore it.</p>
 <dl class="class">
 <dt id="flacmanager.MetadataCollector">
 <em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">MetadataCollector</code><span class="sig-paren">(</span><em>toc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#MetadataCollector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.MetadataCollector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="http://docs.python.org/3/library/functions.html#object" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <p>Base class for collecting album and track metadata.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -270,7 +289,7 @@ choices for a disc identified by its MusicBrainz ID.</p>
 
 <dl class="attribute">
 <dt id="flacmanager.MusicBrainzMetadataCollector.USER_AGENT_TEMPLATE">
-<code class="descname">USER_AGENT_TEMPLATE</code><em class="property"> = 'FLACManager/0.7.0+doc.2 Python/3.4 ( %s )'</em><a class="headerlink" href="#flacmanager.MusicBrainzMetadataCollector.USER_AGENT_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<code class="descname">USER_AGENT_TEMPLATE</code><em class="property"> = 'FLACManager/0.7.2 Python/3.5 ( %s )'</em><a class="headerlink" href="#flacmanager.MusicBrainzMetadataCollector.USER_AGENT_TEMPLATE" title="Permalink to this definition">¶</a></dt>
 <dd><p>HTTP User-Agent format string for MusicBrainz requests.</p>
 </dd></dl>
 
@@ -298,7 +317,7 @@ choices for a disc identified by its MusicBrainz ID.</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a MusicBrainz Disc ID for <em>toc</em></td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.4)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></td>
 </tr>
 </tbody>
 </table>
@@ -346,7 +365,7 @@ metadata choices for a disc.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="http://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.4)"><em>dict</em></a>) &#8211; the finalized metadata for a disc</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; the finalized metadata for a disc</td>
 </tr>
 </tbody>
 </table>
@@ -373,7 +392,7 @@ the field.</p>
 <dl class="class">
 <dt id="flacmanager.MetadataAggregator">
 <em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">MetadataAggregator</code><span class="sig-paren">(</span><em>toc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#MetadataAggregator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.MetadataAggregator" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#flacmanager.MetadataCollector" title="flacmanager.MetadataCollector"><code class="xref py py-class docutils literal"><span class="pre">flacmanager.MetadataCollector</span></code></a>, <a class="reference external" href="http://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.4)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#flacmanager.MetadataCollector" title="flacmanager.MetadataCollector"><code class="xref py py-class docutils literal"><span class="pre">flacmanager.MetadataCollector</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -399,15 +418,16 @@ the field.</p>
 </div>
 
 
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="tagging-and-encoding.html" class="btn btn-neutral float-right" title="Audio tagging and encoding API">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="tagging-and-encoding.html" class="btn btn-neutral float-right" title="Audio tagging and encoding API" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="disc-info.html" class="btn btn-neutral" title="Disc information API"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="disc-info.html" class="btn btn-neutral" title="Disc information API" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -416,13 +436,14 @@ the field.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2013 - 2015, Matthew Zipay.
+        &copy; Copyright 2013 - 2016, Matthew Zipay.
+
     </p>
   </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
-  
 </footer>
+
         </div>
       </div>
 
@@ -437,7 +458,7 @@ the field.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.7.0+doc.2',
+            VERSION:'0.7.2',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
