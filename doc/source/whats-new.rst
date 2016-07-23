@@ -4,14 +4,20 @@ What's new in FLAC Manager
 
 Current release: |release|
 ==========================
+* now persists metadata *before* preparing to encode the CD-DA data
+  (see https://github.com/mzipay/FLACManager/issues/1)
+* tested on Mac OS X 10.11.5
+
+Previous releases
+=================
+
+Release 0.7.1
+-------------
 * fixed a bug in the disc check loop caused by a change to ``diskutil`` output
   in El Capitan
 * relaxed the SSL certificate verification when connecting to an HTTPS source
   for metadata or cover images
 * tested on Mac OS X 10.11.1 (El Capitan)
-
-Previous releases
-=================
 
 Release 0.7.0
 -------------

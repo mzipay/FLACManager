@@ -26,7 +26,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 
 """
 Please read the following articles before using FLAC Manager!
@@ -1421,6 +1421,7 @@ class FLACManager(tk.Frame):
             self.encoding_status_frame = None
         self.disc_eject_button.config(state=tk.DISABLED)
         self.rip_and_tag_button.config(state=tk.DISABLED)
+        self._persist_metadata()
         try:
             encoder = self._prepare_encoder()
         except Exception as e:
@@ -1429,7 +1430,6 @@ class FLACManager(tk.Frame):
             self.disc_eject_button.config(state=tk.NORMAL)
             self.rip_and_tag_button.config(state=tk.NORMAL)
         else:
-            self._persist_metadata()
             encoder.start()
             self._monitor_encoding_progress()
         self.__logger.debug("RETURN")
