@@ -2577,14 +2577,10 @@ def encode_flac(
         command.append("--picture=%s" % track_metadata["album_cover"])
 
     vorbis_comments = make_vorbis_comments(track_metadata)
-    #TODO: just make all values lists instead of checking instance here
-    for (name, value) in vorbis_comments.items():
-        if not value:
+    for (name, values) in vorbis_comments.items():
+        if not values:
             continue
-        elif isinstance(value, list):
-            command.extend(["--tag=%s=%s" % (name, val) for val in value])
-        else:
-            command.append("--tag=%s=%s" % (name, value))
+        command.extend(["--tag=%s=%s" % (name, value) for value in values])
 
     command.append("--output-name=%s" % flac_filename)
     command.append(cdda_filename)
@@ -2655,17 +2651,12 @@ def encode_mp3(
         command.extend(["--ti", track_metadata["album_cover"]])
 
     id3v2_tags = make_id3v2_tags(track_metadata)
-    #TODO: just make all values lists instead of checking instance here
-    for (name, value) in id3v2_tags.items():
-        if not value:
+    for (name, values) in id3v2_tags.items():
+        if not values:
             continue
-        elif isinstance(value, list):
-            # ID3v2 spec calls for '/' separator, but iTunes only handles ','
-            # separator correctly
-            combined_value = ", ".join(value)
-            command.extend(["--tv", "%s=%s" % (name, combined_value)])
-        else:
-            command.extend(["--tv", "%s=%s" % (name, value)])
+        # ID3v2 spec calls for '/' separator, but iTunes only handles ','
+        # separator correctly
+        command.extend(["--tv", "%s=%s" % (name, ", ".join(values))])
 
     command.append(wav_filename)
     command.append(mp3_filename)
@@ -2706,21 +2697,29 @@ def make_vorbis_comments(metadata):
     """
     _logger.debug("TRACE metadata = %r", metadata)
 
-    vorbis_comments = dict(
-        ALBUM=metadata["album_title"],
-        DISCNUMBER=metadata["disc_number"],
-        DISCTOTAL=metadata["disc_total"],
-        TRACKNUMBER=metadata["track_number"],
-        TRACKTOTAL=metadata["track_total"],
-        TITLE=metadata["track_title"],
-        ARTIST=metadata["track_artist"],
-        PERFORMER=metadata["track_performer"],
-        GENRE=re.split(r"\s*,\s*", metadata["track_genre"]),
-        DATE=metadata["track_year"]
-    )
+    comments = {}
+    comments["ALBUM"] = \
+        [metadata["album_title"]] if metadata["album_title"] else []
+    comments["DISCNUMBER"] = \
+        [metadata["disc_number"]] if metadata["disc_number"] else []
+    comments["DISCTOTAL"] = \
+        [metadata["disc_total"]] if metadata["disc_total"] else []
+    comments["TRACKNUMBER"] = \
+        [metadata["track_number"]] if metadata["track_number"] else []
+    comments["TRACKTOTAL"] = \
+        [metadata["track_total"]] if metadata["track_total"] else []
+    comments["TITLE"] = \
+        [metadata["track_title"]] if metadata["track_title"] else []
+    comments["ARTIST"] = \
+        [metadata["track_artist"]] if metadata["track_artist"] else []
+    comments["PERFORMER"] = \
+        [metadata["track_performer"]] if metadata["track_performer"] else []
+    comments["GENRE"] = re.split(r"\s*,\s*", metadata["track_genre"])
+    comments["DATE"] = \
+        [metadata["track_year"]] if metadata["track_year"] else []
 
-    _logger.debug("RETURN %r", vorbis_comments)
-    return vorbis_comments
+    _logger.debug("RETURN %r", comments)
+    return comments
 
 
 def make_id3v2_tags(metadata):
@@ -2749,19 +2748,24 @@ def make_id3v2_tags(metadata):
     """
     _logger.debug("TRACE metadata = %r", metadata)
 
-    id3v2_tags = dict(
-        TALB=metadata["album_title"],
-        TPOS="%s/%s" % (metadata["disc_number"], metadata["disc_total"]),
-        TRCK="%s/%s" % (metadata["track_number"], metadata["track_total"]),
-        TIT2=metadata["track_title"],
-        TPE1=metadata["track_artist"],
-        TPE2=metadata["track_performer"],
-        TCON=re.split(r"\s*,\s*", metadata["track_genre"]),
-        TYER=metadata["track_year"]
-    )
+    tags = {}
+    tags["TALB"] = [metadata["album_title"]] if metadata["album_title"] else []
+    tags["TPOS"] = (
+        "%s/%s" % (metadata["disc_number"], metadata["disc_total"])
+        if metadata["disc_number"] and metadata["disc_total"] else [])
+    tags["TRCK"] = (
+        "%s/%s" % (metadata["track_number"], metadata["track_total"])
+        if metadata["track_number"] and metadata["track_total"] else [])
+    tags["TIT2"] = [metadata["track_title"]] if metadata["track_title"] else []
+    tags["TPE1"] = \
+        [metadata["track_artist"]] if metadata["track_artist"] else []
+    tags["TPE2"] = \
+        [metadata["track_performer"]] if metadata["track_performer"] else []
+    tags["TCON"] = re.split(r"\s*,\s*", metadata["track_genre"])
+    tags["TYER"] = [metadata["track_year"]] if metadata["track_year"] else []
 
-    _logger.debug("RETURN %r", id3v2_tags)
-    return id3v2_tags
+    _logger.debug("RETURN %r", tags)
+    return tags
 
 
 #: Used to pass data between a :class:`FLACEncoder` thread and the main thread.
