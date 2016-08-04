@@ -3,8 +3,8 @@
 
 # FLAC Manager -- an audio metadata aggregator and FLAC+MP3 encoder
 #
-# Copyright (c) 2013 - 2014 Matthew Zipay <mattz@ninthtest.net>
-# http://www.ninthtest.net/flac-mp3-audio-manager/
+# Copyright (c) 2013 - 2016 Matthew Zipay <mattz@ninthtest.net>
+# http://ninthtest.net/flac-mp3-audio-manager/
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -31,9 +31,9 @@ __version__ = "0.7.2"
 """
 Please read the following articles before using FLAC Manager!
 
-http://www.ninthtest.net/flac-mp3-audio-manager/prerequisites.html
-http://www.ninthtest.net/flac-mp3-audio-manager/whats-new.html
-http://www.ninthtest.net/flac-mp3-audio-manager/usage.html
+http://mzipay.github.io/FLACManager/prerequisites.html
+http://mzipay.github.io/FLACManager/whats-new.html
+http://mzipay.github.io/FLACManager/usage.html
 
 """
 
