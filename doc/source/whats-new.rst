@@ -4,12 +4,27 @@ What's new in FLAC Manager
 
 Current release: |release|
 ==========================
-* now persists metadata *before* preparing to encode the CD-DA data
-  (see https://github.com/mzipay/FLACManager/issues/1)
-* tested on Mac OS X 10.11.5
+* standardized the application menubar
+  (now has conventional File, Edit and Help menus)
+* directory and file naming for music library can now be configured via the
+  Edit menu (rather than needing to edit the source code)
+* comprehensive tag management: you can now configure\ :sup:`†` (via the Edit menu)
+  how metadata fields in the UI map to Vorbis comments for FLAC files and ID3v2
+  tags for MP3 files
+
+:sup:`†` defaults have been tuned to produce sane results for Apple iTunes,
+Google Play, and any FLAC player that respects
+`Ogg Vorbis I format specification: comment field and header specification
+<https://xiph.org/vorbis/doc/v-comment.html>`_
 
 Previous releases
 =================
+
+Release 0.7.2
+-------------
+* now persists metadata *before* preparing to encode the CD-DA data
+  (see https://github.com/mzipay/FLACManager/issues/1)
+* tested on Mac OS X 10.11.5
 
 Release 0.7.1
 -------------

@@ -26,7 +26,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.7.2"
+__version__ = "0.8.0-beta+dev"
 
 """
 Please read the following articles before using FLAC Manager!
@@ -2454,6 +2454,20 @@ def make_vorbis_comments(metadata):
     :return: Vorbis comment name/value pairs
     :rtype: :obj:`dict`
 
+    .. seealso::
+
+       `Ogg Vorbis I format specification: comment field and header specification <https://xiph.org/vorbis/doc/v-comment.html>`_
+          The only (?) "official recommendation" for Vorbis comments
+
+       `Xiph Wiki: VorbisComment <https://wiki.xiph.org/VorbisComment>`_
+          a (very) basic metadata format
+
+       `Xiph Wiki: Field_names <https://wiki.xiph.org/Field_names>`_
+          official (?) proposed updates to the VorbisComment recommendations
+
+       `Ogg Vorbis Comment Field Recommendations <http://age.hobba.nl/audio/mirroredpages/ogg-tagging.html>`_
+          Just a proposal, but linked directly from Xiph Wiki
+
     """
     _logger.debug("TRACE metadata = %r", metadata)
     # see http://www.xiph.org/vorbis/doc/v-comment.html
@@ -2479,6 +2493,22 @@ def make_id3v2_tags(metadata):
     :param dict metadata: the metadata for a single track
     :return: ID3v2 frame name/value pairs
     :rtype: :obj:`dict`
+
+    .. seealso::
+
+       `ID3 tag version 2.3.0 <http://id3.org/id3v2.3.0>`_
+          The most compatible standard for ID3 tagging
+
+       http://id3.org/iTunes
+          ID3 tagging idiosyncracies in Apple iTunes
+
+       `Why is Google Music absolutely abysmal at reading mp3 metadata? <https://www.reddit.com/r/Android/comments/wi9jd/why_is_google_music_absolutely_abysmal_at_reading/>`_
+          Google Play Music is a great service, but this reddit is painfully
+          accurate - Play Music's ID3 tag handling is **absymal**.
+
+       `MusicBrainz Picard <http://picard.musicbrainz.org/>`_
+          FLACManager does its best to get the tagging right the first time,
+          but Picard is a fantastic post-encoding fixer-upper.
 
     """
     _logger.debug("TRACE metadata = %r", metadata)
