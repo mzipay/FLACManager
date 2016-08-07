@@ -275,91 +275,149 @@ def get_config():
         if _config is None:
             _logger.info("initializing configuration")
             _config = ConfigParser(interpolation=ExtendedInterpolation())
-            if _config.read("flacmanager.ini") != ["flacmanager.ini"]:
-                _logger.warning("flacmanager.ini not read; creating")
-                _config["Logging"] = dict(
-                    level="WARNING",
-                    filename="flacmanager.log",
-                    filemode='w',
-                    format=
-                        "%(asctime)s %(levelname)s [%(threadName)s "
-                        "%(name)s %(funcName)s] %(message)s")
-                _config["HTTP"] = dict(
-                    debuglevel=0,
-                    timeout=5)
-                _config["Gracenote"] = dict(
-                    client_id="",
-                    user_id="")
-                _config["MusicBrainz"] = dict(
-                    contact_url_or_email="",
-                    libdiscid_location="")
+            _config.optionxform = lambda option: option # preserve casing
+
+            if (_config.read("flacmanager.ini") != ["flacmanager.ini"] or
+                    "FLACManager" not in _config or
+                    _config["FLACManager"].get("__version__") != __version__):
+                _logger.warning(
+                    "flacmanager.ini is outdated; updating to version %s",
+                    __version__)
+
+                # always make sure this is accurate
+                _config["FLACManager"] = OrderedDict(__version__=__version__)
+
+                if "Logging" not in _config:
+                    _config["Logging"] = OrderedDict()
+                for (key, default_value) in [
+                        ("level", "WARNING"),
+                        ("filename", "flacmanager.log"),
+                        ("filemode", 'w'),
+                        ("format", 
+                            "%(asctime)s %(levelname)s [%(threadName)s "
+                            "%(name)s %(funcName)s] %(message)s"),
+                        ]:
+                    _config["Logging"].setdefault(key, default_value)
+                        
+
+                if "HTTP" not in _config:
+                    _config["HTTP"] = OrderedDict()
+                for (key, default_value) in [
+                        ("debuglevel", 0),
+                        ("timeout", 5),
+                        ]:
+                    _config["HTTP"].setdefault(key, default_value)
+
+                if "Gracenote" not in _config:
+                    _config["Gracenote"] = OrderedDict()
+                for (key, default_value) in [
+                        ("client_id", ""),
+                        ("user_id", ""),
+                        ]:
+                    _config["Gracenote"].setdefault(key, default_value)
+
+                if "MusicBrainz" not in _config:
+                    _config["MusicBrainz"] = OrderedDict()
+                for (key, default_value) in [
+                        ("contact_url_or_email", ""),
+                        ("libdiscid_location", ""),
+                        ]:
+                    _config["MusicBrainz"].setdefault(key, default_value)
+
                 #TODO: add Discogs for metadata aggregation
-                #_config["Discogs"] = dict()
-                _config["Organize"] = dict(
-                    library_root="",
-                    library_subroot_trie_key="album_artist",
-                    library_subroot_trie_level=1,
-                    use_xplatform_safe_names="yes",
-                    album_folder=
-                        "%(album_artist)s/%(album_title)s (%(album_year)s)",
-                    ndisc_album_folder="${album_folder}",
-                    compilation_album_folder=
-                        "_COMPILATION_/%(album_title)s (%(album_year)s)",
-                    ndisc_compilation_album_folder=
-                        "${compilation_album_folder}",
-                    track_filename="%(track_number)02d %(track_title)s",
-                    ndisc_track_filename="%(disc_number)02d-${track_filename}",
-                    compilation_track_filename=
-                        "${track_filename} (%(track_artist)s)",
-                    ndisc_compilation_track_filename=
-                        "${ndisc_track_filename} (%(track_artist)s)")
-                _config["FLAC"] = dict(
-                    library_root="",
-                    library_subroot_trie_key=
-                        "${Organize:library_subroot_trie_key}",
-                    library_subroot_trie_level=
-                        "${Organize:library_subroot_trie_level}",
-                    use_xplatform_safe_names=
-                        "${Organize:use_xplatform_safe_names}",
-                    album_folder="${Organize:album_folder}",
-                    ndisc_album_folder="${Organize:ndisc_album_folder}",
-                    compilation_album_folder=
-                        "${Organize:compilation_album_folder}",
-                    ndisc_compilation_album_folder=
-                        "${Organize:ndisc_compilation_album_folder}",
-                    track_filename="${Organize:track_filename}",
-                    ndisc_track_filename="${Organize:ndisc_track_filename}",
-                    compilation_track_filename=
-                        "${Organize:compilation_track_filename}",
-                    ndisc_compilation_track_filename=
-                        "${Organize:ndisc_compilation_track_filename}",
-                    track_fileext=".flac",
-                    flac_encode_options=
-                        "--force --keep-foreign-metadata --verify",
-                    flac_decode_options="--force")
-                _config["MP3"] = dict(
-                    library_root="",
-                    library_subroot_trie_key=
-                        "${Organize:library_subroot_trie_key}",
-                    library_subroot_trie_level=
-                        "${Organize:library_subroot_trie_level}",
-                    use_xplatform_safe_names=
-                        "${Organize:use_xplatform_safe_names}",
-                    album_folder="${Organize:album_folder}",
-                    ndisc_album_folder="${Organize:ndisc_album_folder}",
-                    compilation_album_folder=
-                        "${Organize:compilation_album_folder}",
-                    ndisc_compilation_album_folder=
-                        "${Organize:ndisc_compilation_album_folder}",
-                    track_filename="${Organize:track_filename}",
-                    ndisc_track_filename="${Organize:ndisc_track_filename}",
-                    compilation_track_filename=
-                        "${Organize:compilation_track_filename}",
-                    ndisc_compilation_track_filename=
-                        "${Organize:ndisc_compilation_track_filename}",
-                    track_fileext=".mp3",
-                    lame_encode_options=
-                        "--replaygain-accurate --clipdetect -q 2 -V2 -b 224")
+                '''
+                if "Discogs" not in _config:
+                    _config["Discogs"] = OrderedDict()
+                for (key, default_value) in [
+                        ]:
+                    _config["Discogs"].setdefault(key, default_value)
+                '''
+
+                if "Organize" not in _config:
+                    _config["Organize"] = OrderedDict()
+                for (key, default_value) in [
+                        ("library_root", ""),
+                        ("library_subroot_trie_key", "album_artist"),
+                        ("library_subroot_trie_level", 1),
+                        ("use_xplatform_safe_names", "yes"),
+                        ("album_folder", "%(album_artist)s/%(album_title)s"),
+                        ("ndisc_album_folder", "${album_folder}"),
+                        ("compilation_album_folder",
+                            "_COMPILATION_/%(album_title)s"),
+                        ("ndisc_compilation_album_folder",
+                            "${compilation_album_folder}"),
+                        ("track_filename",
+                            "%(track_number)02d %(track_title)s"),
+                        ("ndisc_track_filename",
+                            "%(disc_number)02d-${track_filename}"),
+                        ("compilation_track_filename",
+                            "${track_filename} (%(track_artist)s)"),
+                        ("ndisc_compilation_track_filename",
+                            "${ndisc_track_filename} (%(track_artist)s)"),
+                        ]:
+                    _config["Organize"].setdefault(key, default_value)
+
+                if "FLAC" not in _config:
+                    _config["FLAC"] = OrderedDict()
+                for (key, default_value) in [
+                        ("library_root", "${Organize:library_root}/FLAC"),
+                        ("library_subroot_trie_key",
+                            "${Organize:library_subroot_trie_key}"),
+                        ("library_subroot_trie_level",
+                            "${Organize:library_subroot_trie_level}"),
+                        ("use_xplatform_safe_names",
+                            "${Organize:use_xplatform_safe_names}"),
+                        ("album_folder", "${Organize:album_folder}"),
+                        ("ndisc_album_folder",
+                            "${Organize:ndisc_album_folder}"),
+                        ("compilation_album_folder",
+                            "${Organize:compilation_album_folder}"),
+                        ("ndisc_compilation_album_folder",
+                            "${Organize:ndisc_compilation_album_folder}"),
+                        ("track_filename", "${Organize:track_filename}"),
+                        ("ndisc_track_filename",
+                            "${Organize:ndisc_track_filename}"),
+                        ("compilation_track_filename",
+                            "${Organize:compilation_track_filename}"),
+                        ("ndisc_compilation_track_filename",
+                            "${Organize:ndisc_compilation_track_filename}"),
+                        ("track_fileext", ".flac"),
+                        ("flac_encode_options",
+                            "--force --keep-foreign-metadata --verify"),
+                        ("flac_decode_options", "--force"),
+                        ]:
+                    _config["FLAC"].setdefault(key, default_value)
+
+                if "MP3" not in _config:
+                    _config["MP3"] = OrderedDict()
+                for (key, default_value) in [
+                        ("library_root", "${Organize:library_root}/FLAC"),
+                        ("library_subroot_trie_key",
+                            "${Organize:library_subroot_trie_key}"),
+                        ("library_subroot_trie_level",
+                            "${Organize:library_subroot_trie_level}"),
+                        ("use_xplatform_safe_names",
+                            "${Organize:use_xplatform_safe_names}"),
+                        ("album_folder", "${Organize:album_folder}"),
+                        ("ndisc_album_folder",
+                            "${Organize:ndisc_album_folder}"),
+                        ("compilation_album_folder",
+                            "${Organize:compilation_album_folder}"),
+                        ("ndisc_compilation_album_folder",
+                            "${Organize:ndisc_compilation_album_folder}"),
+                        ("track_filename", "${Organize:track_filename}"),
+                        ("ndisc_track_filename",
+                            "${Organize:ndisc_track_filename}"),
+                        ("compilation_track_filename",
+                            "${Organize:compilation_track_filename}"),
+                        ("ndisc_compilation_track_filename",
+                            "${Organize:ndisc_compilation_track_filename}"),
+                        ("track_fileext", ".mp3"),
+                        ("lame_encode_options",
+                            "--clipdetect -q 2 -V2 -b 224"),
+                        ]:
+                    _config["MP3"].setdefault(key, default_value)
+
                 with open("flacmanager.ini", 'w') as f:
                     _config.write(f)
         _logger.debug("RETURN %r", _config)
@@ -423,7 +481,8 @@ class FLACManager(tk.Frame):
 
     #: Any HTTP(S) request issued by FLAC Manager uses this value for the HTTP
     #: User-Agent header value.
-    USER_AGENT = "FLACManager/%s Python/%s" % (__version__, sys.version[:3])
+    USER_AGENT = "FLACManager/%s Python/%s" % (
+        __version__, sys.version.split()[0])
 
     def __init__(self, master=None, need_config=False):
         """
