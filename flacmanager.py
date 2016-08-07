@@ -473,7 +473,7 @@ def get_config():
                 if "MP3" not in _config:
                     _config["MP3"] = OrderedDict()
                 for (key, default_value) in [
-                        ("library_root", "${Organize:library_root}/FLAC"),
+                        ("library_root", "${Organize:library_root}/MP3"),
                         ("library_subroot_trie_key",
                             "${Organize:library_subroot_trie_key}"),
                         ("library_subroot_trie_level",
