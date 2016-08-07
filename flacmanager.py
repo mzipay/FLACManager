@@ -40,7 +40,7 @@ http://mzipay.github.io/FLACManager/usage.html
 import atexit
 import cgi
 from collections import namedtuple, OrderedDict
-from configparser import ConfigParser
+from configparser import ConfigParser, ExtendedInterpolation
 import ctypes as C
 import datetime
 from functools import total_ordering
@@ -274,7 +274,7 @@ def get_config():
     with _CONFIG_LOCK:
         if _config is None:
             _logger.info("initializing configuration")
-            _config = ConfigParser()
+            _config = ConfigParser(interpolation=ExtendedInterpolation())
             if _config.read("flacmanager.ini") != ["flacmanager.ini"]:
                 _logger.warning("flacmanager.ini not read; creating")
                 _config["Logging"] = dict(
@@ -282,8 +282,8 @@ def get_config():
                     filename="flacmanager.log",
                     filemode='w',
                     format=
-                        "%%(asctime)s %%(levelname)s %%(threadName)s "
-                        "%%(name)s %%(funcName)s %%(message)s")
+                        "%(asctime)s %(levelname)s [%(threadName)s "
+                        "%(name)s %(funcName)s] %(message)s")
                 _config["HTTP"] = dict(
                     debuglevel=0,
                     timeout=5)
@@ -294,21 +294,70 @@ def get_config():
                     contact_url_or_email="",
                     libdiscid_location="")
                 #TODO: add Discogs for metadata aggregation
-                '''
-                _config["Discogs"] = dict(
-                    contact_url_or_email="",
-                    oauth_consumer_key="",
-                    oauth_consumer_secret="",
-                    oauth_token="",
-                    oauth_token_secret="")
-                '''
+                #_config["Discogs"] = dict()
+                _config["Organize"] = dict(
+                    library_root="",
+                    library_subroot_trie_key="album_artist",
+                    library_subroot_trie_level=1,
+                    use_xplatform_safe_names="yes",
+                    album_folder=
+                        "%(album_artist)s/%(album_title)s (%(album_year)s)",
+                    ndisc_album_folder="${album_folder}",
+                    compilation_album_folder=
+                        "_COMPILATION_/%(album_title)s (%(album_year)s)",
+                    ndisc_compilation_album_folder=
+                        "${compilation_album_folder}",
+                    track_filename="%(track_number)02d %(track_title)s",
+                    ndisc_track_filename="%(disc_number)02d-${track_filename}",
+                    compilation_track_filename=
+                        "${track_filename} (%(track_artist)s)",
+                    ndisc_compilation_track_filename=
+                        "${ndisc_track_filename} (%(track_artist)s)")
                 _config["FLAC"] = dict(
                     library_root="",
+                    library_subroot_trie_key=
+                        "${Organize:library_subroot_trie_key}",
+                    library_subroot_trie_level=
+                        "${Organize:library_subroot_trie_level}",
+                    use_xplatform_safe_names=
+                        "${Organize:use_xplatform_safe_names}",
+                    album_folder="${Organize:album_folder}",
+                    ndisc_album_folder="${Organize:ndisc_album_folder}",
+                    compilation_album_folder=
+                        "${Organize:compilation_album_folder}",
+                    ndisc_compilation_album_folder=
+                        "${Organize:ndisc_compilation_album_folder}",
+                    track_filename="${Organize:track_filename}",
+                    ndisc_track_filename="${Organize:ndisc_track_filename}",
+                    compilation_track_filename=
+                        "${Organize:compilation_track_filename}",
+                    ndisc_compilation_track_filename=
+                        "${Organize:ndisc_compilation_track_filename}",
+                    track_fileext=".flac",
                     flac_encode_options=
                         "--force --keep-foreign-metadata --verify",
                     flac_decode_options="--force")
                 _config["MP3"] = dict(
                     library_root="",
+                    library_subroot_trie_key=
+                        "${Organize:library_subroot_trie_key}",
+                    library_subroot_trie_level=
+                        "${Organize:library_subroot_trie_level}",
+                    use_xplatform_safe_names=
+                        "${Organize:use_xplatform_safe_names}",
+                    album_folder="${Organize:album_folder}",
+                    ndisc_album_folder="${Organize:ndisc_album_folder}",
+                    compilation_album_folder=
+                        "${Organize:compilation_album_folder}",
+                    ndisc_compilation_album_folder=
+                        "${Organize:ndisc_compilation_album_folder}",
+                    track_filename="${Organize:track_filename}",
+                    ndisc_track_filename="${Organize:ndisc_track_filename}",
+                    compilation_track_filename=
+                        "${Organize:compilation_track_filename}",
+                    ndisc_compilation_track_filename=
+                        "${Organize:ndisc_compilation_track_filename}",
+                    track_fileext=".mp3",
                     lame_encode_options=
                         "--replaygain-accurate --clipdetect -q 2 -V2 -b 224")
                 with open("flacmanager.ini", 'w') as f:
@@ -2078,16 +2127,6 @@ class TrackEncodingStatus:
             message if message is not None else self.__state.text)
 
 
-#: A list of format strings for individual folder names that, joined, make up
-#: the *library_root*-relative directory path for a FLAC file.
-FLAC_FOLDERS_TEMPLATE = ["%(album_artist)s", "%(album_title)s"]
-
-#: A list of format strings for individual folder names that, joined, make up
-#: the *library_root*-relative directory path for a FLAC file that is part of a
-#: compilation.
-FLAC_FOLDERS_COMPILATION_TEMPLATE = ["_COMPILATIONS_", "%(album_title)s"]
-
-
 def generate_flac_dirname(library_root, metadata):
     """Build the directory for a track's FLAC file.
 
@@ -2097,46 +2136,8 @@ def generate_flac_dirname(library_root, metadata):
     :rtype: :obj:`str`
 
     """
-    _logger.debug(
-        "TRACE library_root = %r, metadata = %r", library_root, metadata)
-
-    folders_template = (
-        FLAC_FOLDERS_TEMPLATE if not metadata["is_compilation"]
-        else FLAC_FOLDERS_COMPILATION_TEMPLATE)
-    _logger.debug("using template %r", folders_template)
-
-    folders = [
-        format_string % metadata for format_string in folders_template]
-    folders = [
-        re.sub(r"[\\/:*?\"<>|]", '_', folder) for folder in folders]
-
-    folders_path = os.sep.join(folders)
-    album_path = os.path.join(library_root, folders_path)
-
-    # doesn't work as expected for external media
-    #os.makedirs(album_path, exist_ok=True)
-    subprocess.check_call(["mkdir", "-p", album_path])
-
-    _logger.debug("RETURN %r", album_path)
-    return album_path
-
-
-#: The format string for a FLAC filename.
-FLAC_FILENAME_TEMPLATE = "%(track_number)02d %(track_title)s.flac"
-
-#: The format string for a FLAC filename that is part of a compilation.
-FLAC_FILENAME_COMPILATION_TEMPLATE = \
-    "%(track_number)02d %(track_title)s (%(track_artist)s).flac"
-
-#: The format string for a FLAC filename on an album of 2+ discs.
-FLAC_FILENAME_DISCN_TEMPLATE = \
-    "%(disc_number)02d-%(track_number)02d %(track_title)s.flac"
-
-#: The format string for a FLAC filename that is part of a compilation
-#: spanning 2+ discs.
-FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE = (
-    "%(disc_number)02d-%(track_number)02d "
-    "%(track_title)s (%(track_artist)s).flac")
+    _logger.debug("TRACE library_root=%r, metadata=%r", library_root, metadata)
+    return _generate_dirname("FLAC", library_root, metadata)
 
 
 def generate_flac_basename(metadata):
@@ -2147,35 +2148,8 @@ def generate_flac_basename(metadata):
     :rtype: :obj:`str`
 
     """
-    _logger.debug("TRACE metadata = %r", metadata)
-
-    format_string = FLAC_FILENAME_TEMPLATE
-    if not metadata["is_compilation"] and metadata["disc_total"] == 1:
-        # the expected common case
-        format_string = FLAC_FILENAME_TEMPLATE
-    elif metadata["is_compilation"] and metadata["disc_total"] == 1:
-        format_string = FLAC_FILENAME_COMPILATION_TEMPLATE
-    elif not metadata["is_compilation"] and metadata["disc_total"] > 1:
-        format_string = FLAC_FILENAME_DISCN_TEMPLATE
-    else: # is_compilation and disc_total > 1
-        format_string = FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE
-    _logger.debug("using template %r", format_string)
-
-    filename = format_string % metadata
-    filename = re.sub(r"[\\/:*?\"<>|]", '_', filename)
-
-    _logger.debug("RETURN %r", filename)
-    return filename
-
-
-#: A list of format strings for individual folder names that, joined, make up
-#: the *library_root*-relative directory path for an MP3 file.
-MP3_FOLDERS_TEMPLATE = FLAC_FOLDERS_TEMPLATE.copy()
-
-#: A list of format strings for individual folder names that, joined, make up
-#: the *library_root*-relative directory path for an MP3 file that is part of a
-#: compilation.
-MP3_FOLDERS_COMPILATION_TEMPLATE = FLAC_FOLDERS_COMPILATION_TEMPLATE.copy()
+    _logger.debug("TRACE metadata=%r", metadata)
+    return _generate_basename("FLAC", metadata)
 
 
 def generate_mp3_dirname(library_root, metadata):
@@ -2187,45 +2161,8 @@ def generate_mp3_dirname(library_root, metadata):
     :rtype: :obj:`str`
 
     """
-    _logger.debug(
-        "TRACE library_root = %r, metadata = %r", library_root, metadata)
-
-    folders_template = (
-        MP3_FOLDERS_TEMPLATE if not metadata["is_compilation"]
-        else MP3_FOLDERS_COMPILATION_TEMPLATE)
-    _logger.debug("using template %r", folders_template)
-
-    folders = [
-        format_string % metadata for format_string in folders_template]
-    folders = [
-        re.sub(r"[\\/:*?\"<>|]", '_', folder) for folder in folders]
-
-    folders_path = os.sep.join(folders)
-    album_path = os.path.join(library_root, folders_path)
-
-    # doesn't work as expected for external media
-    #os.makedirs(album_path, exist_ok=True)
-    subprocess.check_call(["mkdir", "-p", album_path])
-
-    _logger.debug("RETURN %r", album_path)
-    return album_path
-
-
-#: The format string for an MP3 filename.
-MP3_FILENAME_TEMPLATE = os.path.splitext(FLAC_FILENAME_TEMPLATE)[0] + ".mp3"
-
-#: The format string for an MP3 filename that is part of a compilation.
-MP3_FILENAME_COMPILATION_TEMPLATE = \
-    os.path.splitext(FLAC_FILENAME_COMPILATION_TEMPLATE)[0] + ".mp3"
-
-#: The format string for an MP3 filename on an album of 2+ discs.
-MP3_FILENAME_DISCN_TEMPLATE = \
-    os.path.splitext(FLAC_FILENAME_DISCN_TEMPLATE)[0] + ".mp3"
-
-#: The format string for an MP3 filename that is part of a compilation
-#: spanning 2+ discs.
-MP3_FILENAME_DISCN_COMPILATION_TEMPLATE = \
-    os.path.splitext(FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE)[0] + ".mp3"
+    _logger.debug("TRACE library_root=%r, metadata=%r", library_root, metadata)
+    return _generate_dirname("MP3", library_root, metadata)
 
 
 def generate_mp3_basename(metadata):
@@ -2236,25 +2173,145 @@ def generate_mp3_basename(metadata):
     :rtype: :obj:`str`
 
     """
-    _logger.debug("TRACE metadata = %r", metadata)
+    _logger.debug("TRACE metadata=%r", metadata)
+    return _generate_basename("MP3", metadata)
 
-    format_string = MP3_FILENAME_TEMPLATE
-    if not metadata["is_compilation"] and metadata["disc_total"] == 1:
-        # the expected common case
-        format_string = MP3_FILENAME_TEMPLATE
-    elif metadata["is_compilation"] and metadata["disc_total"] == 1:
-        format_string = MP3_FILENAME_COMPILATION_TEMPLATE
-    elif not metadata["is_compilation"] and metadata["disc_total"] > 1:
-        format_string = MP3_FILENAME_DISCN_TEMPLATE
-    else: # is_compilation and disc_total > 1
-        format_string = MP3_FILENAME_DISCN_COMPILATION_TEMPLATE
-    _logger.debug("using template %r", format_string)
 
-    filename = format_string % metadata
-    filename = re.sub(r"[\\/:*?\"<>|]", '_', filename)
+def _generate_dirname(section, library_root, metadata):
+    """Build the directory for a track's FLAC or MP3 file.
 
-    _logger.debug("RETURN %r", filename)
-    return filename
+    :param str section: "FLAC" or "MP3"
+    :param str library_root: the MP3 library directory
+    :param dict metadata: the finalized metadata for a single track
+    :return: an absolute directory path
+    :rtype: :obj:`str`
+
+    """
+    _logger.debug(
+        "TRACE section=%r, library_root=%r, metadata=%r",
+        section, library_root, metadata)
+
+    config = get_config()
+    ndisc = "ndisc_" if metadata["disc_total"] > 1 else ""
+    is_compilation = metadata["is_compilation"]
+    folder_format_string = (
+        config[section][ndisc + "album_folder"] if not is_compilation
+        else config[section][ndisc + "compilation_album_folder"])
+    _logger.debug("using template %r", folder_format_string)
+
+    folder_names = [
+        name_format_string % metadata
+        for name_format_string in folder_format_string.split('/')]
+    _logger.debug("raw folder names %r", folder_names)
+
+    if config[section].getboolean("use_xplatform_safe_names"):
+        # paranoid-safe and compact, but less readable
+        folder_names = _xplatform_safe(*folder_names)
+    else:
+        # as close to format string as possible, but still relatively safe
+        folder_names = [
+            re.sub(r"[^0-9a-zA-Z-.,_() ]", '_', name) for name in folder_names]
+    _logger.debug("final folder names %r", folder_names)
+
+    album_folder = os.path.join(
+        library_root, *_subroot_trie(section, metadata), *folder_names)
+    _logger.info("using album folder %r", album_folder)
+
+    # doesn't work as expected for external media
+    #os.makedirs(album_folder, exist_ok=True)
+    subprocess.check_call(["mkdir", "-p", album_folder])
+
+    return album_folder
+
+
+def _generate_basename(section, metadata):
+    """Build the filename for a track's FLAC or MP3 file.
+
+    :param str section: "FLAC" or "MP3"
+    :param dict metadata: the finalized metadata for a single track
+    :return: a relative file name
+    :rtype: :obj:`str`
+
+    """
+    _logger.debug("TRACE section=%r, metadata=%r", section, metadata)
+
+    config = get_config()
+    ndisc = "ndisc_" if metadata["disc_total"] > 1 else ""
+    is_compilation = metadata["is_compilation"]
+    track_format_string = (
+        config[section][ndisc + "track_filename"] if not is_compilation
+        else config[section][ndisc + "compilation_track_filename"])
+    _logger.debug("using template %r", track_format_string)
+
+    basename = track_format_string % metadata
+    _logger.debug("raw basename %r", basename)
+
+    if config[section].getboolean("use_xplatform_safe_names"):
+        # paranoid-safe and compact, but less readable
+        basename = _xplatform_safe(basename)
+    else:
+        # as close to format string as possible, but still relatively safe
+        basename = re.sub(r"[^0-9a-zA-Z-.,_() ]", '_', basename)
+    _logger.debug("final basename %r", basename)
+
+    track_filename = basename + config[section]["track_fileext"]
+    _logger.info("using track filename %r", track_filename)
+
+    return track_filename
+
+
+def _xplatform_safe(*names):
+    """Transform a list of names so that they are safe to use as
+    cross-platform folder and file names.
+
+    :param list names:
+       folder/file names that may be non-portable
+    :return: the list of names, transformed
+
+    """
+    safe_names = list(names)
+    for (pattern, replacement) in [
+            (r"\s+", '-'), # contiguous ws to '-'
+            (r"[^0-9a-zA-Z-.,_]+", '_'), # contiguous special to '_'
+            (r"^[^0-9a-zA-Z_]", '_'), # non-alphanum/underscore at [0] to '_'
+            (r"([-.,_]){2,}", r'\1') # 2+ contiguous special/replacement to \1
+            ]:
+        safe_names = [
+            re.sub(pattern, replacement, name) for name in safe_names]
+    return safe_names[0] if len(safe_names) == 1 else safe_names
+
+
+def _subroot_trie(section, metadata):
+    """Build zero or more subdirectories below the library root to form
+    an easily navigable "trie" structure for audio files.
+
+    :param str section: "FLAC" or "MP3"
+    :param dict metadata: the finalized metadata for a single track
+    :return:
+       a list (possibly empty) of directory names that form a trie
+       structure for organizing audio files
+
+    """
+    # compilations exist at the top level of the library and do not use any
+    # trie structure
+    if metadata["is_compilation"]:
+        return []
+
+    config = get_config()
+
+    key = config[section]["library_subroot_trie_key"]
+    level = config[section].getint("library_subroot_trie_level")
+
+    # to skip building a directory trie structure, the key can be left empty or
+    # the level can be set to zero (0)
+    if not key or level <= 0:
+        return []
+
+    term = re.sub(r"[^0-9a-zA-Z]", "", metadata[key]).upper()
+    nodes = [term[:n + 1] for n in range(min(level, len(term)))]
+
+    _logger.debug("RETURN %r", nodes)
+    return nodes
 
 
 def _font(widget: "a :class:`tkinter.Widget`"):
