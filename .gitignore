@@ -1,6 +1,7 @@
 *.pyc
 *.pyo
 *.bak
+*.swp
 __pycache__/
 NOTES.txt
 flacmanager-dev-env/
