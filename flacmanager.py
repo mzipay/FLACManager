@@ -303,8 +303,8 @@ def get_config():
                 if "HTTP" not in _config:
                     _config["HTTP"] = OrderedDict()
                 for (key, default_value) in [
-                        ("debuglevel", 0),
-                        ("timeout", 5),
+                        ("debuglevel", '0'),
+                        ("timeout", '5'),
                         ]:
                     _config["HTTP"].setdefault(key, default_value)
 
