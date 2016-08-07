@@ -115,8 +115,61 @@ __all__ = [
     "show_exception_dialog",
 ]
 
+#: A custom tracing log level, lower in severity than :attr:`logging.DEBUG`.
+TRACE = 1
+logging.addLevelName(TRACE, "TRACE")
+
+
+class _TracingLogger(logging.getLoggerClass()):
+    """A logger with tracing capability."""
+
+    def __init__(self, name):
+        """
+        :param str name: the logger name
+
+        """
+        super().__init__(name)
+
+    def call(self, *args, **kwargs):
+        """Log entry into a callable with severity :attr:`TRACE`.
+
+        :param tuple args: the positional arguments to the callable
+        :param dict kwargs: the keyword arguments to the callable
+
+        """
+        if self.isEnabledFor(TRACE):
+            self._log(TRACE, "CALL *%r **%r", (args, kwargs))
+
+    def trace(self, msg, *args, **kwargs):
+        """Log 'msg % args' with severity :attr:`TRACE`.
+
+        Positional and keyword arguments are interpreted as for
+        :meth:`logging.Logger.log`.
+
+        """
+        if self.isEnabledFor(TRACE):
+            self._log(TRACE, msg, *args, **kwargs)
+
+    def mark(self, marker="MARK"):
+        """Log *marker* with severity :attr:`TRACE`."""
+        if self.isEnabledFor(TRACE):
+            self._log(TRACE, marker)
+
+    def return_(self, value=None):
+        """Log return from a callable with severity :attr:`TRACE`.
+
+        :keyword value: the value returned from the callable
+
+        """
+        if self.isEnabledFor(TRACE):
+            self._log(TRACE, "RETURN %r", (value,))
+
+
+logging.setLoggerClass(_TracingLogger)
+
 #: The module-level logger.
-_log = logging.getLogger()
+_log = logging.getLogger(__name__)
+
 
 
 def logged(cls):
@@ -144,8 +197,7 @@ def get_disc_info():
        or ``None``
 
     """
-    # minimal tracing/logging here - can be called repeatedly (indefinitely) by
-    # a DiscCheck thread
+    # do not trace; called in a loop by the DiscCheck thread
     output = subprocess.check_output(
         ["diskutil", "list"], stderr=subprocess.STDOUT)
     output = output.decode(sys.getfilesystemencoding())
@@ -176,11 +228,11 @@ def get_disc_info():
             match = re.search(r"\s+Mount Point:\s+(.*?)$", line)
             if match is not None:
                 mountpoint = match.group(1)
-                _log.info("mount point %s for device %s", mountpoint, device)
+                _log.info("CD-DA %s mounted at %s", device, mountpoint)
                 return (device, mountpoint)
             else:
-                _log.warning(
-                    "expected to find a mountpoint for device %s", device)
+                _log.debug(
+                    "CD-DA %s; still waiting for mount point", device)
 
 
 #: Used to pass data between a :class:`DiscCheck` thread and the main thread.
@@ -192,19 +244,19 @@ class DiscCheck(threading.Thread):
     """A thread that checks for the presence of a CD-DA disc."""
 
     def __init__(self):
-        self.__log.debug("TRACE")
-        # kill this thread if the program exits
-        super().__init__(daemon=True)
+        self.__log.call()
+        super().__init__(daemon=True) # kill this thread if the program exits
 
     def run(self):
         """Check for a disc until one is found or an exception occurs.
 
         """
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         try:
             disc_info = get_disc_info()
             while disc_info is None:
-                time.sleep(0.5)
+                time.sleep(0.5) #TODO: should be configurable
                 disc_info = get_disc_info()
         except Exception as e:
             self.__log.error("enqueueing %r", e)
@@ -230,7 +282,8 @@ def read_disc_toc(mountpoint):
     :rtype: :obj:`TOC`
 
     """
-    _log.debug("TRACE mountpoint=%r", mountpoint)
+    _log.call(mountpoint)
+
     toc_plist_filename = os.path.join(mountpoint, ".TOC.plist")
     toc_plist = plistlib.readPlist(toc_plist_filename)
 
@@ -252,7 +305,8 @@ def read_disc_toc(mountpoint):
     toc = TOC(
         first_track_number, last_track_number, tuple(track_offsets),
         leadout_track_offset)
-    _log.debug("RETURN %r", toc)
+
+    _log.return_(toc)
     return toc
 
 
@@ -273,7 +327,8 @@ def get_config():
     to disk if it does not exist.
 
     """
-    _log.debug("TRACE")
+    _log.call()
+
     global _config
     with _CONFIG_LOCK:
         if _config is None:
@@ -298,8 +353,8 @@ def get_config():
                         ("filename", "flacmanager.log"),
                         ("filemode", 'w'),
                         ("format", 
-                            "%(asctime)s %(levelname)s [%(threadName)s "
-                            "%(name)s %(funcName)s] %(message)s"),
+                            "%(asctime)s %(levelname)s [%(threadName)s: "
+                            "%(name)s.%(funcName)s] %(message)s"),
                         ]:
                     _config["Logging"].setdefault(key, default_value)
                         
@@ -424,13 +479,14 @@ def get_config():
 
                 with open("flacmanager.ini", 'w') as f:
                     _config.write(f)
-        _log.debug("RETURN %r", _config)
+        _log.return_(_config)
         return _config
 
 
 def save_config():
     """Write the configuration settings to an INI-style file."""
-    _log.debug("TRACE")
+    _log.call()
+
     with _CONFIG_LOCK, open("flacmanager.ini", 'w') as f:
         get_config().write(f)
 
@@ -496,7 +552,7 @@ class FLACManager(tk.Frame):
         :keyword master: the parent object of this frame
 
         """
-        self.__log.debug("TRACE master=%r", master)
+        self.__log.call(master)
         super().__init__(master)
 
         self._create_menu()
@@ -521,20 +577,25 @@ class FLACManager(tk.Frame):
            otherwise ``False``
 
         """
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         config = get_config()
         # the following options MUST be set by the user before FLACManager can
         # be used
-        return (
+        flag = (
             not config["Organize"].get("library_root") or
             not config["Gracenote"].get("client_id") or
             not config["MusicBrainz"].get("contact_url_or_email") or
             not config["MusicBrainz"].get("libdiscid_location")
             )
 
+        self.__log.return_(flag)
+        return flag
+
     def _create_menu(self):
         """Create the FLAC Manager menu bar."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         menubar = tk.Menu(self)
 
         #TODO: make this the conventional File | Edit | Help
@@ -558,7 +619,8 @@ class FLACManager(tk.Frame):
 
     def _create_disc_status(self):
         """Create the disc status frame."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         disc_status_group = tk.LabelFrame(self, text="Disc status")
         disc_status_group.pack(fill=tk.BOTH, padx=17, pady=11)
 
@@ -579,7 +641,8 @@ class FLACManager(tk.Frame):
 
     def _create_editor_status(self):
         """Create the labels and buttons that communicate editor status."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         self.status_message_var = tk.StringVar(
             value="Aggregating metadata\u2026")
         self.status_message = tk.Label(
@@ -593,9 +656,11 @@ class FLACManager(tk.Frame):
 
     def _edit_offline(self):
         """Create the metadata editor without info from a CDDB."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         self.retry_aggregation_button.pack_forget()
         self.edit_offline_button.pack_forget()
+
         try:
             self._create_metadata_editor()
         except Exception as e:
@@ -607,7 +672,7 @@ class FLACManager(tk.Frame):
 
     def _create_metadata_editor(self):
         """Create the metadata editor."""
-        self.__log.debug("TRACE")
+        self.__log.call()
 
         self._current_track_number = 1
         # tracks indexing is 1-based
@@ -719,7 +784,8 @@ class FLACManager(tk.Frame):
 
     def _create_track_vars(self):
         """Create metadata variables for each track."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         track_vars = {
             "include": [None],
             "title": [None],
@@ -737,17 +803,20 @@ class FLACManager(tk.Frame):
             track_vars["genre"].append(tk.StringVar())
             track_vars["year"].append(tk.StringVar())
 
+        self.__log.return_(track_vars)
         return track_vars
 
     def _initialize_track_vars(self):
         """Set default values for all track variables."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         # use the tracks Spinbox as a convenient way to make sure all track
         # editors have valid values; but make sure this method is only called
         # BEFORE the metadata editor is packed, otherwise the user will be very
         # confused ;)
         while int(self.track_spinner.get()) != self._total_tracks:
             self.track_spinner.invoke("buttonup")
+
         # now "reset" the spinner back to track #1
         while int(self.track_spinner.get()) != 1:
             self.track_spinner.invoke("buttondown")
@@ -773,9 +842,7 @@ class FLACManager(tk.Frame):
         if it is not provided.
 
         """
-        self.__log.debug(
-            "TRACE master=%r, name=%r, choices=%r, width=%r, var=%r",
-            master, name, choices, width, var)
+        self.__log.call(master, name, choices, width=width, var=var)
 
         label = tk.Label(master, text=name)
 
@@ -794,6 +861,7 @@ class FLACManager(tk.Frame):
         optionmenu = tk.OptionMenu(
             master, var, *choices, command=lambda v: var.set(v))
 
+        self.__log.return_((label, var, entry, optionmenu))
         return (label, var, entry, optionmenu)
 
     def _refresh_choices_editor(self, var, entry, optionmenu, choices):
@@ -816,9 +884,7 @@ class FLACManager(tk.Frame):
            method.
 
         """
-        self.__log.debug(
-            "TRACE var=%r, entry=%r, optionmenu=%r, choices=%r",
-            var, entry, optionmenu, choices)
+        self.__log.call(var, entry, optionmenu, choices)
 
         master = optionmenu.master
         optionmenu.destroy()
@@ -837,6 +903,7 @@ class FLACManager(tk.Frame):
         new_optionmenu = tk.OptionMenu(
             master, var, *choices, command=lambda v: var.set(v))
 
+        self.__log.return_(new_optionmenu)
         return new_optionmenu
 
     def _create_album_title_editor(self, master, choices):
@@ -848,7 +915,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         frame = tk.Frame(master)
 
         (label, self.album_title_var, entry, optionmenu) = \
@@ -860,6 +928,7 @@ class FLACManager(tk.Frame):
         if len(choices) > 1:
             optionmenu.pack(side=tk.LEFT)
 
+        self.__log.return_(frame)
         return frame
 
     def _create_album_artist_editor(self, master, choices):
@@ -871,7 +940,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         frame = tk.Frame(master)
 
         (label, self.album_artist_var, entry, optionmenu) = \
@@ -888,11 +958,13 @@ class FLACManager(tk.Frame):
 
         button.pack(side=tk.LEFT, padx=5)
 
+        self.__log.return_(frame)
         return frame
 
     def apply_album_artist_to_tracks(self):
         """Set each track artist to the album artist."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         album_artist_value = self.album_artist_var.get()
         for track_artist_var in self._track_vars["artist"][1:]:
             track_artist_var.set(album_artist_value)
@@ -906,7 +978,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         frame = tk.Frame(master)
 
         (label, self.album_performer_var, entry, optionmenu) = \
@@ -923,11 +996,13 @@ class FLACManager(tk.Frame):
 
         button.pack(side=tk.LEFT, padx=5)
 
+        self.__log.return_(frame)
         return frame
 
     def apply_album_performer_to_tracks(self):
         """Set each track performer to the album performer."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         album_performer_value = self.album_performer_var.get()
         for track_performer_var in self._track_vars["performer"][1:]:
             track_performer_var.set(album_performer_value)
@@ -941,8 +1016,10 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         frame = tk.Frame(master)
+
         genres = self._combine_genres(choices)
         (label, self.album_genre_var, entry, optionmenu) = \
             self._create_choices_editor(frame, "Genre", genres, width=29)
@@ -958,6 +1035,7 @@ class FLACManager(tk.Frame):
         optionmenu.pack(side=tk.LEFT)
         button.pack(side=tk.LEFT, padx=5)
 
+        self.__log.return_(frame)
         return frame
 
     def _combine_genres(self, choices):
@@ -972,7 +1050,7 @@ class FLACManager(tk.Frame):
         If *choices* is empty, add "Other" to the list.
 
         """
-        self.__log.debug("TRACE choices=%r", choices)
+        self.__log.call(choices)
 
         genres = []
         for choice in choices:
@@ -991,7 +1069,7 @@ class FLACManager(tk.Frame):
                 genres.remove(choices[0])
             genres.insert(0, choices[0])
 
-        self.__log.debug("RETURN %r", genres)
+        self.__log.return_(genres)
         return genres
 
     def _add_lame_genres_menu(self, optionmenu, var, excludes):
@@ -1004,9 +1082,7 @@ class FLACManager(tk.Frame):
         :param list excludes: LAME genres to exclude from the submenu
 
         """
-        self.__log.debug(
-            "TRACE optionmenu=%r, var=%r, excludes=%r",
-            optionmenu, var, excludes)
+        self.__log.call(optionmenu, var, excludes)
 
         optionmenu["menu"].add_separator()
         menu = tk.Menu(optionmenu["menu"])
@@ -1018,7 +1094,8 @@ class FLACManager(tk.Frame):
 
     def apply_album_genre_to_tracks(self):
         """Set each track genre to the album genre."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         album_genre_value = self.album_genre_var.get()
         for track_genre_var in self._track_vars["genre"][1:]:
             track_genre_var.set(album_genre_value)
@@ -1032,7 +1109,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         frame = tk.Frame(master)
 
         (label, self.album_year_var, entry, optionmenu) = \
@@ -1049,11 +1127,13 @@ class FLACManager(tk.Frame):
 
         button.pack(side=tk.LEFT, padx=5)
 
+        self.__log.return_(frame)
         return frame
 
     def apply_album_year_to_tracks(self):
         """Set each track genre to the album genre."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         album_year_value = self.album_year_var.get()
         for track_year_var in self._track_vars["year"][1:]:
             track_year_var.set(album_year_value)
@@ -1068,8 +1148,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug(
-            "TRACE master=%r, number=%r, total=%r", master, number, total)
+        self.__log.call(master, number, total)
+
         frame = tk.Frame(master)
 
         number_label = tk.Label(frame, text="Disc")
@@ -1090,6 +1170,7 @@ class FLACManager(tk.Frame):
             textvariable=self.album_disc_total_var, width=2)
         total_entry.pack(side=tk.LEFT, padx=2)
 
+        self.__log.return_(frame)
         return frame
 
     def _create_album_cover_editor(self, master, choices):
@@ -1101,7 +1182,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         self._album_covers = OrderedDict()
         self._album_covers["--none--"] = None
         for image_data in choices:
@@ -1126,6 +1208,7 @@ class FLACManager(tk.Frame):
             frame, text="Add file", command=self.choose_cover_image_from_file)
         file_button.pack(side=tk.LEFT)
 
+        self.__log.return_(frame)
         return frame
 
     def _create_album_compilation_editor(self, master, value):
@@ -1138,7 +1221,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, value=%r", master, value)
+        self.__log.call(master, value)
+
         frame = tk.Frame(master)
 
         self.album_compilation_var = tk.BooleanVar(value=value)
@@ -1147,6 +1231,7 @@ class FLACManager(tk.Frame):
             onvalue=True, offvalue=False)
         checkbutton.pack(side=tk.LEFT)
 
+        self.__log.return_(frame)
         return frame
 
     def _save_cover_image(self, image_data):
@@ -1156,7 +1241,7 @@ class FLACManager(tk.Frame):
         :return: 2-tuple (:obj:`str` label, :obj:`str` filename)
 
         """
-        self.__log.debug("TRACE image_data=%r...", image_data[:8])
+        self.__log.call(image_data)
 
         image_type = imghdr.what("_ignored_", h=image_data)
         if image_type is None:
@@ -1178,7 +1263,7 @@ class FLACManager(tk.Frame):
         :param str name: label for the image
 
         """
-        self.__log.debug("TRACE name=%r", name)
+        self.__log.call(name)
 
         filename = self._album_covers.get(name)
         if filename:
@@ -1204,7 +1289,7 @@ class FLACManager(tk.Frame):
         dropdown.
 
         """
-        self.__log.debug("TRACE")
+        self.__log.call()
 
         self._covers_optionmenu.config(state=tk.DISABLED)
 
@@ -1214,6 +1299,7 @@ class FLACManager(tk.Frame):
             initialvalue="")
         if not url:
             self._covers_optionmenu.config(state=tk.NORMAL)
+            self.__log.return_()
             return
 
         self.__log.debug("url = %r", url)
@@ -1248,7 +1334,8 @@ class FLACManager(tk.Frame):
 
     def _add_album_cover_option(self, name):
         """Add *name* to the cover image dropdown menu."""
-        self.__log.debug("TRACE name=%r", name)
+        self.__log.call(name)
+
         self._covers_optionmenu["menu"].add_command(
             label=name,
             command=lambda f=self.choose_cover_image, v=name: f(v))
@@ -1259,7 +1346,7 @@ class FLACManager(tk.Frame):
         The cover image is made available in the cover image dropdown.
 
         """
-        self.__log.debug("TRACE")
+        self.__log.call()
 
         self._covers_optionmenu.config(state=tk.DISABLED)
 
@@ -1274,6 +1361,7 @@ class FLACManager(tk.Frame):
             title="Choose a JPEG or PNG file")
         if not filename:
             self._covers_optionmenu.config(state=tk.NORMAL)
+            self.__log.return_()
             return
 
         self.__log.debug("filename = %r", filename)
@@ -1315,8 +1403,7 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug(
-            "TRACE master=%r, total_tracks=%r", master, total_tracks)
+        self.__log.call(master, total_tracks)
 
         frame = tk.Frame(master)
 
@@ -1331,6 +1418,7 @@ class FLACManager(tk.Frame):
         of_label = tk.Label(frame, text="of %d" % total_tracks)
         of_label.pack(side=tk.LEFT)
 
+        self.__log.return_(frame)
         return frame
 
     def _create_track_include_editor(self, master):
@@ -1341,7 +1429,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r", master)
+        self.__log.call(master)
+
         frame = tk.Frame(master)
 
         self.track_include_checkbox = tk.Checkbutton(
@@ -1356,6 +1445,7 @@ class FLACManager(tk.Frame):
             command=self.apply_include_to_tracks)
         button.pack(side=tk.LEFT)
 
+        self.__log.return_(frame)
         return frame
 
     def apply_include_to_tracks(self):
@@ -1363,7 +1453,8 @@ class FLACManager(tk.Frame):
         track's include/exclude state.
 
         """
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         include_value = \
             self._track_vars["include"][self._current_track_number].get()
         for track_include_var in self._track_vars["include"][1:]:
@@ -1374,7 +1465,8 @@ class FLACManager(tk.Frame):
         it is include or excluded, respectively.
 
         """
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         if not self._track_vars["include"][self._current_track_number].get():
             self.__log.debug(
                 "disabling track editors for track %s",
@@ -1413,7 +1505,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         frame = tk.Frame(master)
 
         (label, _, self.track_title_entry, self._track_title_optionmenu) = \
@@ -1426,6 +1519,7 @@ class FLACManager(tk.Frame):
         if len(choices) > 1:
             self._track_title_optionmenu.pack(side=tk.LEFT)
 
+        self.__log.return_(frame)
         return frame
 
     def _create_track_artist_editor(self, master, choices):
@@ -1437,7 +1531,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         frame = tk.Frame(master)
 
         (label, _, self.track_artist_entry, self._track_artist_optionmenu) = \
@@ -1450,6 +1545,7 @@ class FLACManager(tk.Frame):
         if len(choices) > 1:
             self._track_artist_optionmenu.pack(side=tk.LEFT)
 
+        self.__log.return_(frame)
         return frame
 
     def _create_track_performer_editor(self, master, choices):
@@ -1461,7 +1557,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         frame = tk.Frame(master)
 
         (label, _, self.track_performer_entry,
@@ -1476,6 +1573,7 @@ class FLACManager(tk.Frame):
         if len(choices) > 1:
             self._track_performer_optionmenu.pack(side=tk.LEFT)
 
+        self.__log.return_(frame)
         return frame
 
     def _create_track_genre_editor(self, master, choices):
@@ -1487,7 +1585,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         frame = tk.Frame(master)
 
         genres = self._combine_genres(choices)
@@ -1503,6 +1602,7 @@ class FLACManager(tk.Frame):
         self.track_genre_entry.pack(side=tk.LEFT, padx=5)
         self._track_genre_optionmenu.pack(side=tk.LEFT)
 
+        self.__log.return_(frame)
         return frame
 
     def _create_track_year_editor(self, master, choices):
@@ -1514,7 +1614,8 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug("TRACE master=%r, choices=%r", master, choices)
+        self.__log.call(master, choices)
+
         frame = tk.Frame(master)
 
         (label, _, self.track_year_entry, self._track_year_optionmenu) = \
@@ -1528,6 +1629,7 @@ class FLACManager(tk.Frame):
         if len(choices) > 1:
             self._track_year_optionmenu.pack(side=tk.LEFT)
 
+        self.__log.return_(frame)
         return frame
 
     def refresh_track_editors(self):
@@ -1539,11 +1641,12 @@ class FLACManager(tk.Frame):
         then this method is a no-op.
 
         """
-        self.__log.debug("TRACE")
+        self.__log.call()
 
         #TODO: should "wrap" on first or last track
         track_number = int(self.track_spinner.get())
         if self._current_track_number == track_number:
+            self.__log.return_()
             return
 
         self._current_track_number = track_number
@@ -1623,17 +1726,19 @@ class FLACManager(tk.Frame):
         The order of preferred/additional choices is maintained.
 
         """
-        self.__log.debug(
-            "TRACE preferred=%r, additional=%r", preferred, additional)
+        self.__log.call(preferred, additional)
+
         combined = list(preferred)
         for choice in additional:
             if choice not in combined:
                 combined.append(choice)
+
+        self.__log.return_(combined)
         return combined
 
     def _persist_metadata(self):
         """Store the current metadata field/value pairs."""
-        self.__log.debug("TRACE")
+        self.__log.call()
 
         number_of_tracks = len(self.toc.track_offsets)
         album_metadata = {
@@ -1700,7 +1805,7 @@ class FLACManager(tk.Frame):
            ``None`` is added to the returned list instead of a dict.
 
         """
-        self.__log.debug("TRACE")
+        self.__log.call()
 
         # not set from metadata collectors, so set it now
         self._album_metadata["is_compilation"] = \
@@ -1741,7 +1846,7 @@ class FLACManager(tk.Frame):
                 self.__log.info("track %d is excluded", track_number)
                 tagging_metadata.append(None)
 
-        self.__log.debug("RETURN %r", tagging_metadata)
+        self.__log.return_(tagging_metadata)
         return tagging_metadata
 
     def _create_encoder_status(self, master, max_visible_tracks=29):
@@ -1756,9 +1861,7 @@ class FLACManager(tk.Frame):
         :rtype: :class:`tkinter.Frame`
 
         """
-        self.__log.debug(
-            "TRACE master=%r, max_visible_tracks=%r",
-            master, max_visible_tracks)
+        self.__log.call(master, max_visible_tracks=max_visible_tracks)
 
         encoding_status_frame = tk.LabelFrame(master, text="Encoding status")
 
@@ -1804,7 +1907,7 @@ class FLACManager(tk.Frame):
 
         self._encoding_status_list.pack(fill=tk.BOTH, padx=0, pady=0)
 
-        self.__log.debug("RETURN %r", encoding_status_frame)
+        self.__log.return_(encoding_status_frame)
         return encoding_status_frame
 
     def _initialize_track_encoding_statuses(self, track_include_flags):
@@ -1815,7 +1918,8 @@ class FLACManager(tk.Frame):
            whether or not it is included for the encoding process
 
         """
-        self.__log.debug("TRACE trace_include_flags=%r", track_include_flags)
+        self.__log.call(track_include_flags)
+
         self._track_encoding_statuses = []
         for (i, label) in enumerate(self.track_labels):
             self._track_encoding_statuses.append(
@@ -1823,7 +1927,7 @@ class FLACManager(tk.Frame):
 
     def rip_and_tag(self):
         """Create tagged FLAC and MP3 files of all included tracks."""
-        self.__log.debug("TRACE")
+        self.__log.call()
 
         if self.encoding_status_frame is not None:
             self.encoding_status_frame.destroy()
@@ -1855,7 +1959,7 @@ class FLACManager(tk.Frame):
            for each track
 
         """
-        self.__log.debug("TRACE")
+        self.__log.call()
 
         disc_filenames = [
             name for name in os.listdir(self._mountpoint)
@@ -1912,7 +2016,7 @@ class FLACManager(tk.Frame):
             encoder.add_instruction(
                 index, cdda_filename, flac_filename, mp3_filename, metadata)
 
-        self.__log.debug("RETURN %r", encoder)
+        self.__log.return_(encoder)
         return encoder
 
     def _monitor_encoding_progress(self):
@@ -1945,7 +2049,7 @@ class FLACManager(tk.Frame):
                 self.rip_and_tag_button.config(state=tk.NORMAL)
 
                 self.master.bell()
-                # break out of the monitoring loop
+                self.__log.trace("break out of the monitoring loop")
                 return
 
             track_label = self.track_labels[track_index]
@@ -2003,7 +2107,7 @@ class FLACManager(tk.Frame):
         :rtype: :obj:`str`
 
         """
-        # do not log entry; called from a recursive method
+        # do not trace; called from a recursive method
         status_line = None
         prefix = "%s: " % cdda_basename
         with open(stdout_fn, 'r') as f:
@@ -2020,7 +2124,7 @@ class FLACManager(tk.Frame):
 
     def _destroy_metadata_editor(self):
         """Cleanup up UI resources created for the metadata editor."""
-        self.__log.debug("TRACE")
+        self.__log.call()
 
         if self.metadata_editor is not None:
             self.metadata_editor.destroy()
@@ -2053,7 +2157,8 @@ class FLACManager(tk.Frame):
 
     def _do_disc_check(self):
         """Spawn the :class:`DiscCheck` thread."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         self.retry_disc_check_button.pack_forget()
         DiscCheck().start()
         self._check_for_disc()
@@ -2064,8 +2169,7 @@ class FLACManager(tk.Frame):
         If a disc is **not** present, set a UI timer to check again.
 
         """
-        # don't log entry into this method - it is called repeatedly until a
-        # disc is found
+        # do not trace; called indefinitely until a disc is found
         try:
             disc_info = _DISC_QUEUE.get_nowait()
         except queue.Empty:
@@ -2096,7 +2200,8 @@ class FLACManager(tk.Frame):
 
     def _do_metadata_aggregation(self):
         """Spawn the :class:`MetadataAggregator` thread."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         try:
             MetadataAggregator(self.toc).start()
         except Exception as e:
@@ -2151,7 +2256,7 @@ class FLACManager(tk.Frame):
 
     def _eject_disc(self):
         """Eject the current CD-DA disc and update the UI."""
-        self.__log.debug("TRACE")
+        self.__log.call()
 
         status = subprocess.call(
             ["diskutil", "eject", self._disk],
@@ -2193,17 +2298,17 @@ class FLACManager(tk.Frame):
 
     def edit_config(self):
         """Open the configuration editor dialog."""
-        self.__log.debug("TRACE")
+        self.__log.mark()
         EditConfigurationDialog(self.master, title="Edit flacmanager.ini")
 
     def prerequisites(self):
         """Open the prerequisites information dialog."""
-        self.__log.debug("TRACE")
+        self.__log.mark()
         PrerequisitesDialog(self.master, title="%s prerequisites" % self.TITLE)
 
     def about(self):
         """Open the application description dialog."""
-        self.__log.debug("TRACE")
+        self.__log.mark()
         AboutDialog(self.master, title="About %s" % self.TITLE)
 
 
@@ -2306,8 +2411,8 @@ class TrackEncodingStatus:
            as :data:`TRACK_EXCLUDED`
 
         """
-        self.__log.debug(
-            "TRACE track_label=%r, pending=%r", track_label, pending)
+        self.__log.call(track_label, pending=pending)
+
         self.track_label = track_label
         self.__state = TRACK_PENDING if pending else TRACK_EXCLUDED
 
@@ -2327,7 +2432,8 @@ class TrackEncodingStatus:
            ``True`` if the transition is successful, otherwise ``False``
 
         """
-        self.__log.debug("TRACE to_state=%r", to_state)
+        self.__log.call(to_state)
+
         from_state = self.__state
         if isinstance(to_state, Exception):
             to_state = TRACK_FAILED
@@ -2337,9 +2443,11 @@ class TrackEncodingStatus:
             self.__log.warning(
                 "%s: illegal transition from %s to %s",
                 self.track_label, from_state, to_state)
+            self.__log.return_(False)
             return False
 
         self.__state = to_state
+        self.__log.return_(True)
         return True
 
     def describe(self, message=None):
@@ -2365,7 +2473,7 @@ def generate_flac_dirname(library_root, metadata):
     :rtype: :obj:`str`
 
     """
-    _log.debug("TRACE library_root=%r, metadata=%r", library_root, metadata)
+    _log.mark()
     return _generate_dirname("FLAC", library_root, metadata)
 
 
@@ -2377,7 +2485,7 @@ def generate_flac_basename(metadata):
     :rtype: :obj:`str`
 
     """
-    _log.debug("TRACE metadata=%r", metadata)
+    _log.mark()
     return _generate_basename("FLAC", metadata)
 
 
@@ -2390,7 +2498,7 @@ def generate_mp3_dirname(library_root, metadata):
     :rtype: :obj:`str`
 
     """
-    _log.debug("TRACE library_root=%r, metadata=%r", library_root, metadata)
+    _log.mark()
     return _generate_dirname("MP3", library_root, metadata)
 
 
@@ -2402,7 +2510,7 @@ def generate_mp3_basename(metadata):
     :rtype: :obj:`str`
 
     """
-    _log.debug("TRACE metadata=%r", metadata)
+    _log.mark()
     return _generate_basename("MP3", metadata)
 
 
@@ -2416,9 +2524,7 @@ def _generate_dirname(section, library_root, metadata):
     :rtype: :obj:`str`
 
     """
-    _log.debug(
-        "TRACE section=%r, library_root=%r, metadata=%r",
-        section, library_root, metadata)
+    _log.call(section, library_root, metadata)
 
     config = get_config()
     ndisc = "ndisc_" if metadata["disc_total"] > 1 else ""
@@ -2444,12 +2550,12 @@ def _generate_dirname(section, library_root, metadata):
 
     album_folder = os.path.join(
         library_root, *_subroot_trie(section, metadata), *folder_names)
-    _log.info("using album folder %r", album_folder)
 
     # doesn't work as expected for external media
     #os.makedirs(album_folder, exist_ok=True)
     subprocess.check_call(["mkdir", "-p", album_folder])
 
+    _log.info("using album folder %r", album_folder)
     return album_folder
 
 
@@ -2462,7 +2568,7 @@ def _generate_basename(section, metadata):
     :rtype: :obj:`str`
 
     """
-    _log.debug("TRACE section=%r, metadata=%r", section, metadata)
+    _log.call(section, metadata)
 
     config = get_config()
     ndisc = "ndisc_" if metadata["disc_total"] > 1 else ""
@@ -2498,7 +2604,8 @@ def _xplatform_safe(*names):
     :return: the list of names, transformed
 
     """
-    _log.debug("TRACE names=%r", names)
+    _log.call(*names)
+
     safe_names = list(names)
     for (pattern, replacement) in [
             (r"\s+", '-'), # contiguous ws to '-'
@@ -2523,12 +2630,12 @@ def _subroot_trie(section, metadata):
        structure for organizing audio files
 
     """
-    _log.debug("TRACE metadata=%r", metadata)
+    _log.call(metadata)
 
     # compilations exist at the top level of the library and do not use any
     # trie structure
     if metadata["is_compilation"]:
-        _log.debug("RETURN []")
+        _log.trace("RETURN []")
         return []
 
     config = get_config()
@@ -2539,13 +2646,13 @@ def _subroot_trie(section, metadata):
     # to skip building a directory trie structure, the key can be left empty or
     # the level can be set to zero (0)
     if not key or level <= 0:
-        _log.debug("RETURN []")
+        _log.trace("RETURN []")
         return []
 
     term = re.sub(r"[^0-9a-zA-Z]", "", metadata[key]).upper()
     nodes = [term[:n + 1] for n in range(min(level, len(term)))]
 
-    _log.debug("RETURN %r", nodes)
+    _log.return_(nodes)
     return nodes
 
 
@@ -2659,7 +2766,8 @@ class EditConfigurationDialog(simpledialog.Dialog):
         logging_label.grid(row=0, pady=11, sticky=tk.W)
 
         tk.Label(frame, text="level").grid(row=1, sticky=tk.W)
-        levels = ["OFF", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        levels = [
+            "OFF", "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         level = config.get("Logging", "level")
         self.logging_level = tk.StringVar(
             self, value=level if level in levels else "OFF")
@@ -2840,7 +2948,7 @@ def resolve_path(spec):
     :rtype: :obj:`str`
 
     """
-    _log.debug("TRACE spec=%r", spec)
+    _log.call(spec)
 
     resolved_path = os.path.realpath(
         os.path.abspath(
@@ -2850,7 +2958,7 @@ def resolve_path(spec):
     if not os.path.exists(resolved_path):
         raise RuntimeError("not a valid path: " + resolved_path)
 
-    _log.debug("RETURN %r", resolved_path)
+    _log.return_(resolved_path)
     return resolved_path
 
 
@@ -2865,10 +2973,9 @@ def encode_flac(
        absolute file name for redirected stdout
 
     """
-    _log.debug(
-        "TRACE cdda_filename=%r, flac_filename=%r, track_metadata=%r, "
-            "stdout_filename=%r",
-        cdda_filename, flac_filename, track_metadata, stdout_filename)
+    _log.call(
+        cdda_filename, flac_filename, track_metadata,
+        stdout_filename=stdout_filename)
 
     command = ["flac"]
     command.extend(get_config().get("FLAC", "flac_encode_options").split())
@@ -2906,9 +3013,7 @@ def decode_wav(flac_filename, wav_filename, stdout_filename=None):
        absolute file name for redirected stdout
 
     """
-    _log.debug(
-        "TRACE flac_filename=%r, wav_filename=%r, stdout_filename=%r",
-        flac_filename, wav_filename, stdout_filename)
+    _log.call(flac_filename, wav_filename, stdout_filename=stdout_filename)
 
     command = ["flac", "--decode"]
     command.extend(get_config().get("FLAC", "flac_decode_options").split())
@@ -2938,10 +3043,9 @@ def encode_mp3(
        absolute file name for redirected stdout
 
     """
-    _log.debug(
-        "TRACE wav_filename=%r, mp3_filename=%r, track_metadata=%r, "
-            "stdout_filename=%r",
-        wav_filename, mp3_filename, track_metadata, stdout_filename)
+    _log.call(
+        wav_filename, mp3_filename, track_metadata,
+        stdout_filename=stdout_filename)
 
     command = ["lame"]
     command.extend(get_config().get("MP3", "lame_encode_options").split())
@@ -2995,7 +3099,7 @@ def make_vorbis_comments(metadata):
           Just a proposal, but linked directly from Xiph Wiki
 
     """
-    _log.debug("TRACE metadata=%r", metadata)
+    _log.call(metadata)
 
     comments = {}
     comments["ALBUM"] = \
@@ -3018,7 +3122,7 @@ def make_vorbis_comments(metadata):
     comments["DATE"] = \
         [metadata["track_year"]] if metadata["track_year"] else []
 
-    _log.debug("RETURN %r", comments)
+    _log.return_(comments)
     return comments
 
 
@@ -3042,7 +3146,7 @@ def make_id3v2_tags(metadata):
           time, but Picard is a fantastic post-encoding fixer-upper.
 
     """
-    _log.debug("TRACE metadata=%r", metadata)
+    _log.call(metadata)
 
     tags = {}
     tags["TALB"] = [metadata["album_title"]] if metadata["album_title"] else []
@@ -3060,7 +3164,7 @@ def make_id3v2_tags(metadata):
     tags["TCON"] = re.split(r"\s*,\s*", metadata["track_genre"])
     tags["TYER"] = [metadata["track_year"]] if metadata["track_year"] else []
 
-    _log.debug("RETURN %r", tags)
+    _log.return_(tags)
     return tags
 
 
@@ -3073,8 +3177,9 @@ class FLACEncoder(threading.Thread):
     """A thread that rips CD-DA tracks to FLAC."""
 
     def __init__(self):
-        self.__log.debug("TRACE")
+        self.__log.call()
         super().__init__(daemon=True)
+
         self._instructions = []
 
     def add_instruction(self, track_index, cdda_filename, flac_filename,
@@ -3088,9 +3193,7 @@ class FLACEncoder(threading.Thread):
         :param dict track_metadata: tagging fields for this track
 
         """
-        self.__log.debug(
-            "TRACE track_index=%r, cdda_filename=%r, flac_filename=%r, "
-                "mp3_filename=%r, track_metadata=%r",
+        self.__log.call(
             track_index, cdda_filename, flac_filename, mp3_filename,
             track_metadata)
 
@@ -3100,7 +3203,8 @@ class FLACEncoder(threading.Thread):
 
     def run(self):
         """Rip CD-DA tracks to FLAC."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         mp3_encoder_threads = []
         for (index, cdda_fn, flac_fn, mp3_fn, metadata) in self._instructions:
             stdout_fn = make_tempfile(suffix=".out")
@@ -3206,13 +3310,12 @@ class MP3Encoder(threading.Thread):
         :param dict track_metadata: tagging fields for this track
 
         """
-        self.__log.debug(
-            "TRACE track_index=%r, cdda_filename=%r, flac_filename=%r, "
-                "mp3_filename=%r, stdout_filename=%r, track_metadata=%r",
+        self.__log.call(
             track_index, cdda_filename, flac_filename, mp3_filename,
             stdout_filename, track_metadata)
 
         super().__init__(daemon=True)
+
         self.track_index = track_index
         self.cdda_filename = cdda_filename
         self.flac_filename = flac_filename
@@ -3222,7 +3325,8 @@ class MP3Encoder(threading.Thread):
 
     def run(self):
         """Decode FLAC to WAV, then encode WAV to MP3."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         flac_basename = os.path.basename(self.flac_filename)
         wav_tempdir = TemporaryDirectory(prefix="fm")
         wav_basename = os.path.splitext(flac_basename)[0] + ".wav"
@@ -3288,12 +3392,14 @@ class MetadataCollector:
         :param flacmanager.TOC toc: a disc's table of contents
 
         """
-        self.__log.debug("TRACE toc=%r", toc)
+        self.__log.call(toc)
+
         self.toc = toc
 
     def reset(self):
         """Initialize all collection fields to default (empty)."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         number_of_tracks = len(self.toc.track_offsets)
         self.album = {
             "title": [],
@@ -3397,7 +3503,7 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
         :param flacmanager.TOC toc: a disc's table of contents
 
         """
-        self.__log.debug("TRACE toc=%r", toc)
+        self.__log.call(toc)
         super().__init__(toc)
 
         config = get_config()
@@ -3421,7 +3527,8 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
 
     def _register(self):
         """Register this client with the Gracenote Web API."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         gn_queries = ET.fromstring(self.REGISTER_XML)
         gn_queries.find("QUERY/CLIENT").text = self._client_id
 
@@ -3435,7 +3542,8 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
 
     def collect(self):
         """Populate all Gracenote album metadata choices."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         super().collect()
 
         if not self._user_id:
@@ -3533,8 +3641,7 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
         :rtype: :class:`xml.etree.ElementTree.Element`
 
         """
-        self.__log.debug(
-            "TRACE gn_id=%r, is_last_album=%r", gn_id, is_last_album)
+        self.__log.call(gn_id, is_last_album=is_last_album)
 
         gn_queries = self._prepare_gn_queries(self.ALBUM_FETCH_XML)
         gn_queries.find("QUERY/GN_ID").text = gn_id
@@ -3543,7 +3650,7 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
             gn_queries, http_keep_alive=is_last_album)
         gn_album = gn_responses.find("RESPONSE/ALBUM")
 
-        self.__log.debug("RETURN %r", gn_album)
+        self.__log.return_(gn_album)
         return gn_album
 
     def _get_cover_image(self, url):
@@ -3553,7 +3660,8 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
         :return: the raw image :obj:`bytes` data
 
         """
-        self.__log.debug("TRACE url=%r", url)
+        self.__log.call(url)
+
         parse_result = urlparse(url)
         host = parse_result.netloc
 
@@ -3594,9 +3702,7 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
         response.close()
         conx.close()
 
-        if response.status == 200:
-            return data
-        else:
+        if response.status != 200:
             if "Content-Type" in response.headers:
                 (_, params) = cgi.parse_header(
                     response.headers["Content-Type"])
@@ -3606,8 +3712,9 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
             self.__log.warning(
                 "unable to get cover art from %r (HTTP %d %s: %s)",
                 url, response.status, response.reason, data.decode(encoding))
+            return None
 
-        self.__log.debug("RETURN %r", data)
+        self.__log.return_(data)
         return data
 
     def _prepare_gn_queries(self, xml):
@@ -3619,13 +3726,13 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
         :rtype: :class:`xml.etree.ElementTree.Element`
 
         """
-        self.__log.debug("TRACE xml=%r", xml)
+        self.__log.call(xml)
 
         gn_queries = ET.fromstring(xml)
         gn_queries.find("AUTH/CLIENT").text = self._client_id
         gn_queries.find("AUTH/USER").text = self._user_id
 
-        self.__log.debug("RETURN %r", gn_queries)
+        self.__log.return_(gn_queries)
         return gn_queries
 
     def _get_response(self, gn_queries, http_keep_alive=True):
@@ -3641,9 +3748,7 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
            if the Gracenote request is unsuccessful
 
         """
-        self.__log.debug(
-            "TRACE gn_queries=%r, http_keep_alive=%r",
-            gn_queries, http_keep_alive)
+        self.__log.call(gn_queries, http_keep_alive=http_keep_alive)
 
         buf = BytesIO()
         ET.ElementTree(gn_queries).write(
@@ -3684,7 +3789,7 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
                 message = status
             raise MetadataError(message, context_hint="Gracenote %s" % cmd)
 
-        self.__log.debug("RETURN %r", gn_responses)
+        self.__log.return_(gn_responses)
         return gn_responses
 
 
@@ -3718,7 +3823,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
     @classmethod
     def initialize_libdiscid(cls):
         """Load the ``libdiscid`` shared library."""
-        cls.__log.debug("TRACE")
+        cls.__log.call()
 
         config = get_config()
         try:
@@ -3765,7 +3870,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         :rtype: :obj:`str`
 
         """
-        cls.__log.debug("TRACE toc=%r", toc)
+        cls.__log.call(toc)
 
         if cls._LIBDISCID is None:
             cls.initialize_libdiscid()
@@ -3796,7 +3901,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
 
             disc_id = cls._LIBDISCID.discid_get_id(handle).decode("us-ascii")
 
-            cls.__log.debug("RETURN %r", disc_id)
+            cls.__log.return_(disc_id)
             return disc_id
         finally:
             if handle is not None:
@@ -3809,7 +3914,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         :param flacmanager.TOC toc: a disc's table of contents
 
         """
-        self.__log.debug("TRACE toc=%r", toc)
+        self.__log.call(toc)
         super().__init__(toc)
 
         config = get_config()
@@ -3830,7 +3935,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
 
     def collect(self):
         """Populate all MusicBrainz album metadata choices."""
-        self.__log.debug("TRACE")
+        self.__log.call()
         super().collect()
 
         nsmap = self.NAMESPACES.copy()
@@ -3976,7 +4081,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         :rtype: :obj:`str`
 
         """
-        self.__log.debug("TRACE disc_id=%r", disc_id)
+        self.__log.call(disc_id)
 
         buf = StringIO()
         buf.write("%s/discid/%s" % (self.API_PATH_PREFIX, disc_id))
@@ -3990,7 +4095,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         request_path = buf.getvalue()
         buf.close()
 
-        self.__log.debug("RETURN %r", request_path)
+        self.__log.return_(request_path)
         return request_path
 
     def _get_response(self, request_path, nsmap, http_keep_alive=True):
@@ -4008,9 +4113,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         rasied.
 
         """
-        self.__log.debug(
-            "TRACE request_path=%r, nsmap=%r, http_keep_alive=%r",
-            request_path, nsmap, http_keep_alive)
+        self.__log.call(request_path, nsmap, http_keep_alive=http_keep_alive)
 
         headers = {
             "User-Agent": self.user_agent,
@@ -4049,7 +4152,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
                     "Unexpected response root element <%s>" % mb_response.tag
             raise MetadataError(message, context_hint="MusicBrainz API")
 
-        self.__log.debug("RETURN %r", mb_response)
+        self.__log.return_(mb_response)
         return mb_response
 
     def _get_cover_image(self, release_mbid):
@@ -4059,7 +4162,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         :return: raw image :obj:`bytes` data
 
         """
-        self.__log.debug("TRACE release_mbid=%r", release_mbid)
+        self.__log.call(release_mbid)
 
         url = urlparse(self.COVERART_URL_TEMPLATE % release_mbid)
         host = url.netloc
@@ -4084,9 +4187,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         response.close()
         conx.close()
 
-        if response.status == 200:
-            return data
-        else:
+        if response.status != 200:
             if "Content-Type" in response.headers:
                 (_, params) = cgi.parse_header(
                     response.headers["Content-Type"])
@@ -4097,6 +4198,10 @@ class MusicBrainzMetadataCollector(MetadataCollector):
                 "unable to get cover art for mbid %r (HTTP %d %s: %s)",
                 release_mbid, response.status, response.reason,
                 data.decode(encoding))
+            return None
+
+        self.__log.return_(data)
+        return data
 
 
 @logged
@@ -4111,7 +4216,7 @@ class MetadataPersistence(MetadataCollector):
         :param flacmanager.TOC toc: a disc's table of contents
 
         """
-        self.__log.debug("TRACE toc=%r", toc)
+        self.__log.call(toc)
         super().__init__(toc)
 
         flac_library_root = get_config().get("FLAC", "library_root")
@@ -4132,13 +4237,15 @@ class MetadataPersistence(MetadataCollector):
 
     def reset(self):
         """Initialize all collection fields to default (empty)."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         super().reset()
         self.restored = False
 
     def collect(self):
         """Populate metadata choices from persisted data."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         super().collect()
 
         if os.path.isfile(self.metadata_path):
@@ -4183,7 +4290,7 @@ class MetadataPersistence(MetadataCollector):
            the field.
 
         """
-        self.__log.debug("TRACE metadata=%r", metadata)
+        self.__log.call(metadata)
 
         if not os.path.isdir(self.metadata_persistence_root):
             # doesn't work as expected for external media
@@ -4239,7 +4346,7 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
         :param flacmanager.TOC toc: a disc's table of contents
 
         """
-        self.__log.debug("TRACE toc=%r", toc)
+        self.__log.call(toc)
 
         threading.Thread.__init__(self, daemon=True)
         MetadataCollector.__init__(self, toc)
@@ -4254,7 +4361,8 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
 
     def run(self):
         """Run the :meth:`collect` method in another thread."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         try:
             self.collect()
         except Exception as e:
@@ -4265,7 +4373,8 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
 
     def collect(self):
         """Populate metadata from all music databases."""
-        self.__log.debug("TRACE")
+        self.__log.call()
+
         MetadataCollector.collect(self)
 
         try:
@@ -4308,8 +4417,7 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
         :param dict target: metadata being merged into
 
         """
-        self.__log.debug(
-            "TRACE fields=%r, source=%r, target=%r", fields, source, target)
+        self.__log.call(fields, source, target)
 
         for field in fields:
             for value in source[field]:
@@ -4319,7 +4427,8 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
 
 def get_lame_genres():
     """Return the list of genres recognized by LAME."""
-    _log.debug("TRACE")
+    _log.call()
+
     # simple memo
     genres = getattr(get_lame_genres, "_fm_cached_genres", None)
     if genres is None:
@@ -4334,6 +4443,7 @@ def get_lame_genres():
 
     # always return a copy so that the list can be modified without changing
     # the cached value
+    _log.return_(genres)
     return list(genres)
 
 
