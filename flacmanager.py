@@ -420,7 +420,7 @@ def get_config():
                 for (key, default_value) in [
                         ("library_root", ""),
                         ("library_subroot_trie_key", "album_artist"),
-                        ("library_subroot_trie_level", 1),
+                        ("library_subroot_trie_level", '1'),
                         ("use_xplatform_safe_names", "yes"),
                         ("album_folder", "%(album_artist)s/%(album_title)s"),
                         ("ndisc_album_folder", "${album_folder}"),
