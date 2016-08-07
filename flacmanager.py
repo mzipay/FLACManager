@@ -189,20 +189,18 @@ def logged(cls):
 QUEUE_GET_NOWAIT_AFTER = 625
 
 
-def get_disc_info():
-    """Return a CD-DA disc's device name and mount point.
+def identify_cdda_device():
+    """Locate the file system device for an inserted CD-DA.
 
-    :return:
-       2-tuple (:obj:`str` device-name, :obj:`str` mount-point)
-       or ``None``
+    :return: the CD-DA file system device ("/dev/*")
+    :rtype: :obj:`str`
 
     """
-    # do not trace; called in a loop by the DiscCheck thread
+    # do not trace; called repeatedly by a the DiscCheck thread
     output = subprocess.check_output(
         ["diskutil", "list"], stderr=subprocess.STDOUT)
     output = output.decode(sys.getfilesystemencoding())
 
-    device = None
     is_cd_partition_scheme = False
     is_cd_da = False
     for line in StringIO(output):
@@ -212,7 +210,7 @@ def get_disc_info():
             continue
 
         if "CD_partition_scheme" in tokens:
-            _log.debug("%s: %s", device, line)
+            _log.debug("candidate %s: %s", device, line)
             is_cd_partition_scheme = True
             continue
         elif "CD_DA" in tokens:
@@ -220,20 +218,35 @@ def get_disc_info():
             break
 
     if is_cd_partition_scheme and is_cd_da:
-        output = subprocess.check_output(
-            ["diskutil", "info", device], stderr=subprocess.STDOUT)
-        output = output.decode(sys.getfilesystemencoding())
+        return device
 
-        for line in StringIO(output):
-            match = re.search(r"\s+Mount Point:\s+(.*?)$", line)
-            if match is not None:
-                mountpoint = match.group(1)
-                _log.info("CD-DA %s mounted at %s", device, mountpoint)
-                return (device, mountpoint)
-            else:
-                _log.debug(
-                    "CD-DA %s; still waiting for mount point", device)
 
+def identify_cdda_mount_point(device):
+    """Locate the file system mount point for the CD-DA *device*.
+
+    :param str device: the CD-DA device ("/dev/*")
+    :return: the *device* mount point
+    :rtype: :obj:`str`
+
+    """
+    # do not trace; called repeatedly by a the DiscCheck thread
+    output = subprocess.check_output(
+        ["diskutil", "info", device], stderr=subprocess.STDOUT)
+    output = output.decode(sys.getfilesystemencoding())
+
+    for line in StringIO(output):
+        match = re.search(r"\s+Mount Point:\s+(.*?)$", line)
+        if match is not None:
+            return match.group(1)
+
+
+#: The number of seconds to wait between querying ``diskutil`` for the
+#: inserted CD-DA device.
+_CDDA_DEVICE_IDENT_WAIT = 0.5
+
+#: The number of seconds to wait between querying ``diskutil`` for the
+#: inserted CD-DA device's mount point.
+_CDDA_MOUNT_POINT_IDENT_WAIT = 1.5
 
 #: Used to pass data between a :class:`DiscCheck` thread and the main thread.
 _DISC_QUEUE = queue.Queue(1)
@@ -253,11 +266,21 @@ class DiscCheck(threading.Thread):
         """
         self.__log.call()
 
+        device = None
+        mount_point = None
         try:
-            disc_info = get_disc_info()
-            while disc_info is None:
-                time.sleep(0.5) #TODO: should be configurable
-                disc_info = get_disc_info()
+            while device is None:
+                device = identify_cdda_device()
+                time.sleep(_CDDA_DEVICE_IDENT_WAIT)
+            self.__log.info("identified CD-DA device %s", device)
+
+            while mount_point is None:
+                # sleep first here to give the device time to mount
+                time.sleep(_CDDA_MOUNT_POINT_IDENT_WAIT)
+                mount_point = identify_cdda_mount_point(device)
+            self.__log.info("identified CD-DA mount point %s", mount_point)
+
+            disc_info = (device, mount_point)
         except Exception as e:
             self.__log.error("enqueueing %r", e)
             _DISC_QUEUE.put(e)
