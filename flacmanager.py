@@ -643,21 +643,22 @@ class FLACManager(tk.Frame):
 
         menubar = tk.Menu(self)
 
-        #TODO: make this the conventional File | Edit | Help
+        file_menu = tk.Menu(menubar, tearoff=tk.NO)
+        file_menu.add_command(label="Exit", command=self._exit)
+        menubar.add_cascade(label="File", menu=file_menu)
 
-        config_menu = tk.Menu(menubar, tearoff=tk.NO)
-        config_menu.add_command(
+        edit_menu = tk.Menu(menubar, tearoff=tk.NO)
+        edit_menu.add_command(
             label="Edit configuration settings",
             command=self.edit_config)
-        config_menu.add_command(
+        edit_menu.add_command(
             label="Refresh logging configuration",
             command=initialize_logging)
+        menubar.add_cascade(label="Edit", menu=edit_menu)
 
         help_menu = tk.Menu(menubar, tearoff=tk.NO)
         help_menu.add_command(label="Prequisites", command=self.prerequisites)
         help_menu.add_command(label="About", command=self.about)
-
-        menubar.add_cascade(label="Configuration", menu=config_menu)
         menubar.add_cascade(label="Help", menu=help_menu)
 
         self.master.config(menu=menubar)
@@ -2360,6 +2361,12 @@ class FLACManager(tk.Frame):
         self.__log.mark()
         AboutDialog(self.master, title="About %s" % self.TITLE)
 
+    def _exit(self):
+        """Quit the FLACManager application."""
+        self.master.withdraw()
+        self.destroy()
+        self.master.quit()
+
 
 @total_ordering
 class TrackState:
@@ -2816,10 +2823,10 @@ class EditConfigurationDialog(simpledialog.Dialog):
 
         tk.Label(frame, text="level").grid(row=1, sticky=tk.W)
         levels = [
-            "OFF", "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+            "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         level = config.get("Logging", "level")
         self.logging_level = tk.StringVar(
-            self, value=level if level in levels else "OFF")
+            self, value=level if level in levels else "INFO")
         tk.OptionMenu(
             frame, self.logging_level, *levels).grid(
                 row=1, column=1, sticky=tk.W)
@@ -4601,11 +4608,7 @@ def initialize_logging():
     config = get_config()
 
     _log.info("Logging config = %r", dict(config["Logging"]))
-    if config["Logging"]["level"] != "OFF":
-        logging.basicConfig(**config["Logging"])
-    else:
-        # effectively turns logging off
-        _log.setLevel(logging.FATAL + 1)
+    logging.basicConfig(**config["Logging"])
 
     _log.info("HTTP config = %r", dict(config["HTTP"]))
     HTTPConnection.debuglevel = config["HTTP"].getint("debuglevel")
