@@ -43,7 +43,7 @@ from collections import namedtuple, OrderedDict
 from configparser import ConfigParser, ExtendedInterpolation
 import ctypes as C
 import datetime
-from functools import total_ordering
+from functools import partial, total_ordering
 from http.client import HTTPConnection, HTTPSConnection
 import imghdr
 from io import BytesIO, StringIO
@@ -648,13 +648,38 @@ class FLACManager(tk.Frame):
         file_menu.add_command(label="Exit", command=self._exit)
         menubar.add_cascade(label="File", menu=file_menu)
 
-        edit_menu = tk.Menu(menubar, tearoff=tk.NO)
+        edit_menu = tk.Menu(menubar)
         edit_menu.add_command(
-            label="Edit configuration settings",
-            command=self.edit_config)
+            label="Configure metadata aggregation",
+            command=self._edit_aggregation_config)
         edit_menu.add_command(
-            label="Refresh logging configuration",
-            command=initialize_logging)
+            label="Configure default folder and file names",
+            command=self._edit_organization_config)
+        edit_menu.add_separator()
+        flac_menu = tk.Menu(edit_menu, tearoff=tk.NO)
+        flac_menu.add_command(
+            label="FLAC encoding options",
+            command=self._edit_flac_encoding_config)
+        flac_menu.add_command(
+            label="FLAC Vorbis comments",
+            command=self._edit_vorbis_comments_config)
+        flac_menu.add_command(
+            label="FLAC folder and file names",
+            command=self._edit_flac_organization_config)
+        edit_menu.add_cascade(label="Configure FLAC", menu=flac_menu)
+        mp3_menu = tk.Menu(edit_menu, tearoff=tk.NO)
+        mp3_menu.add_command(
+            label="MP3 encoding options",
+            command=self._edit_mp3_encoding_config)
+        mp3_menu.add_command(
+            label="MP3 ID3v2 tags", command=self._edit_id3v2_tags_config)
+        mp3_menu.add_command(
+            label="MP3 folder and file names",
+            command=self._edit_mp3_organization_config)
+        edit_menu.add_cascade(label="Configure MP3", menu=mp3_menu)
+        edit_menu.add_separator()
+        edit_menu.add_command(
+            label="Configure logging", command=self._edit_logging_config)
         menubar.add_cascade(label="Edit", menu=edit_menu)
 
         help_menu = tk.Menu(menubar, tearoff=tk.NO)
@@ -2350,10 +2375,41 @@ class FLACManager(tk.Frame):
                 title="Disk eject failure",
                 message="Unable to eject %s" % self._mountpoint)
 
-    def edit_config(self):
+    def _edit_aggregation_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
-        EditConfigurationDialog(self.master, title="Edit flacmanager.ini")
+
+    def _edit_organization_config(self):
+        """Open the configuration editor dialog."""
+        self.__log.mark()
+
+    def _edit_flac_encoding_config(self):
+        """Open the configuration editor dialog."""
+        self.__log.mark()
+
+    def _edit_vorbis_comments_config(self):
+        """Open the configuration editor dialog."""
+        self.__log.mark()
+
+    def _edit_flac_organization_config(self):
+        """Open the configuration editor dialog."""
+        self.__log.mark()
+
+    def _edit_mp3_encoding_config(self):
+        """Open the configuration editor dialog."""
+        self.__log.mark()
+
+    def _edit_id3v2_tags_config(self):
+        """Open the configuration editor dialog."""
+        self.__log.mark()
+
+    def _edit_mp3_organization_config(self):
+        """Open the configuration editor dialog."""
+        self.__log.mark()
+
+    def _edit_logging_config(self):
+        """Open the configuration editor dialog."""
+        self.__log.mark()
 
     def prerequisites(self):
         """Open the prerequisites information dialog."""
@@ -2821,6 +2877,19 @@ class _EditConfigurationDialog(simpledialog.Dialog):
         """Create the content of the dialog."""
         self._populate(frame, get_config())
 
+    def _section(self, parent, text, row=0):
+        section_label = tk.Label(parent, text=text)
+        _font(section_label).config(size=13, weight=tkfont.BOLD)
+        section_label.grid(row=row, columnspan=2, pady=11, sticky=tk.W)
+
+    def _option(self, parent, text, value, width=67, row=1):
+        tk.Label(parent, text=text).grid(row=row, sticky=tk.E)
+        textvariable = tk.StringVar(self, value=value)
+        tk.Entry(
+            parent, textvariable=textvariable, width=width
+            ).grid(row=row, column=1, sticky=tk.W)
+        return textvariable
+
     def buttonbox(self):
         """Create the buttons to save and/or dismiss the dialog."""
         box = tk.Frame(self)
@@ -2849,51 +2918,24 @@ class EditRequiredConfigurationDialog(_EditConfigurationDialog):
 
     def _populate(self, frame, config):
         """Create the content of the dialog."""
-        warning_label = tk.Label(
-            frame, text="These configuration settings MUST be specified:",
-            fg="Red")
-        _font(warning_label).config(size=13, weight=tkfont.BOLD)
-        warning_label.grid(row=0, sticky=tk.W)
+        section = partial(self._section, frame)
+        option = partial(self._option, frame)
 
-        organize_label = tk.Label(frame, text="Organize")
-        _font(organize_label).config(size=17, weight=tkfont.BOLD)
-        organize_label.grid(row=1, pady=11, sticky=tk.W)
+        section("Organize")
+        self.organize_library_root = option(
+            "library_root", config["Organize"].get("library_root", ""), row=1)
 
-        tk.Label(frame, text="library_root").grid(row=2, sticky=tk.W)
-        self.organize_library_root = tk.StringVar(
-            self, value=config.get("Organize", "library_root"))
-        tk.Entry(
-            frame, textvariable=self.organize_library_root, width=47
-            ).grid(row=2, column=1, sticky=tk.W)
+        section("Gracenote", row=2)
+        self.gracenote_client_id = option(
+            "client_id", config["Gracenote"].get("client_id", ""), row=3)
 
-        gracenote_label = tk.Label(frame, text="Gracenote")
-        _font(gracenote_label).config(size=17, weight=tkfont.BOLD)
-        gracenote_label.grid(row=3, pady=11, sticky=tk.W)
-
-        tk.Label(frame, text="client_id").grid(row=4, sticky=tk.W)
-        self.gracenote_client_id = tk.StringVar(
-            self, value=config.get("Gracenote", "client_id"))
-        tk.Entry(
-            frame, textvariable=self.gracenote_client_id, width=53
-            ).grid(row=4, column=1, sticky=tk.W)
-
-        musicbrainz_label = tk.Label(frame, text="MusicBrainz")
-        _font(musicbrainz_label).config(size=17, weight=tkfont.BOLD)
-        musicbrainz_label.grid(row=5, pady=11, sticky=tk.W)
-
-        tk.Label(frame, text="contact_url_or_email").grid(row=6, sticky=tk.W)
-        self.musicbrainz_contact_url_or_email = tk.StringVar(
-            self, value=config.get("MusicBrainz", "contact_url_or_email"))
-        tk.Entry(
-            frame, textvariable=self.musicbrainz_contact_url_or_email, width=37
-            ).grid(row=6, column=1, sticky=tk.W)
-
-        tk.Label(frame, text="libdiscid_location").grid(row=7, sticky=tk.W)
-        self.musicbrainz_libdiscid_location = tk.StringVar(
-            self, value=config.get("MusicBrainz", "libdiscid_location"))
-        tk.Entry(
-            frame, textvariable=self.musicbrainz_libdiscid_location, width=47
-            ).grid(row=7, column=1, sticky=tk.W)
+        section("MusicBrainz", row=4)
+        self.musicbrainz_contact_url_or_email = option(
+            "contact_url_or_email", 
+            config["MusicBrainz"].get("contact_url_or_email", ""), row=5)
+        self.musicbrainz_libdiscid_location = option(
+            "libdiscid_location",
+            config["MusicBrainz"].get("libdiscid_location", ""), row=6)
 
     def _update(self, config):
         """Update the options in *config*."""
