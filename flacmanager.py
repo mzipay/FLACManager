@@ -585,13 +585,12 @@ class FLACManager(tk.Frame):
 
         self.pack(fill=tk.BOTH, expand=tk.YES)
 
-        if not self._need_config():
+        if not self._missing_required_config():
             self._do_disc_check()
         else:
-            self.edit_config()
-            self.retry_disc_check_button.pack(side=tk.RIGHT, padx=7, pady=5)
+            self._prompt_edit_required_config()
 
-    def _need_config(self):
+    def _missing_required_config(self):
         """Determine whether or not required configuration settings have
         been specified.
 
@@ -614,6 +613,29 @@ class FLACManager(tk.Frame):
 
         self.__log.return_(flag)
         return flag
+
+    def _prompt_edit_required_config(self):
+        """Let the user know that required configuration settings are
+        not present, and provide a button to open an editor.
+
+        """
+        self.disc_status_message.config(
+            text="Required configuration is missing!", fg="Red")
+        self.open_req_config_editor_button.pack(
+            side=tk.RIGHT, padx=7, pady=5)
+
+    def _edit_required_config(self):
+        """Open a *flacmanager.ini* editor to allow the user to provide
+        required configuration settings.
+
+        """
+        EditRequiredConfigurationDialog(
+            self.master, title="Edit flacmanager.ini")
+        if not self._missing_required_config():
+            self.open_req_config_editor_button.pack_forget()
+            self.disc_status_message.config(
+                text="Waiting for a disc to be inserted\u2026", fg="Black")
+            self._do_disc_check()
 
     def _create_menu(self):
         """Create the FLAC Manager menu bar."""
@@ -654,6 +676,10 @@ class FLACManager(tk.Frame):
         self.disc_status_message = tk.Label(
             disc_status_group, text="Waiting for a disc to be inserted\u2026")
         self.disc_status_message.pack(side=tk.LEFT, padx=5, pady=3)
+
+        self.open_req_config_editor_button = tk.Button(
+            disc_status_group, text="Provide required configuration settings",
+            fg="Red", command=self._edit_required_config)
 
         self.retry_disc_check_button = tk.Button(
             disc_status_group, text="Retry disc check",
@@ -2307,7 +2333,7 @@ class FLACManager(tk.Frame):
             self.toc = None
             self.disc_status_message.config(
                 text="Waiting for a disc to be inserted\u2026",
-                padx=11, pady=7)
+                padx=5, pady=3)
 
             DiscCheck().start()
             self._check_for_disc()
@@ -2959,6 +2985,76 @@ class EditConfigurationDialog(simpledialog.Dialog):
         config.set("MP3", "library_root", self.mp3_library_root.get())
         config.set(
             "MP3", "lame_encode_options", self.mp3_lame_encode_options.get())
+
+        save_config()
+
+
+class EditRequiredConfigurationDialog(EditConfigurationDialog):
+    """A dialog that allows the user to edit the *flacmanager.ini*
+    file.
+
+    """
+
+    def body(self, frame):
+        """Create the content of the dialog."""
+        config = get_config()
+
+        warning_label = tk.Label(
+            frame, text="These configuration settings MUST be specified:",
+            fg="Red")
+        _font(warning_label).config(size=13, weight=tkfont.BOLD)
+        warning_label.grid(row=0, sticky=tk.W)
+
+        organize_label = tk.Label(frame, text="Organize")
+        _font(organize_label).config(size=17, weight=tkfont.BOLD)
+        organize_label.grid(row=1, pady=11, sticky=tk.W)
+
+        tk.Label(frame, text="library_root").grid(row=2, sticky=tk.W)
+        self.organize_library_root = tk.StringVar(
+            self, value=config.get("Organize", "library_root"))
+        tk.Entry(
+            frame, textvariable=self.organize_library_root, width=47
+            ).grid(row=2, column=1, sticky=tk.W)
+
+        gracenote_label = tk.Label(frame, text="Gracenote")
+        _font(gracenote_label).config(size=17, weight=tkfont.BOLD)
+        gracenote_label.grid(row=3, pady=11, sticky=tk.W)
+
+        tk.Label(frame, text="client_id").grid(row=4, sticky=tk.W)
+        self.gracenote_client_id = tk.StringVar(
+            self, value=config.get("Gracenote", "client_id"))
+        tk.Entry(
+            frame, textvariable=self.gracenote_client_id, width=53
+            ).grid(row=4, column=1, sticky=tk.W)
+
+        musicbrainz_label = tk.Label(frame, text="MusicBrainz")
+        _font(musicbrainz_label).config(size=17, weight=tkfont.BOLD)
+        musicbrainz_label.grid(row=5, pady=11, sticky=tk.W)
+
+        tk.Label(frame, text="contact_url_or_email").grid(row=6, sticky=tk.W)
+        self.musicbrainz_contact_url_or_email = tk.StringVar(
+            self, value=config.get("MusicBrainz", "contact_url_or_email"))
+        tk.Entry(
+            frame, textvariable=self.musicbrainz_contact_url_or_email, width=37
+            ).grid(row=6, column=1, sticky=tk.W)
+
+        tk.Label(frame, text="libdiscid_location").grid(row=7, sticky=tk.W)
+        self.musicbrainz_libdiscid_location = tk.StringVar(
+            self, value=config.get("MusicBrainz", "libdiscid_location"))
+        tk.Entry(
+            frame, textvariable=self.musicbrainz_libdiscid_location, width=47
+            ).grid(row=7, column=1, sticky=tk.W)
+
+    def apply(self):
+        """Save changes to the *flacmanager.ini* file."""
+        config = get_config()
+
+        config["Organize"]["library_root"] = self.organize_library_root.get()
+        config["Gracenote"]["client_id"] = self.gracenote_client_id.get()
+        config["MusicBrainz"]["contact_url_or_email"] = \
+            self.musicbrainz_contact_url_or_email.get()
+        config["MusicBrainz"]["libdiscid_location"] = \
+            self.musicbrainz_libdiscid_location.get()
 
         save_config()
 
