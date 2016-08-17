@@ -386,7 +386,7 @@ def get_config():
                     _config["HTTP"] = OrderedDict()
                 for (key, default_value) in [
                         ("debuglevel", '0'),
-                        ("timeout", '5'),
+                        ("timeout", "5.0"),
                         ]:
                     _config["HTTP"].setdefault(key, default_value)
 
@@ -421,7 +421,6 @@ def get_config():
                         ("library_root", ""),
                         ("library_subroot_trie_key", "album_artist"),
                         ("library_subroot_trie_level", '1'),
-                        ("use_xplatform_safe_names", "yes"),
                         ("album_folder", "%(album_artist)s/%(album_title)s"),
                         ("ndisc_album_folder", "${album_folder}"),
                         ("compilation_album_folder",
@@ -436,6 +435,7 @@ def get_config():
                             "${track_filename} (%(track_artist)s)"),
                         ("ndisc_compilation_track_filename",
                             "${ndisc_track_filename} (%(track_artist)s)"),
+                        ("use_xplatform_safe_names", "yes"),
                         ]:
                     _config["Organize"].setdefault(key, default_value)
 
@@ -447,8 +447,6 @@ def get_config():
                             "${Organize:library_subroot_trie_key}"),
                         ("library_subroot_trie_level",
                             "${Organize:library_subroot_trie_level}"),
-                        ("use_xplatform_safe_names",
-                            "${Organize:use_xplatform_safe_names}"),
                         ("album_folder", "${Organize:album_folder}"),
                         ("ndisc_album_folder",
                             "${Organize:ndisc_album_folder}"),
@@ -464,11 +462,34 @@ def get_config():
                         ("ndisc_compilation_track_filename",
                             "${Organize:ndisc_compilation_track_filename}"),
                         ("track_fileext", ".flac"),
+                        ("use_xplatform_safe_names",
+                            "${Organize:use_xplatform_safe_names}"),
                         ("flac_encode_options",
                             "--force --keep-foreign-metadata --verify"),
                         ("flac_decode_options", "--force"),
                         ]:
                     _config["FLAC"].setdefault(key, default_value)
+
+                if "Vorbis" not in _config:
+                    _config["Vorbis"] = OrderedDict()
+                for (key, default_value) in [
+                        ("ALBUM", "={album_title}"),
+                        ("DISCNUMBER", "={disc_number}"),
+                        ("DISCTOTAL", "={disc_total}"),
+                        ("TRACKNUMBER", "={track_number}"),
+                        ("TRACKTOTAL", "={track_total}"),
+                        ("TITLE", "={track_title}"),
+                        ("ARTIST", "={track_artist}"),
+                        ("PERFORMER", "={track_performer}"),
+                        ("ALBUMARTIST", "={album_artist}"),
+                        ("COMPOSER", "={track_composer}"),
+                        ("CONDUCTOR", "={track_conductor}"),
+                        ("GENRE", "*{track_genre}"),
+                        ("ORGANIZATION", "={track_recordlabel}"),
+                        ("DATE", "={track_year}"),
+                        ("COMPILATION", "={is_compilation:d}"),
+                        ]:
+                    _config["Vorbis"].setdefault(key, default_value)
 
                 if "MP3" not in _config:
                     _config["MP3"] = OrderedDict()
@@ -478,8 +499,6 @@ def get_config():
                             "${Organize:library_subroot_trie_key}"),
                         ("library_subroot_trie_level",
                             "${Organize:library_subroot_trie_level}"),
-                        ("use_xplatform_safe_names",
-                            "${Organize:use_xplatform_safe_names}"),
                         ("album_folder", "${Organize:album_folder}"),
                         ("ndisc_album_folder",
                             "${Organize:ndisc_album_folder}"),
@@ -495,10 +514,33 @@ def get_config():
                         ("ndisc_compilation_track_filename",
                             "${Organize:ndisc_compilation_track_filename}"),
                         ("track_fileext", ".mp3"),
+                        ("use_xplatform_safe_names",
+                            "${Organize:use_xplatform_safe_names}"),
                         ("lame_encode_options",
                             "--clipdetect -q 2 -V2 -b 224"),
                         ]:
                     _config["MP3"].setdefault(key, default_value)
+
+                if "ID3v2" not in _config:
+                    _config["ID3v2"] = OrderedDict()
+                for (key, default_value) in [
+                        ("TALB", "={album_title}"),
+                        ("TPOS", "={disc_number}/{disc_total}"),
+                        ("TRCK", "={track_number}/{track_total}"),
+                        ("TIT2", "={track_title}"),
+                        ("TIT1", "={track_artist}"),
+                        ("TPE1", "={track_artist}"),
+                        ("TPE4", "={track_performer}"),
+                        ("TPE2", "={album_artist}"),
+                        ("TCOM", "={track_composer}"),
+                        ("TPE3", "={track_conductor}"),
+                        ("TCON", "={track_genre:,}"),
+                        ("TPUB", "={track_recordlabel}"),
+                        ("TYER", "={track_year}"),
+                        ("TDRC", "${TYER}"),
+                        ("TCMP", "={is_compilation:d}"),
+                        ]:
+                    _config["ID3v2"].setdefault(key, default_value)
 
                 with open("flacmanager.ini", 'w') as f:
                     _config.write(f)
@@ -630,7 +672,7 @@ class FLACManager(tk.Frame):
 
         """
         EditRequiredConfigurationDialog(
-            self.master, title="Edit flacmanager.ini")
+            self.master, title="Edit flacmanager.ini (required settings)")
         if not self._missing_required_config():
             self.open_req_config_editor_button.pack_forget()
             self.disc_status_message.config(
@@ -705,8 +747,9 @@ class FLACManager(tk.Frame):
         self.disc_status_message.pack(side=tk.LEFT, padx=5, pady=3)
 
         self.open_req_config_editor_button = tk.Button(
-            disc_status_group, text="Provide required configuration settings",
-            fg="Red", command=self._edit_required_config)
+            disc_status_group,
+            text="Edit required configuration in flacmanager.ini", fg="Red",
+            command=self._edit_required_config)
         #TODO: ensure fg stays red (below doesn't work!?)
         self.open_req_config_editor_button.bind(
             "<Enter>", lambda event: event.widget.configure(fg="Red"))
@@ -2378,38 +2421,60 @@ class FLACManager(tk.Frame):
     def _edit_aggregation_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
+        EditAggregationConfigurationDialog(
+            self.master, title="Edit flacmanager.ini (metadata aggregation)")
 
     def _edit_organization_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
+        EditOrganizationConfigurationDialog(
+            self.master,
+            title="Edit flacmanager.ini (default folder and file names)")
 
     def _edit_flac_encoding_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
+        EditFLACEncodingConfigurationDialog(
+            self.master, title="Edit flacmanager.ini (FLAC encoding)")
 
     def _edit_vorbis_comments_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
+        EditVorbisCommentsConfigurationDialog(
+            self.master,
+            title="Edit flacmanager.ini (default FLAC Vorbis comments)")
 
     def _edit_flac_organization_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
+        EditFLACOrganizationConfigurationDialog(
+            self.master,
+            title="Edit flacmanager.ini (FLAC folder and file names)")
 
     def _edit_mp3_encoding_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
+        EditMP3EncodingConfigurationDialog(
+            self.master, title="Edit flacmanager.ini (MP3 encoding)")
 
     def _edit_id3v2_tags_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
+        EditID3v2TagsConfigurationDialog(
+            self.master, title="Edit flacmanager.ini (default MP3 ID3v2 tags)")
 
     def _edit_mp3_organization_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
+        EditMP3OrganizationConfigurationDialog(
+            self.master,
+            title="Edit flacmanager.ini (MP3 folder and file names)")
 
     def _edit_logging_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
+        EditLoggingConfigurationDialog(
+            self.master, title="Edit flacmanager.ini (logging/debug)")
 
     def prerequisites(self):
         """Open the prerequisites information dialog."""
@@ -2874,39 +2939,101 @@ class _EditConfigurationDialog(simpledialog.Dialog):
     """
 
     def body(self, frame):
-        """Create the content of the dialog."""
+        """Create the content of the dialog.
+
+        :param tk.Frame frame: the frame that contains the body content
+
+        """
+        self._row = 0
+        self._variables = {} # "Section" -> { "option" -> tk-variable }
+
         self._populate(frame, get_config())
 
-    def _section(self, parent, text, row=0):
-        section_label = tk.Label(parent, text=text)
-        _font(section_label).config(size=13, weight=tkfont.BOLD)
-        section_label.grid(row=row, columnspan=2, pady=11, sticky=tk.W)
+    def section(self, parent, section_name):
+        """Add a section header to the body of the dialog.
 
-    def _option(self, parent, text, value, width=67, row=1):
-        tk.Label(parent, text=text).grid(row=row, sticky=tk.E)
-        textvariable = tk.StringVar(self, value=value)
-        tk.Entry(
-            parent, textvariable=textvariable, width=width
-            ).grid(row=row, column=1, sticky=tk.W)
-        return textvariable
+        :param parent: the parent object of the section header
+        :param str section_name: the name of the configuration section
+
+        """
+        section_label = tk.Label(parent, text=section_name)
+        _font(section_label).config(size=13, weight=tkfont.BOLD)
+        section_label.grid(row=self._row, columnspan=2, pady=11, sticky=tk.W)
+
+        self._row += 1
+
+    def option(
+            self, parent, section_name, option_name, value, width=67):
+        """Add an editable option to the body of the dialog.
+
+        :param parent: the parent object of the section header
+        :param str section_name: the name of the configuration section
+        :param str option_name: the name of the configuration option
+        :param value: the default/initial value of the option
+        :keyword int width:
+           the display width of the entry box for this option's value
+
+        """
+        tk.Label(parent, text=option_name).grid(row=self._row, sticky=tk.E)
+
+        if type(value) is int:
+            variable = tk.IntVar(self, value=value)
+        elif type(value) is bool:
+            variable = tk.BooleanVar(self, value=value)
+        elif type(value) is float:
+            variable = tk.DoubleVar(self, value=value)
+        else:
+            variable = tk.StringVar(
+                self, value=value if type(value) is not list else value[0])
+
+        if type(value) is list:
+            tk.OptionMenu(parent, variable, *value[1:]).grid(
+                row=self._row, column=1, sticky=tk.W)
+        elif type(variable) is tk.BooleanVar:
+            tk.Checkbutton(
+                parent, variable=variable, onvalue=True, offvalue=False).grid(
+                    row=self._row, column=1, sticky=tk.W)
+        else:
+            tk.Entry(parent, textvariable=variable, width=width).grid(
+                row=self._row, column=1, sticky=tk.W)
+
+        self._row += 1
+
+        # track the variable; see apply()
+        if section_name not in self._variables:
+            self._variables[section_name] = {}
+        self._variables[section_name][option_name] = variable
 
     def buttonbox(self):
         """Create the buttons to save and/or dismiss the dialog."""
         box = tk.Frame(self)
+
         tk.Button(
             box, text="Save", width=10, command=self.ok, default=tk.ACTIVE
             ).pack(side=tk.LEFT, padx=5, pady=5)
+
         tk.Button(
             box, text="Cancel", width=10,
             command=self.cancel
             ).pack(side=tk.LEFT, padx=5, pady=5)
+
         self.bind("<Return>", self.ok)
         self.bind("<Escape>", self.cancel)
+
         box.pack()
 
     def apply(self):
         """Save changes to the *flacmanager.ini* file."""
-        self._update(get_config())
+        config = get_config()
+
+        for (section, optvar) in self._variables.items():
+            for (option, variable) in optvar.items():
+                # values MUST be strings!
+                if type(variable) is not tk.BooleanVar:
+                    config[section][option] = str(variable.get())
+                else:
+                    config[section][option] = "yes" if variable.get() else "no"
+
         save_config()
 
 
@@ -2918,202 +3045,323 @@ class EditRequiredConfigurationDialog(_EditConfigurationDialog):
 
     def _populate(self, frame, config):
         """Create the content of the dialog."""
-        section = partial(self._section, frame)
-        option = partial(self._option, frame)
+        section = partial(self.section, frame)
+        option = partial(self.option, frame)
 
         section("Organize")
-        self.organize_library_root = option(
-            "library_root", config["Organize"].get("library_root", ""), row=1)
+        option(
+            "Organize", "library_root", config["Organize"]["library_root"])
 
-        section("Gracenote", row=2)
-        self.gracenote_client_id = option(
-            "client_id", config["Gracenote"].get("client_id", ""), row=3)
+        section("Gracenote")
+        option("Gracenote", "client_id", config["Gracenote"]["client_id"])
 
-        section("MusicBrainz", row=4)
-        self.musicbrainz_contact_url_or_email = option(
-            "contact_url_or_email", 
-            config["MusicBrainz"].get("contact_url_or_email", ""), row=5)
-        self.musicbrainz_libdiscid_location = option(
-            "libdiscid_location",
-            config["MusicBrainz"].get("libdiscid_location", ""), row=6)
-
-    def _update(self, config):
-        """Update the options in *config*."""
-        config["Organize"]["library_root"] = self.organize_library_root.get()
-        config["Gracenote"]["client_id"] = self.gracenote_client_id.get()
-        config["MusicBrainz"]["contact_url_or_email"] = \
-            self.musicbrainz_contact_url_or_email.get()
-        config["MusicBrainz"]["libdiscid_location"] = \
-            self.musicbrainz_libdiscid_location.get()
+        section("MusicBrainz")
+        option(
+            "MusicBrainz", "contact_url_or_email", 
+            config["MusicBrainz"]["contact_url_or_email"])
+        option(
+            "MusicBrainz", "libdiscid_location",
+            config["MusicBrainz"]["libdiscid_location"])
 
 
-class EditConfigurationDialog(_EditConfigurationDialog):
-    """A dialog that allows the user to edit the *flacmanager.ini*
-    file.
+class EditAggregationConfigurationDialog(_EditConfigurationDialog):
+    """A dialog that allows the user to edit metadata aggregation
+    options from the *flacmanager.ini* configuration file.
 
     """
 
     def _populate(self, frame, config):
         """Create the content of the dialog."""
-        logging_label = tk.Label(frame, text="Logging")
-        _font(logging_label).config(size=17, weight=tkfont.BOLD)
-        logging_label.grid(row=0, pady=11, sticky=tk.W)
+        section = partial(self.section, frame)
+        option = partial(self.option, frame)
 
-        tk.Label(frame, text="level").grid(row=1, sticky=tk.W)
+        section("HTTP")
+        option("HTTP", "timeout", config["HTTP"].getfloat("timeout"), width=7)
+
+        section("Gracenote")
+        option("Gracenote", "client_id", config["Gracenote"]["client_id"])
+        option("Gracenote", "user_id", config["Gracenote"]["user_id"])
+
+        section("MusicBrainz")
+        option(
+            "MusicBrainz", "contact_url_or_email", 
+            config["MusicBrainz"]["contact_url_or_email"])
+        option(
+            "MusicBrainz", "libdiscid_location",
+            config["MusicBrainz"]["libdiscid_location"])
+
+
+class EditOrganizationConfigurationDialog(_EditConfigurationDialog):
+    """A dialog that allows the user to edit library folder/file
+    organization options from the *flacmanager.ini* configuration file.
+
+    """
+
+    def _populate(self, frame, config):
+        """Create the content of the dialog."""
+        section = partial(self.section, frame)
+        option = partial(self.option, frame)
+
+        section("Organize")
+        option("Organize", "library_root", config["Organize"]["library_root"])
+        option(
+            "Organize", "library_subroot_trie_key",
+            config["Organize"]["library_subroot_trie_key"], width=29)
+        option(
+            "Organize", "library_subroot_trie_level",
+            config["Organize"].getint("library_subroot_trie_level"), width=5)
+        option(
+            "Organize", "album_folder",
+            config["Organize"].get("album_folder", raw=True))
+        option(
+            "Organize", "ndisc_album_folder",
+            config["Organize"].get("ndisc_album_folder", raw=True))
+        option(
+            "Organize", "compilation_album_folder",
+            config["Organize"].get("compilation_album_folder", raw=True))
+        option(
+            "Organize", "ndisc_compilation_album_folder",
+            config["Organize"].get("ndisc_compilation_album_folder", raw=True))
+        option(
+            "Organize", "track_filename",
+            config["Organize"].get("track_filename", raw=True))
+        option(
+            "Organize", "ndisc_track_filename",
+            config["Organize"].get("ndisc_track_filename", raw=True))
+        option(
+            "Organize", "compilation_track_filename",
+            config["Organize"].get("compilation_track_filename", raw=True))
+        option(
+            "Organize", "ndisc_compilation_track_filename",
+            config["Organize"].get("ndisc_compilation_track_filename", raw=True))
+        option(
+            "Organize", "use_xplatform_safe_names",
+            config["Organize"].getboolean("use_xplatform_safe_names"))
+
+
+class EditFLACEncodingConfigurationDialog(_EditConfigurationDialog):
+    """A dialog that allows the user to edit FLAC encoding options from
+    the *flacmanager.ini* configuration file.
+
+    """
+
+    def _populate(self, frame, config):
+        """Create the content of the dialog."""
+        section = partial(self.section, frame)
+        option = partial(self.option, frame)
+
+        section("FLAC")
+        option(
+            "FLAC", "flac_encode_options",
+            config["FLAC"]["flac_encode_options"])
+
+
+class EditVorbisCommentsConfigurationDialog(_EditConfigurationDialog):
+    """A dialog that allows the user to edit default FLAC Vorbis comment
+    options from the *flacmanager.ini* configuration file.
+
+    """
+
+    def _populate(self, frame, config):
+        """Create the content of the dialog."""
+        section = partial(self.section, frame)
+        option = partial(self.option, frame, width=29)
+
+        section("Vorbis")
+
+        for comment in config["Vorbis"].keys():
+            option("Vorbis", comment, config["Vorbis"].get(comment, raw=True))
+
+
+class EditFLACOrganizationConfigurationDialog(_EditConfigurationDialog):
+    """A dialog that allows the user to edit FLAC folder/file
+    organization options from the *flacmanager.ini* configuration file.
+
+    """
+
+    def _populate(self, frame, config):
+        """Create the content of the dialog."""
+        section = partial(self.section, frame)
+        option = partial(self.option, frame)
+
+        section("FLAC")
+        option(
+            "FLAC", "library_root",
+            config["FLAC"].get("library_root", raw=True))
+        option(
+            "FLAC", "library_subroot_trie_key",
+            config["FLAC"].get("library_subroot_trie_key", raw=True), width=29)
+
+        # there won't be any validation if this is set to a non-interpolated,
+        # non-int value!
+        option(
+            "FLAC", "library_subroot_trie_level",
+            config["FLAC"].get("library_subroot_trie_level", raw=True))
+        tk.Label(
+            frame, text="${Organize:library_subroot_trie_level} or a number"
+            ).grid(row=self._row, column=1, sticky=tk.W)
+        self._row += 1
+
+        option(
+            "FLAC", "album_folder",
+            config["FLAC"].get("album_folder", raw=True))
+        option(
+            "FLAC", "ndisc_album_folder",
+            config["FLAC"].get("ndisc_album_folder", raw=True))
+        option(
+            "FLAC", "compilation_album_folder",
+            config["FLAC"].get("compilation_album_folder", raw=True))
+        option(
+            "FLAC", "ndisc_compilation_album_folder",
+            config["FLAC"].get("ndisc_compilation_album_folder", raw=True))
+        option(
+            "FLAC", "track_filename",
+            config["FLAC"].get("track_filename", raw=True))
+        option(
+            "FLAC", "ndisc_track_filename",
+            config["FLAC"].get("ndisc_track_filename", raw=True))
+        option(
+            "FLAC", "compilation_track_filename",
+            config["FLAC"].get("compilation_track_filename", raw=True))
+        option(
+            "FLAC", "ndisc_compilation_track_filename",
+            config["FLAC"].get("ndisc_compilation_track_filename", raw=True))
+
+        # there won't be any validation if this is set to a non-interpolated,
+        # non-boolean ("yes"/"no") value!
+        option(
+            "FLAC", "use_xplatform_safe_names",
+            config["FLAC"].get("use_xplatform_safe_names", raw=True))
+        tk.Label(
+            frame, text="${Organize:use_xplatform_safe_names}, yes, or no"
+            ).grid(row=self._row, column=1, sticky=tk.W)
+        self._row += 1
+
+
+class EditMP3EncodingConfigurationDialog(_EditConfigurationDialog):
+    """A dialog that allows the user to edit MP3 encoding options from
+    the *flacmanager.ini* configuration file.
+
+    """
+
+    def _populate(self, frame, config):
+        """Create the content of the dialog."""
+        section = partial(self.section, frame)
+        option = partial(self.option, frame)
+
+        section("MP3")
+        option(
+            "MP3", "lame_encode_options", config["MP3"]["lame_encode_options"])
+
+
+class EditID3v2TagsConfigurationDialog(_EditConfigurationDialog):
+    """A dialog that allows the user to edit default MP3 ID3v2 tag
+    options from the *flacmanager.ini* configuration file.
+
+    """
+
+    def _populate(self, frame, config):
+        """Create the content of the dialog."""
+        section = partial(self.section, frame)
+        option = partial(self.option, frame, width=29)
+
+        section("ID3v2")
+
+        for tag in config["ID3v2"].keys():
+            option("ID3v2", tag, config["ID3v2"].get(tag, raw=True))
+
+
+class EditMP3OrganizationConfigurationDialog(_EditConfigurationDialog):
+    """A dialog that allows the user to edit MP3 folder/file
+    organization options from the *flacmanager.ini* configuration file.
+
+    """
+
+    def _populate(self, frame, config):
+        """Create the content of the dialog."""
+        section = partial(self.section, frame)
+        option = partial(self.option, frame)
+
+        section("MP3")
+        option(
+            "MP3", "library_root",
+            config["MP3"].get("library_root", raw=True))
+        option(
+            "MP3", "library_subroot_trie_key",
+            config["MP3"].get("library_subroot_trie_key", raw=True), width=29)
+
+        # there won't be any validation if this is set to a non-interpolated,
+        # non-int value!
+        option(
+            "MP3", "library_subroot_trie_level",
+            config["MP3"].get("library_subroot_trie_level", raw=True))
+        tk.Label(
+            frame, text="${Organize:library_subroot_trie_level} or a number"
+            ).grid(row=self._row, column=1, sticky=tk.W)
+        self._row += 1
+
+        option(
+            "MP3", "album_folder",
+            config["MP3"].get("album_folder", raw=True))
+        option(
+            "MP3", "ndisc_album_folder",
+            config["MP3"].get("ndisc_album_folder", raw=True))
+        option(
+            "MP3", "compilation_album_folder",
+            config["MP3"].get("compilation_album_folder", raw=True))
+        option(
+            "MP3", "ndisc_compilation_album_folder",
+            config["MP3"].get("ndisc_compilation_album_folder", raw=True))
+        option(
+            "MP3", "track_filename",
+            config["MP3"].get("track_filename", raw=True))
+        option(
+            "MP3", "ndisc_track_filename",
+            config["MP3"].get("ndisc_track_filename", raw=True))
+        option(
+            "MP3", "compilation_track_filename",
+            config["MP3"].get("compilation_track_filename", raw=True))
+        option(
+            "MP3", "ndisc_compilation_track_filename",
+            config["MP3"].get("ndisc_compilation_track_filename", raw=True))
+
+        # there won't be any validation if this is set to a non-interpolated,
+        # non-boolean ("yes"/"no") value!
+        option(
+            "MP3", "use_xplatform_safe_names",
+            config["MP3"].get("use_xplatform_safe_names", raw=True))
+        tk.Label(
+            frame, text="${Organize:use_xplatform_safe_names}, yes, or no"
+            ).grid(row=self._row, column=1, sticky=tk.W)
+        self._row += 1
+
+
+class EditLoggingConfigurationDialog(_EditConfigurationDialog):
+    """A dialog that allows the user to edit logging and debug settings
+    from the *flacmanager.ini* file.
+
+    """
+
+    def _populate(self, frame, config):
+        """Create the content of the dialog."""
+        section = partial(self.section, frame)
+        option = partial(self.option, frame)
+
+        section("Logging")
         levels = [
             "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-        level = config.get("Logging", "level")
-        self.logging_level = tk.StringVar(
-            self, value=level if level in levels else "INFO")
-        tk.OptionMenu(
-            frame, self.logging_level, *levels).grid(
-                row=1, column=1, sticky=tk.W)
+        level = config["Logging"].get("level", "INFO")
+        option(
+            "Logging", "level",
+            [level if level in levels else "INFO"] + levels)
+        option("Logging", "filename", config["Logging"]["filename"])
+        option("Logging", "filemode", config["Logging"]["filemode"])
+        option("Logging", "format", config["Logging"].get("format", raw=True))
 
-        tk.Label(frame, text="filename").grid(row=2, sticky=tk.W)
-        self.logging_filename = tk.StringVar(
-            self, value=config.get("Logging", "filename"))
-        tk.Entry(
-            frame, textvariable=self.logging_filename, width=17
-            ).grid(row=2, column=1, sticky=tk.W)
-
-        tk.Label(frame, text="filemode").grid(row=3, sticky=tk.W)
-        self.logging_filemode = tk.StringVar(
-            self, value=config.get("Logging", "filemode"))
-        tk.Entry(
-            frame, textvariable=self.logging_filemode, width=3
-            ).grid(row=3, column=1, sticky=tk.W)
-
-        tk.Label(frame, text="format").grid(row=4, sticky=tk.W)
-        self.logging_format = tk.StringVar(
-            self, value=config.get("Logging", "format", raw=True))
-        tk.Entry(
-            frame, textvariable=self.logging_format, width=79
-            ).grid(row=4, column=1, sticky=tk.W)
-
-        http_label = tk.Label(frame, text="HTTP")
-        _font(http_label).config(size=17, weight=tkfont.BOLD)
-        http_label.grid(row=5, pady=11, sticky=tk.W)
-
-        tk.Label(frame, text="debuglevel").grid(row=6, sticky=tk.W)
-        self.http_debuglevel = tk.IntVar(
-            self, value=1 if config.getint("HTTP", "debuglevel") else 0)
-        tk.Checkbutton(
-            frame, variable=self.http_debuglevel, onvalue=1, offvalue=0
-            ).grid(row=6, column=1, sticky=tk.W)
-        tk.Label(frame, text="timeout").grid(row=7, sticky=tk.W)
-        self.http_timeout = tk.DoubleVar(
-            self, value=config.getfloat("HTTP", "timeout"))
-        tk.Entry(
-            frame, textvariable=self.http_timeout, width=5
-            ).grid(row=7, column=1, sticky=tk.W)
-
-        gracenote_label = tk.Label(frame, text="Gracenote")
-        _font(gracenote_label).config(size=17, weight=tkfont.BOLD)
-        gracenote_label.grid(row=8, pady=11, sticky=tk.W)
-
-        tk.Label(frame, text="client_id").grid(row=9, sticky=tk.W)
-        self.gracenote_client_id = tk.StringVar(
-            self, value=config.get("Gracenote", "client_id"))
-        tk.Entry(
-            frame, textvariable=self.gracenote_client_id, width=53
-            ).grid(row=9, column=1, sticky=tk.W)
-        tk.Label(frame, text="user_id").grid(row=10, sticky=tk.W)
-        self.gracenote_user_id = tk.StringVar(
-            self, value=config.get("Gracenote", "user_id"))
-        tk.Entry(
-            frame, textvariable=self.gracenote_user_id, width=53
-            ).grid(row=10, column=1, sticky=tk.W)
-
-        musicbrainz_label = tk.Label(frame, text="MusicBrainz")
-        _font(musicbrainz_label).config(size=17, weight=tkfont.BOLD)
-        musicbrainz_label.grid(row=11, pady=11, sticky=tk.W)
-
-        tk.Label(frame, text="contact_url_or_email").grid(row=12, sticky=tk.W)
-        self.musicbrainz_contact_url_or_email = tk.StringVar(
-            self, value=config.get("MusicBrainz", "contact_url_or_email"))
-        tk.Entry(
-            frame, textvariable=self.musicbrainz_contact_url_or_email, width=37
-            ).grid(row=12, column=1, sticky=tk.W)
-
-        tk.Label(frame, text="libdiscid_location").grid(row=13, sticky=tk.W)
-        self.musicbrainz_libdiscid_location = tk.StringVar(
-            self, value=config.get("MusicBrainz", "libdiscid_location"))
-        tk.Entry(
-            frame, textvariable=self.musicbrainz_libdiscid_location, width=47
-            ).grid(row=13, column=1, sticky=tk.W)
-
-        flac_label = tk.Label(frame, text="FLAC")
-        _font(flac_label).config(size=17, weight=tkfont.BOLD)
-        flac_label.grid(row=14, pady=11, sticky=tk.W)
-
-        tk.Label(frame, text="library_root").grid(row=15, sticky=tk.W)
-        self.flac_library_root = tk.StringVar(
-            self, value=config.get("FLAC", "library_root"))
-        tk.Entry(
-            frame, textvariable=self.flac_library_root, width=47
-            ).grid(row=15, column=1, sticky=tk.W)
-
-        tk.Label(frame, text="flac_encode_options").grid(row=16, sticky=tk.W)
-        self.flac_encode_options = tk.StringVar(
-            self, value=config.get("FLAC", "flac_encode_options"))
-        tk.Entry(
-            frame, textvariable=self.flac_encode_options, width=59
-            ).grid(row=16, column=1, sticky=tk.W)
-
-        tk.Label(frame, text="flac_decode_options").grid(row=17, sticky=tk.W)
-        self.flac_decode_options = tk.StringVar(
-            self, value=config.get("FLAC", "flac_decode_options"))
-        tk.Entry(
-            frame, textvariable=self.flac_decode_options, width=59
-            ).grid(row=17, column=1, sticky=tk.W)
-
-        mp3_label = tk.Label(frame, text="MP3")
-        _font(mp3_label).config(size=17, weight=tkfont.BOLD)
-        mp3_label.grid(row=18, pady=11, sticky=tk.W)
-
-        tk.Label(frame, text="library_root").grid(row=19, sticky=tk.W)
-        self.mp3_library_root = tk.StringVar(
-            self, value=config.get("MP3", "library_root"))
-        tk.Entry(
-            frame, textvariable=self.mp3_library_root, width=47
-            ).grid(row=19, column=1, sticky=tk.W)
-
-        tk.Label(frame, text="lame_encode_options").grid(row=20, sticky=tk.W)
-        self.mp3_lame_encode_options = tk.StringVar(
-            self, value=config.get("MP3", "lame_encode_options"))
-        tk.Entry(
-            frame, textvariable=self.mp3_lame_encode_options, width=59
-            ).grid(row=20, column=1, sticky=tk.W)
-
-    def _update(self, config):
-        """Update the options in *config*."""
-        config.set("Logging", "level", self.logging_level.get())
-        config.set("Logging", "filename", self.logging_filename.get())
-        config.set("Logging", "filemode", self.logging_filemode.get())
-        config.set("Logging", "format", self.logging_format.get())
-
-        config.set("HTTP", "debuglevel", str(self.http_debuglevel.get()))
-        config.set("HTTP", "timeout", str(self.http_timeout.get()))
-
-        config.set("Gracenote", "client_id", self.gracenote_client_id.get())
-        config.set("Gracenote", "user_id", self.gracenote_user_id.get())
-
-        config.set(
-            "MusicBrainz", "contact_url_or_email",
-            self.musicbrainz_contact_url_or_email.get())
-        config.set(
-            "MusicBrainz", "libdiscid_location",
-            self.musicbrainz_libdiscid_location.get())
-
-        config.set("FLAC", "library_root", self.flac_library_root.get())
-        config.set(
-            "FLAC", "flac_encode_options", self.flac_encode_options.get())
-        config.set(
-            "FLAC", "flac_decode_options", self.flac_decode_options.get())
-
-        config.set("MP3", "library_root", self.mp3_library_root.get())
-        config.set(
-            "MP3", "lame_encode_options", self.mp3_lame_encode_options.get())
+        section("HTTP")
+        option(
+            "HTTP", "debuglevel", config["HTTP"].getint("debuglevel", 0),
+            width=3)
 
 
 def resolve_path(spec):
