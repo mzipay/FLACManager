@@ -473,21 +473,21 @@ def get_config():
                 if "Vorbis" not in _config:
                     _config["Vorbis"] = OrderedDict()
                 for (key, default_value) in [
-                        ("ALBUM", "={album_title}"),
-                        ("DISCNUMBER", "={disc_number}"),
-                        ("DISCTOTAL", "={disc_total}"),
-                        ("TRACKNUMBER", "={track_number}"),
-                        ("TRACKTOTAL", "={track_total}"),
-                        ("TITLE", "={track_title}"),
-                        ("ARTIST", "={track_artist}"),
-                        ("PERFORMER", "={track_performer}"),
-                        ("ALBUMARTIST", "={album_artist}"),
-                        ("COMPOSER", "={track_composer}"),
-                        ("CONDUCTOR", "={track_conductor}"),
-                        ("GENRE", "*{track_genre}"),
-                        ("ORGANIZATION", "={track_recordlabel}"),
-                        ("DATE", "={track_year}"),
-                        ("COMPILATION", "={is_compilation:d}"),
+                        ("ALBUM", "{album_title}"),
+                        ("DISCNUMBER", "{disc_number:d}"),
+                        ("DISCTOTAL", "{disc_total:d}"),
+                        ("TRACKNUMBER", "{track_number:d}"),
+                        ("TRACKTOTAL", "{track_total:d}"),
+                        ("TITLE", "{track_title}"),
+                        ("ARTIST", "{track_artist}"),
+                        ("PERFORMER", "{track_performer}"),
+                        ("ALBUMARTIST", "{album_artist}"),
+                        ("COMPOSER", "{track_composer}"),
+                        ("CONDUCTOR", "{track_conductor}"),
+                        ("GENRE", "track_genre"),
+                        ("ORGANIZATION", "{track_recordlabel}"),
+                        ("DATE", "{track_year}"),
+                        ("COMPILATION", "{is_compilation:d}"),
                         ]:
                     _config["Vorbis"].setdefault(key, default_value)
 
@@ -524,21 +524,21 @@ def get_config():
                 if "ID3v2" not in _config:
                     _config["ID3v2"] = OrderedDict()
                 for (key, default_value) in [
-                        ("TALB", "={album_title}"),
-                        ("TPOS", "={disc_number}/{disc_total}"),
-                        ("TRCK", "={track_number}/{track_total}"),
-                        ("TIT2", "={track_title}"),
-                        ("TIT1", "={track_artist}"),
-                        ("TPE1", "={track_artist}"),
-                        ("TPE4", "={track_performer}"),
-                        ("TPE2", "={album_artist}"),
-                        ("TCOM", "={track_composer}"),
-                        ("TPE3", "={track_conductor}"),
-                        ("TCON", "={track_genre:,}"),
-                        ("TPUB", "={track_recordlabel}"),
-                        ("TYER", "={track_year}"),
+                        ("TALB", "{album_title}"),
+                        ("TPOS", "{disc_number:d}/{disc_total:d}"),
+                        ("TRCK", "{track_number:d}/{track_total:d}"),
+                        ("TIT2", "{track_title}"),
+                        ("TIT1", "${TPE1}"),
+                        ("TPE1", "{track_artist}"),
+                        ("TPE4", "{track_performer}"),
+                        ("TPE2", "{album_artist}"),
+                        ("TCOM", "{track_composer}"),
+                        ("TPE3", "{track_conductor}"),
+                        ("TCON", "{track_genre:,}"),
+                        ("TPUB", "{track_recordlabel}"),
+                        ("TYER", "{track_year}"),
                         ("TDRC", "${TYER}"),
-                        ("TCMP", "={is_compilation:d}"),
+                        ("TCMP", "{is_compilation:d}"),
                         ]:
                     _config["ID3v2"].setdefault(key, default_value)
 
@@ -1939,7 +1939,7 @@ class FLACManager(tk.Frame):
             album_title=self.album_title_var.get(),
             album_artist=self.album_artist_var.get(),
             album_performer=self.album_performer_var.get(),
-            album_genre=self.album_genre_var.get(),
+            album_genre=re.split(r"\s*,\s*", self.album_genre_var.get()),
             album_year=self.album_year_var.get(),
             disc_number=int(self.album_disc_number_var.get()),
             disc_total=int(self.album_disc_total_var.get()),
@@ -1960,7 +1960,10 @@ class FLACManager(tk.Frame):
                     track_artist=track_vars["artist"][track_number].get(),
                     track_performer=
                         track_vars["performer"][track_number].get(),
-                    track_genre=track_vars["genre"][track_number].get(),
+                    track_genre=
+                        re.split(
+                            r"\s*,\s*",
+                            track_vars["genre"][track_number].get()),
                     track_year=track_vars["year"][track_number].get()
                 ))
                 tagging_metadata.append(track_metadata)
@@ -3523,31 +3526,8 @@ def make_vorbis_comments(metadata):
           Just a proposal, but linked directly from Xiph Wiki
 
     """
-    _log.call(metadata)
-
-    comments = {}
-    comments["ALBUM"] = \
-        [metadata["album_title"]] if metadata["album_title"] else []
-    comments["DISCNUMBER"] = \
-        [metadata["disc_number"]] if metadata["disc_number"] else []
-    comments["DISCTOTAL"] = \
-        [metadata["disc_total"]] if metadata["disc_total"] else []
-    comments["TRACKNUMBER"] = \
-        [metadata["track_number"]] if metadata["track_number"] else []
-    comments["TRACKTOTAL"] = \
-        [metadata["track_total"]] if metadata["track_total"] else []
-    comments["TITLE"] = \
-        [metadata["track_title"]] if metadata["track_title"] else []
-    comments["ARTIST"] = \
-        [metadata["track_artist"]] if metadata["track_artist"] else []
-    comments["PERFORMER"] = \
-        [metadata["track_performer"]] if metadata["track_performer"] else []
-    comments["GENRE"] = re.split(r"\s*,\s*", metadata["track_genre"])
-    comments["DATE"] = \
-        [metadata["track_year"]] if metadata["track_year"] else []
-
-    _log.return_(comments)
-    return comments
+    _log.mark()
+    return _make_tagging_map("Vorbis", metadata)
 
 
 def make_id3v2_tags(metadata):
@@ -3570,23 +3550,38 @@ def make_id3v2_tags(metadata):
           time, but Picard is a fantastic post-encoding fixer-upper.
 
     """
+    _log.mark()
+    return _make_tagging_map("ID3v2", metadata)
+
+
+def _make_tagging_map(type_, metadata):
+    """Create Vorbis comments or ID3v2 frames for tagging from
+    *metadata*.
+
+    :param str type_:
+       "Vorbis" or "ID3v2" (corresponds to a tagging section in the
+       flacmanager.ini configuration file)
+    :param dict metadata: the metadata for a single track
+    :return: Vorbis commen or ID3v2 frame name/value pairs
+    :rtype: :obj:`dict`
+
+    """
     _log.call(metadata)
 
-    tags = {}
-    tags["TALB"] = [metadata["album_title"]] if metadata["album_title"] else []
-    tags["TPOS"] = (
-        "%s/%s" % (metadata["disc_number"], metadata["disc_total"])
-        if metadata["disc_number"] and metadata["disc_total"] else [])
-    tags["TRCK"] = (
-        "%s/%s" % (metadata["track_number"], metadata["track_total"])
-        if metadata["track_number"] and metadata["track_total"] else [])
-    tags["TIT2"] = [metadata["track_title"]] if metadata["track_title"] else []
-    tags["TPE1"] = \
-        [metadata["track_artist"]] if metadata["track_artist"] else []
-    tags["TPE2"] = \
-        [metadata["track_performer"]] if metadata["track_performer"] else []
-    tags["TCON"] = re.split(r"\s*,\s*", metadata["track_genre"])
-    tags["TYER"] = [metadata["track_year"]] if metadata["track_year"] else []
+    config = get_config()
+
+    tags = OrderedDict()
+    for (tag, spec) in config[type_].items():
+        if spec[0] == '{': # format specification
+            formatted = spec.format(**metadata)
+            value = [formatted] if formatted else None
+        else: # direct key lookup
+            value = metadata[spec]
+
+        # ignore empty values
+        if value:
+            tags[tag] = \
+                _FormattableList(value) if type(value) is list else value
 
     _log.return_(tags)
     return tags
@@ -4847,6 +4842,32 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
             for value in source[field]:
                 if value not in target[field]:
                     target[field].append(value)
+
+
+class _FormattableList(list):
+    """A list that provides alternative formatting support.
+
+    """
+
+    def __format__(self, spec):
+        """
+        :param str spec:
+           the format specification
+
+        If *spec* is ',' (comma), then this list is formatted as a
+        comma-separated list of values.
+
+        .. seealso::
+
+           :func:`format`
+              Convert a value to a formatted representation, controlled
+              by a "format specification."
+
+           `Format Specification Mini-Language
+           <https://docs.python.org/3/library/string.html#formatspec>`_
+
+        """
+        return ", ".join(self) if spec == ',' else super().__format__(spec)
 
 
 def get_lame_genres():
