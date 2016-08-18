@@ -376,7 +376,7 @@ def get_config():
                         ("filename", "flacmanager.log"),
                         ("filemode", 'w'),
                         ("format", 
-                            "%(asctime)s %(levelname)s [%(threadName)s: "
+                            "%(asctime)s %(levelname)s [%(threadName)s "
                             "%(name)s.%(funcName)s] %(message)s"),
                         ]:
                     _config["Logging"].setdefault(key, default_value)
@@ -421,20 +421,19 @@ def get_config():
                         ("library_root", ""),
                         ("library_subroot_trie_key", "album_artist"),
                         ("library_subroot_trie_level", '1'),
-                        ("album_folder", "%(album_artist)s/%(album_title)s"),
+                        ("album_folder", "{album_artist}/{album_title}"),
                         ("ndisc_album_folder", "${album_folder}"),
                         ("compilation_album_folder",
-                            "_COMPILATION_/%(album_title)s"),
+                            "_COMPILATIONS/{album_title}"),
                         ("ndisc_compilation_album_folder",
                             "${compilation_album_folder}"),
-                        ("track_filename",
-                            "%(track_number)02d %(track_title)s"),
+                        ("track_filename", "{track_number:02d} {track_title}"),
                         ("ndisc_track_filename",
-                            "%(disc_number)02d-${track_filename}"),
+                            "{disc_number:02d}-${track_filename}"),
                         ("compilation_track_filename",
-                            "${track_filename} (%(track_artist)s)"),
+                            "${track_filename} ({track_artist})"),
                         ("ndisc_compilation_track_filename",
-                            "${ndisc_track_filename} (%(track_artist)s)"),
+                            "{disc_number:02d}-${compilation_track_filename}"),
                         ("use_xplatform_safe_names", "yes"),
                         ]:
                     _config["Organize"].setdefault(key, default_value)
@@ -2711,23 +2710,24 @@ def _generate_dirname(section, library_root, metadata):
     _log.call(section, library_root, metadata)
 
     config = get_config()
+
     ndisc = "ndisc_" if metadata["disc_total"] > 1 else ""
     is_compilation = metadata["is_compilation"]
-    folder_format_string = (
+    folder_format_spec = (
         config[section][ndisc + "album_folder"] if not is_compilation
         else config[section][ndisc + "compilation_album_folder"])
-    _log.debug("using template %r", folder_format_string)
+    _log.debug("using template %r", folder_format_spec)
 
     folder_names = [
-        name_format_string % metadata
-        for name_format_string in folder_format_string.split('/')]
+        name_format_spec.format(**metadata)
+        for name_format_spec in folder_format_spec.split('/')]
     _log.debug("raw folder names %r", folder_names)
 
     if config[section].getboolean("use_xplatform_safe_names"):
         # paranoid-safe and compact, but less readable
-        folder_names = _xplatform_safe(*folder_names)
+        folder_names = _xplatform_safe(folder_names)
     else:
-        # as close to format string as possible, but still relatively safe
+        # as close to format spec as possible, but still relatively safe
         folder_names = [
             re.sub(r"[^0-9a-zA-Z-.,_() ]", '_', name) for name in folder_names]
     _log.debug("final folder names %r", folder_names)
@@ -2755,21 +2755,23 @@ def _generate_basename(section, metadata):
     _log.call(section, metadata)
 
     config = get_config()
+
     ndisc = "ndisc_" if metadata["disc_total"] > 1 else ""
     is_compilation = metadata["is_compilation"]
-    track_format_string = (
+    track_format_spec = (
         config[section][ndisc + "track_filename"] if not is_compilation
         else config[section][ndisc + "compilation_track_filename"])
-    _log.debug("using template %r", track_format_string)
+    _log.debug("using template %r", track_format_spec)
 
-    basename = track_format_string % metadata
+    basename = track_format_spec.format(**metadata)
     _log.debug("raw basename %r", basename)
 
     if config[section].getboolean("use_xplatform_safe_names"):
         # paranoid-safe and compact, but less readable
-        basename = _xplatform_safe(basename)
+        basename = _xplatform_safe(
+            basename, fileext=config[section]["track_fileext"])
     else:
-        # as close to format string as possible, but still relatively safe
+        # as close to format spec as possible, but still relatively safe
         basename = re.sub(r"[^0-9a-zA-Z-.,_() ]", '_', basename)
     _log.debug("final basename %r", basename)
 
@@ -2779,18 +2781,21 @@ def _generate_basename(section, metadata):
     return track_filename
 
 
-def _xplatform_safe(*names):
-    """Transform a list of names so that they are safe to use as
-    cross-platform folder and file names.
+def _xplatform_safe(path, fileext=""):
+    """Transform *path* so that it is safe to use across platforms.
 
-    :param list names:
-       folder/file names that may be non-portable
-    :return: the list of names, transformed
+    :param path:
+       a :obj:`list` of folder names, or a file basename
+    :keyword str fileext:
+       if *path* is a file basename, this is the file extension that
+       will be appended to form the complete file name
+    :return: the transformed *path*
+    :rtype: the same type as *path* (:obj:`list` or :obj:`str`)
 
     """
-    _log.call(*names)
+    _log.call(path, fileext=fileext)
 
-    safe_names = list(names)
+    safe_names = path if type(path) is list else [path]
     for (pattern, replacement) in [
             (r"\s+", '-'), # contiguous ws to '-'
             (r"[^0-9a-zA-Z-.,_]+", '_'), # contiguous special to '_'
@@ -2799,8 +2804,17 @@ def _xplatform_safe(*names):
             ]:
         safe_names = [
             re.sub(pattern, replacement, name) for name in safe_names]
-    _log.debug("safe_names = %s", safe_names)
-    return safe_names[0] if len(safe_names) == 1 else safe_names
+
+    # can't know the target file system ahead of time, so assume 255 UTF-8
+    # bytes as the "least common denominator" limit for all path components
+    safe_names = [
+        name.encode()[:255 - len(fileext)].decode(errors="ignore")
+        for name in safe_names]
+
+    transformed = safe_names if type(path) is list else safe_names[0]
+
+    _log.debug("%r -> %r", path, transformed)
+    return transformed
 
 
 def _subroot_trie(section, metadata):
