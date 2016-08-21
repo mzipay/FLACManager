@@ -473,6 +473,8 @@ def get_config():
                     _config["Vorbis"] = OrderedDict()
                 for (key, default_value) in [
                         ("ALBUM", "{album_title}"),
+                        ("ALBUMARTIST", "{album_artist}"),
+                        ("ORGANIZATION", "{album_recordlabel}"),
                         ("DISCNUMBER", "{disc_number:d}"),
                         ("DISCTOTAL", "{disc_total:d}"),
                         ("TRACKNUMBER", "{track_number:d}"),
@@ -480,11 +482,7 @@ def get_config():
                         ("TITLE", "{track_title}"),
                         ("ARTIST", "{track_artist}"),
                         ("PERFORMER", "{track_performer}"),
-                        ("ALBUMARTIST", "{album_artist}"),
-                        ("COMPOSER", "{track_composer}"),
-                        ("CONDUCTOR", "{track_conductor}"),
                         ("GENRE", "track_genre"),
-                        ("ORGANIZATION", "{track_recordlabel}"),
                         ("DATE", "{track_year}"),
                         ("COMPILATION", "{is_compilation:d}"),
                         ]:
@@ -524,17 +522,15 @@ def get_config():
                     _config["ID3v2"] = OrderedDict()
                 for (key, default_value) in [
                         ("TALB", "{album_title}"),
+                        ("TPE2", "{album_artist}"),
+                        ("TPUB", "{album_recordlabel}"),
                         ("TPOS", "{disc_number:d}/{disc_total:d}"),
                         ("TRCK", "{track_number:d}/{track_total:d}"),
                         ("TIT2", "{track_title}"),
                         ("TIT1", "${TPE1}"),
                         ("TPE1", "{track_artist}"),
                         ("TPE4", "{track_performer}"),
-                        ("TPE2", "{album_artist}"),
-                        ("TCOM", "{track_composer}"),
-                        ("TPE3", "{track_conductor}"),
                         ("TCON", "{track_genre:,}"),
-                        ("TPUB", "{track_recordlabel}"),
                         ("TYER", "{track_year}"),
                         ("TDRC", "${TYER}"),
                         ("TCMP", "{is_compilation:d}"),
@@ -815,6 +811,10 @@ class FLACManager(tk.Frame):
         album_performer_frame = self._create_album_performer_editor(
             album_editor, album_metadata["performer"])
         album_performer_frame.pack(fill=tk.BOTH, pady=7)
+
+        album_recordlabel_frame = self._create_album_recordlabel_editor(
+            album_editor, album_metadata["record_label"])
+        album_recordlabel_frame.pack(fill=tk.BOTH, pady=7)
 
         album_genre_frame = self._create_album_genre_editor(
             album_editor, album_metadata["genre"])
@@ -1127,6 +1127,31 @@ class FLACManager(tk.Frame):
         album_performer_value = self.album_performer_var.get()
         for track_performer_var in self._track_vars["performer"][1:]:
             track_performer_var.set(album_performer_value)
+
+    def _create_album_recordlabel_editor(self, master, choices):
+        """Create the UI editing controls for the record label.
+
+        :param master: parent obejct of the editor frame
+        :param list choices: aggregated values for the record label
+        :return: the record label editor
+        :rtype: :class:`tkinter.Frame`
+
+        """
+        self.__log.call(master, choices)
+
+        frame = tk.Frame(master)
+
+        (label, self.album_recordlabel_var, entry, optionmenu) = \
+            self._create_choices_editor(frame, "Label", choices)
+
+        label.pack(side=tk.LEFT)
+        entry.pack(side=tk.LEFT, padx=5)
+
+        if len(choices) > 1:
+            optionmenu.pack(side=tk.LEFT)
+
+        self.__log.return_(frame)
+        return frame
 
     def _create_album_genre_editor(self, master, choices):
         """Create the UI editing controls for the album genre.
@@ -1869,6 +1894,8 @@ class FLACManager(tk.Frame):
                 if self.album_artist_var.get() else [],
             "performer": [self.album_performer_var.get()]
                 if self.album_performer_var.get() else [],
+            "record_label": [self.album_recordlabel_var.get()]
+                if self.album_recordlabel_var.get() else [],
             "year": [self.album_year_var.get()]
                 if self.album_year_var.get() else [],
             "genre": [self.album_genre_var.get()]
@@ -1938,6 +1965,7 @@ class FLACManager(tk.Frame):
             album_title=self.album_title_var.get(),
             album_artist=self.album_artist_var.get(),
             album_performer=self.album_performer_var.get(),
+            album_recordlabel=self.album_recordlabel_var.get(),
             album_genre=re.split(r"\s*,\s*", self.album_genre_var.get()),
             album_year=self.album_year_var.get(),
             disc_number=int(self.album_disc_number_var.get()),
@@ -2260,6 +2288,7 @@ class FLACManager(tk.Frame):
         self.album_title_var = None
         self.album_artist_var = None
         self.album_performer_var = None
+        self.album_recordlabel_var = None
         self.album_genre_var = None
         self.album_year_var = None
         self.album_disc_number_var = None
@@ -3838,6 +3867,7 @@ class MetadataCollector:
             "title": [],
             "artist": [],
             "performer": [],
+            "record_label": [],
             "year": [],
             "genre": [],
             "cover": [],
@@ -4692,6 +4722,8 @@ class MetadataPersistence(MetadataCollector):
             for i in range(len(disc_metadata["album"]["cover"])):
                 disc_metadata["album"]["cover"][i] = \
                     disc_metadata["album"]["cover"][i].encode("Latin-1")
+            if "record_label" not in disc_metadata["album"]: # new in 0.8.0
+                disc_metadata["album"]["record_label"] = ""
             self.album = disc_metadata["album"]
             self.tracks = disc_metadata["tracks"]
             self.restored = True
@@ -4734,6 +4766,7 @@ class MetadataPersistence(MetadataCollector):
 
         ordered_metadata = OrderedDict()
         ordered_metadata["timestamp"] = datetime.datetime.now().isoformat()
+        ordered_metadata["__version__"] = __version__
         ordered_metadata["TOC"] = self.toc
         ordered_metadata["album"] = metadata["album"]
         ordered_metadata["tracks"] = metadata["tracks"]
@@ -4815,7 +4848,8 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                 collector.collect()
 
                 self._merge_metadata(
-                    ["title", "artist", "performer", "year", "genre", "cover"],
+                    ["title", "artist", "performer", "record_label", "year",
+                        "genre", "cover"],
                     collector.album, self.album)
 
                 for field in ["disc_number", "disc_total"]:
