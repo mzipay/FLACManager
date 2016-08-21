@@ -4087,7 +4087,6 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
 
             album_ord += 1
 
-        #TODO: does Gracenote distinguish between artist/performer/composer?
         album_metadata["performer"] = list(album_metadata["artist"])
         for track_metadata in tracks_metadata[1:]:
             track_metadata["performer"] = list(track_metadata["artist"])
@@ -4529,7 +4528,6 @@ class MusicBrainzMetadataCollector(MetadataCollector):
 
                 #NOTE: MusicBrainz does not support genre information.
 
-        #TODO: does MusicBrainz distinguish between artist/performer/composer?
         album_metadata["performer"] = list(album_metadata["artist"])
         for track_metadata in tracks_metadata[1:]:
             track_metadata["performer"] = list(track_metadata["artist"])
