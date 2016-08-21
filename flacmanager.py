@@ -533,7 +533,7 @@ def get_config():
                         ("TIT1", "${TPE1}"),
                         ("TPE1", "{track_artist}"),
                         ("TPE4", "{track_performer}"),
-                        ("TCON", "{track_genre:,}"),
+                        ("TCON", "track_genre"),
                         ("TYER", "{track_year}"),
                         ("TDRC", "${TYER}"),
                         ("TCMP", "{is_compilation:d}"),
@@ -1967,7 +1967,8 @@ class FLACManager(tk.Frame):
             album_artist=self.album_artist_var.get(),
             album_performer=self.album_performer_var.get(),
             album_recordlabel=self.album_recordlabel_var.get(),
-            album_genre=re.split(r"\s*,\s*", self.album_genre_var.get()),
+            album_genre=
+                re.split(r"\s*,\s*", self.album_genre_var.get()),
             album_year=self.album_year_var.get(),
             disc_number=int(self.album_disc_number_var.get()),
             disc_total=int(self.album_disc_total_var.get()),
@@ -3620,12 +3621,12 @@ def _make_tagging_map(type_, metadata):
             formatted = spec.format(**metadata)
             value = [formatted] if formatted else None
         else: # direct key lookup
-            value = metadata[spec]
+            value = metadata[spec] if type(metadata[spec]) is list \
+                else [metadata[spec]]
 
         # ignore empty values
         if value:
-            tags[tag] = \
-                _FormattableList(value) if type(value) is list else value
+            tags[tag] = value
 
     _log.return_(tags)
     return tags
@@ -4867,6 +4868,9 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                 self.album["disc_number"] = \
                     self.persistence.album["disc_number"]
                 self.album["disc_total"] = self.persistence.album["disc_total"]
+                # persisted data stores the "is_compilation" flag for albums
+                self.album["is_compilation"] = \
+                    self.persistence.album["is_compilation"]
                 # persisted data stores the "include" flag for tracks
                 # (regular collectors do not)
                 track_ordinal = 1
@@ -4889,32 +4893,6 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
             for value in source[field]:
                 if value not in target[field]:
                     target[field].append(value)
-
-
-class _FormattableList(list):
-    """A list that provides alternative formatting support.
-
-    """
-
-    def __format__(self, spec):
-        """
-        :param str spec:
-           the format specification
-
-        If *spec* is ',' (comma), then this list is formatted as a
-        comma-separated list of values.
-
-        .. seealso::
-
-           :func:`format`
-              Convert a value to a formatted representation, controlled
-              by a "format specification."
-
-           `Format Specification Mini-Language
-           <https://docs.python.org/3/library/string.html#formatspec>`_
-
-        """
-        return ", ".join(self) if spec == ',' else super().__format__(spec)
 
 
 def get_lame_genres():
