@@ -938,9 +938,8 @@ class FLACManager(tk.Frame):
         while int(self.track_spinner.get()) != self._total_tracks:
             self.track_spinner.invoke("buttonup")
 
-        # now "reset" the spinner back to track #1
-        while int(self.track_spinner.get()) != 1:
-            self.track_spinner.invoke("buttondown")
+        # now reset the spinner back to track #1 by "wrapping around"
+        self.track_spinner.invoke("buttonup")
 
     def _create_choices_editor(
             self, master, name, choices, width=59, var=None):
@@ -1557,7 +1556,7 @@ class FLACManager(tk.Frame):
         track_label.pack(side=tk.LEFT)
 
         self.track_spinner = tk.Spinbox(
-            frame, from_=1, to=total_tracks, width=3,
+            frame, from_=1, to=total_tracks, width=3, wrap=True,
             command=self.refresh_track_editors)
         self.track_spinner.pack(side=tk.LEFT, padx=5)
 
@@ -1789,7 +1788,6 @@ class FLACManager(tk.Frame):
         """
         self.__log.call()
 
-        #TODO: should "wrap" on first or last track
         track_number = int(self.track_spinner.get())
         if self._current_track_number == track_number:
             self.__log.return_()
