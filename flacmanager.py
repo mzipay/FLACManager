@@ -428,8 +428,7 @@ def get_config():
                         ("library_subroot_trie_level", '1'),
                         ("album_folder", "{album_artist}/{album_title}"),
                         ("ndisc_album_folder", "${album_folder}"),
-                        ("compilation_album_folder",
-                            "_COMPILATIONS/{album_title}"),
+                        ("compilation_album_folder", "{album_title}"),
                         ("ndisc_compilation_album_folder",
                             "${compilation_album_folder}"),
                         ("track_filename", "{track_number:02d} {track_title}"),
@@ -2234,7 +2233,8 @@ class FLACManager(tk.Frame):
                         message=stdout_message if stdout_message else None)
                     item_config = {"fg": "blue"}
                 elif track_encoding_status.state in [
-                        TRACK_DECODING_WAV, TRACK_ENCODING_MP3]:
+                        TRACK_DECODING_WAV,
+                        TRACK_ENCODING_MP3, TRACK_REENCODING_MP3]:
                     status_message = track_encoding_status.describe()
                     item_config = {"fg": "dark violet"}
                 elif track_encoding_status.state == TRACK_COMPLETE:
@@ -2610,6 +2610,11 @@ TRACK_DECODING_WAV = TrackState(
 
 #: Indicates that a track is being encoded from WAV to MP3 format.
 TRACK_ENCODING_MP3 = TrackState(3, "ENCODING_MP3", "encoding WAV to MP3\u2026")
+
+#: Indicates that a track is being re-encoded from WAV to MP3 format after
+#: clipping was detected in a prior encoding operation.
+TRACK_REENCODING_MP3 = TrackState(
+    4, "REENCODING_MP3", "re-encoding MP3 (clipping detected)\u2026")
 
 #: Indicates that an error occurred while processing a track.
 TRACK_FAILED = TrackState(99, "FAILED", "failed")
@@ -3857,27 +3862,36 @@ class MP3Encoder(threading.Thread):
             wav_filename, self.mp3_filename, self.track_metadata,
             stdout_filename=self.stdout_filename)
 
-        clipping_occurs = self.__clipping_occurs()
-        scale = 0.99
-        if clipping_occurs:
+        # check for clipping
+        stdout = self.__read_stdout()
+        if "WARNING: clipping occurs at the current gain." in stdout:
+            clipping_occurs = True
             m = re.search(
                 r"encode\s+again\s+using\s+\-\-scale\s+(\d+\.\d+)", stdout)
-            if m:
-                scale = float(m.group(1))
+            scale = float(m.group(1)) if m else 0.99
 
-        while clipping_occurs:
-            self.__log(
-                "detected clipping in %s; re-encoding at %.2f scale...",
-                self.mp3_filename, scale)
-            encode_mp3(
-                wav_filename, self.mp3_filename, self.track_metadata,
-                scale=scale, stdout_filename=self.stdout_filename)
-            clipping_occurs = self.__clipping_occurs()
-            scale -= 0.01
+            # re-encode, scaling the PCM data, until there is no clipping
+            while clipping_occurs:
+                self.__log.info(
+                    "detected clipping in %s; re-encoding at %.2f scale...",
+                    self.mp3_filename, scale)
+                status = (
+                    self.track_index, self.cdda_filename, self.flac_filename,
+                    self.stdout_filename, TRACK_REENCODING_MP3)
+                _ENCODING_QUEUE.put((5, status))
 
-    def __clipping_occurs(self):
+                encode_mp3(
+                    wav_filename, self.mp3_filename, self.track_metadata,
+                    scale=scale, stdout_filename=self.stdout_filename)
+
+                clipping_occurs = (
+                    "WARNING: clipping occurs at the current gain."
+                    in self.__read_stdout())
+                scale -= 0.01
+
+    def __read_stdout(self):
         with open(self.stdout_filename) as f:
-            return "WARNING: clipping occurs at the current gain." in f.read()
+            return f.read()
 
 
 class MetadataError(FLACManagerError):
