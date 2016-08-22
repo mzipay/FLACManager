@@ -4682,17 +4682,17 @@ class MetadataPersistence(MetadataCollector):
         self.__log.call(toc)
         super().__init__(toc)
 
-        flac_library_root = get_config().get("FLAC", "library_root")
+        library_root = get_config()["Organize"]["library_root"]
         try:
-            flac_library_root = resolve_path(flac_library_root)
+            library_root = resolve_path(library_root)
         except Exception as e:
             raise MetadataError(
-                "Cannot use FLAC library root %s: %s" % (flac_library_root, e),
+                "Cannot use library root %s: %s" % (library_root, e),
                 context_hint="Metadata persistence",
                 cause=e)
 
         self.metadata_persistence_root = os.path.join(
-            flac_library_root, ".metadata")
+            library_root, ".metadata")
         self.disc_id = MusicBrainzMetadataCollector.calculate_disc_id(toc)
         self.metadata_filename = "%s.json" % self.disc_id
         self.metadata_path = os.path.join(
