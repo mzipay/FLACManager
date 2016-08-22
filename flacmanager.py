@@ -3669,6 +3669,10 @@ def _make_tagging_map(type_, metadata):
 _ENCODING_QUEUE = queue.PriorityQueue()
 
 
+#: The number of seconds to wait between enqueuing a FLAC encoding status.
+FLAC_ENCODING_STATUS_WAIT = 1.25
+
+
 @logged
 class FLACEncoder(threading.Thread):
     """A thread that rips CD-DA tracks to FLAC."""
@@ -3779,16 +3783,16 @@ class FLACEncoder(threading.Thread):
         # an error occurred or not
         done_filename = "%s.done" % stdout_filename
 
-        interval = 1.25 #TODO: this should be configurable
         self.__log.info(
-            "enqueueing %r every %s seconds...", status, interval)
+            "enqueueing %r every %s seconds...",
+            status, FLAC_ENCODING_STATUS_WAIT)
 
         # as long as the ".done" file doesn't exist, keep telling the UI to
         # read a status update from the stdout file
         exists = os.path.isfile
         while not exists(done_filename):
             _ENCODING_QUEUE.put((7, status))
-            time.sleep(interval)
+            time.sleep(FLAC_ENCODING_STATUS_WAIT)
 
 
 @logged
