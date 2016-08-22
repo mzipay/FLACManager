@@ -3512,22 +3512,27 @@ def decode_wav(flac_filename, wav_filename, stdout_filename=None):
 
 
 def encode_mp3(
-        wav_filename, mp3_filename, track_metadata, stdout_filename=None):
+        wav_filename, mp3_filename, track_metadata, scale=None,
+        stdout_filename=None):
     """Convert a WAV file to an MP3 file.
 
     :param str wav_filename: absolute *.wav* file name
     :param str mp3_filename: absolute *.mp3* file name
     :param dict track_metadata: tagging fields for this track
+    :keyword float scale:
+      multiply PCM data by this factor
     :keyword str stdout_filename:
        absolute file name for redirected stdout
 
     """
     _log.call(
-        wav_filename, mp3_filename, track_metadata,
+        wav_filename, mp3_filename, track_metadata, scale=scale,
         stdout_filename=stdout_filename)
 
     command = ["lame"]
-    command.extend(get_config().get("MP3", "lame_encode_options").split())
+    command.extend(get_config()["MP3"]["lame_encode_options"].split())
+    if scale is not None:
+        command.extend(["--scale", "%.2f" % scale])
     command.append("--id3v2-only")
 
     if track_metadata["album_cover"]:
@@ -3831,9 +3836,7 @@ class MP3Encoder(threading.Thread):
         _ENCODING_QUEUE.put((5, status))
 
         try:
-            encode_mp3(
-                wav_filename, self.mp3_filename, self.track_metadata,
-                stdout_filename=self.stdout_filename)
+            self._encode_mp3(wav_filename)
         except Exception as e:
             status = (
                 self.track_index, self.cdda_filename, self.flac_filename,
@@ -3848,6 +3851,33 @@ class MP3Encoder(threading.Thread):
             _ENCODING_QUEUE.put((11, status))
         finally:
             del wav_tempdir
+
+    def _encode_mp3(self, wav_filename):
+        encode_mp3(
+            wav_filename, self.mp3_filename, self.track_metadata,
+            stdout_filename=self.stdout_filename)
+
+        clipping_occurs = self.__clipping_occurs()
+        scale = 0.99
+        if clipping_occurs:
+            m = re.search(
+                r"encode\s+again\s+using\s+\-\-scale\s+(\d+\.\d+)", stdout)
+            if m:
+                scale = float(m.group(1))
+
+        while clipping_occurs:
+            self.__log(
+                "detected clipping in %s; re-encoding at %.2f scale...",
+                self.mp3_filename, scale)
+            encode_mp3(
+                wav_filename, self.mp3_filename, self.track_metadata,
+                scale=scale, stdout_filename=self.stdout_filename)
+            clipping_occurs = self.__clipping_occurs()
+            scale -= 0.01
+
+    def __clipping_occurs(self):
+        with open(self.stdout_filename) as f:
+            return "WARNING: clipping occurs at the current gain." in f.read()
 
 
 class MetadataError(FLACManagerError):
