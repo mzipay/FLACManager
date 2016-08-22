@@ -423,6 +423,8 @@ def get_config():
                 for (key, default_value) in [
                         ("library_root", ""),
                         ("library_subroot_trie_key", "album_artist"),
+                        ("library_subroot_compilation_trie_key",
+                            "album_title"),
                         ("library_subroot_trie_level", '1'),
                         ("album_folder", "{album_artist}/{album_title}"),
                         ("ndisc_album_folder", "${album_folder}"),
@@ -447,6 +449,8 @@ def get_config():
                         ("library_root", "${Organize:library_root}/FLAC"),
                         ("library_subroot_trie_key",
                             "${Organize:library_subroot_trie_key}"),
+                        ("library_subroot_compilation_trie_key",
+                            "${Organize:library_subroot_compilation_trie_key}"),
                         ("library_subroot_trie_level",
                             "${Organize:library_subroot_trie_level}"),
                         ("album_folder", "${Organize:album_folder}"),
@@ -499,6 +503,8 @@ def get_config():
                             "${Organize:library_subroot_trie_key}"),
                         ("library_subroot_trie_level",
                             "${Organize:library_subroot_trie_level}"),
+                        ("library_subroot_compilation_trie_key",
+                            "${Organize:library_subroot_compilation_trie_key}"),
                         ("album_folder", "${Organize:album_folder}"),
                         ("ndisc_album_folder",
                             "${Organize:ndisc_album_folder}"),
@@ -2861,15 +2867,12 @@ def _subroot_trie(section, metadata):
     """
     _log.call(metadata)
 
-    # compilations exist at the top level of the library and do not use any
-    # trie structure
-    if metadata["is_compilation"]:
-        _log.trace("RETURN []")
-        return []
-
     config = get_config()
 
-    key = config[section]["library_subroot_trie_key"]
+    key = (
+        config[section]["library_subroot_trie_key"]
+        if not metadata["is_compilation"] else
+        config[section]["library_subroot_compilation_trie_key"])
     level = config[section].getint("library_subroot_trie_level")
 
     # to skip building a directory trie structure, the key can be left empty or
@@ -2879,7 +2882,11 @@ def _subroot_trie(section, metadata):
         return []
 
     term = re.sub(r"[^0-9a-zA-Z]", "", metadata[key]).upper()
-    nodes = [term[:n + 1] for n in range(min(level, len(term)))]
+    # use len(term) - 1 so trie prefixes never include the full term
+    nodes = [term[:n + 1] for n in range(min(level, len(term) - 1))]
+    # edge case - any non-alphanumeric key falls into the special '_' node
+    if not nodes:
+        nodes = ['_']
 
     _log.return_(nodes)
     return nodes
