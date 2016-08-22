@@ -481,6 +481,7 @@ def get_config():
                         ("ALBUM", "{album_title}"),
                         ("ALBUMARTIST", "{album_artist}"),
                         ("ORGANIZATION", "{album_recordlabel}"),
+                        ("LABEL", "${ORGANIZATION}"),
                         ("DISCNUMBER", "{disc_number:d}"),
                         ("DISCTOTAL", "{disc_total:d}"),
                         ("TRACKNUMBER", "{track_number:d}"),
