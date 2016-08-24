@@ -3697,6 +3697,32 @@ class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
             "album level are applied to ALL tracks."
         )
 
+    def _add_field(self, parent, vorbis_comment="", id3v2_tag="", values=None):
+        """Render a custom field in the dialog body.
+
+        :param parent: the object that contains the field controls
+        :keyword str vorbis_comment: the custom Vorbis comment
+        :keyword str id3v2_tag: the custom ID3v2 tag
+        :keyword list values: the value(s) for the custom comment/tag
+
+        If adding an already-populated field, the entry widgets will be
+        disabled. This is a bit ugly, but it greatly simplifies change
+        tracking - modify is modeled as a remove-then-add operation
+        instead of having to keep track of old and new values.
+
+        """
+        self.__log.call(
+            parent, vorbis_comment=vorbis_comment, id3v2_tag=id3v2_tag,
+            values=values)
+
+        super()._add_field(
+            parent, vorbis_comment=vorbis_comment, id3v2_tag=id3v2_tag,
+            values=values)
+
+        if (vorbis_comment or id3v2_tag) and values:
+            for widget in self._widgets[-1][1:]:
+                widget.config(state=tk.DISABLED)
+
     def _clear_field(self, index):
         """Clear (effectively removing) the *index* -th field.
 
