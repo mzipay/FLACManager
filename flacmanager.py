@@ -763,7 +763,8 @@ class FLACManager(tk.Frame):
 
         self.rip_and_tag_button = tk.Button(
             disc_status_group, text="Rip and tag",
-            bg="Dark Green", fg="White", activebackground="Lime Green",  activeforeground="Black",
+            bg="Dark Green", fg="White",
+            activebackground="Lime Green",  activeforeground="Black",
             command=self.rip_and_tag)
         _font(self.rip_and_tag_button).config(weight=tkfont.BOLD)
 
@@ -2291,9 +2292,9 @@ class FLACManager(tk.Frame):
                     status_message = track_encoding_status.describe(
                         message=stdout_message if stdout_message else None)
                     item_config = {"fg": "blue"}
-                elif track_encoding_status.state in [
-                        TRACK_DECODING_WAV,
-                        TRACK_ENCODING_MP3, TRACK_REENCODING_MP3]:
+                elif (track_encoding_status.state in [
+                            TRACK_DECODING_WAV, TRACK_ENCODING_MP3] or
+                        track_encoding_status.state.key == "REENCODING_MP3"):
                     status_message = track_encoding_status.describe()
                     item_config = {"fg": "dark violet"}
                 elif track_encoding_status.state == TRACK_COMPLETE:
@@ -2610,6 +2611,11 @@ class TrackState:
         self._text = text
 
     @property
+    def key(self):
+        """The unique identifier for this state."""
+        return self._key
+
+    @property
     def text(self):
         """The track-independent short description of this state."""
         return self._text
@@ -2672,8 +2678,11 @@ TRACK_ENCODING_MP3 = TrackState(3, "ENCODING_MP3", "encoding WAV to MP3\u2026")
 
 #: Indicates that a track is being re-encoded from WAV to MP3 format after
 #: clipping was detected in a prior encoding operation.
-TRACK_REENCODING_MP3 = TrackState(
-    4, "REENCODING_MP3", "re-encoding MP3 (clipping detected)\u2026")
+_TRACK_REENCODING_MP3 = partial(
+    lambda scale: TrackState(
+        4, "REENCODING_MP3",
+        "re-encoding MP3 at {:.2f} scale (clipping detected)\u2026".
+            format(scale)))
 
 #: Indicates that an error occurred while processing a track.
 TRACK_FAILED = TrackState(99, "FAILED", "failed")
@@ -4328,7 +4337,7 @@ class MP3Encoder(threading.Thread):
                     self.mp3_filename, scale)
                 status = (
                     self.track_index, self.cdda_filename, self.flac_filename,
-                    self.stdout_filename, TRACK_REENCODING_MP3)
+                    self.stdout_filename, _TRACK_REENCODING_MP3(scale))
                 _ENCODING_QUEUE.put((5, status))
 
                 encode_mp3(
