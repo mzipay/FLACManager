@@ -489,7 +489,6 @@ def get_config():
                         ("TRACKTOTAL", "{track_total:d}"),
                         ("TITLE", "{track_title}"),
                         ("ARTIST", "{track_artist}"),
-                        ("PERFORMER", "{track_performer}"),
                         ("GENRE", "track_genre"),
                         ("DATE", "{track_year}"),
                         ("COMPILATION", "{is_compilation:d}"),
@@ -539,7 +538,6 @@ def get_config():
                         ("TIT2", "{track_title}"),
                         ("TIT1", "${TPE1}"),
                         ("TPE1", "{track_artist}"),
-                        ("TPE4", "{track_performer}"),
                         ("TCON", "track_genre"),
                         ("TYER", "{track_year}"),
                         ("TDRC", "${TYER}"),
@@ -820,10 +818,6 @@ class FLACManager(tk.Frame):
             album_editor, album_metadata["artist"])
         album_artist_frame.pack(fill=tk.BOTH, pady=7)
 
-        album_performer_frame = self._create_album_performer_editor(
-            album_editor, album_metadata["performer"])
-        album_performer_frame.pack(fill=tk.BOTH, pady=7)
-
         album_recordlabel_frame = self._create_album_recordlabel_editor(
             album_editor, album_metadata["record_label"])
         album_recordlabel_frame.pack(fill=tk.BOTH, pady=7)
@@ -888,12 +882,6 @@ class FLACManager(tk.Frame):
                 first_track["artist"], album_metadata["artist"]))
         track_artist_frame.pack(fill=tk.BOTH, pady=7)
 
-        track_performer_frame = self._create_track_performer_editor(
-            track_editor,
-            self._combine_choices(
-                first_track["performer"], album_metadata["performer"]))
-        track_performer_frame.pack(fill=tk.BOTH, pady=7)
-
         track_genre_frame = self._create_track_genre_editor(
             track_editor,
             self._combine_choices(
@@ -933,7 +921,6 @@ class FLACManager(tk.Frame):
             "include": [None],
             "title": [None],
             "artist": [None],
-            "performer": [None],
             "genre": [None],
             "year": [None],
         }
@@ -942,7 +929,6 @@ class FLACManager(tk.Frame):
                 tk.BooleanVar(value=track_metadata["include"]))
             track_vars["title"].append(tk.StringVar())
             track_vars["artist"].append(tk.StringVar())
-            track_vars["performer"].append(tk.StringVar())
             track_vars["genre"].append(tk.StringVar())
             track_vars["year"].append(tk.StringVar())
 
@@ -1110,44 +1096,6 @@ class FLACManager(tk.Frame):
         album_artist_value = self.album_artist_var.get()
         for track_artist_var in self._track_vars["artist"][1:]:
             track_artist_var.set(album_artist_value)
-
-    def _create_album_performer_editor(self, master, choices):
-        """Create the UI editing controls for the album performer.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the album performer
-        :return: the album performer editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = tk.Frame(master)
-
-        (label, self.album_performer_var, entry, optionmenu) = \
-            self._create_choices_editor(frame, "Performer", choices)
-        button = tk.Button(
-            frame, text="Apply to all tracks",
-            command=self.apply_album_performer_to_tracks)
-
-        label.pack(side=tk.LEFT)
-        entry.pack(side=tk.LEFT, padx=5)
-
-        if len(choices) > 1:
-            optionmenu.pack(side=tk.LEFT)
-
-        button.pack(side=tk.LEFT, padx=5)
-
-        self.__log.return_(frame)
-        return frame
-
-    def apply_album_performer_to_tracks(self):
-        """Set each track performer to the album performer."""
-        self.__log.call()
-
-        album_performer_value = self.album_performer_var.get()
-        for track_performer_var in self._track_vars["performer"][1:]:
-            track_performer_var.set(album_performer_value)
 
     def _create_album_recordlabel_editor(self, master, choices):
         """Create the UI editing controls for the record label.
@@ -1723,34 +1671,6 @@ class FLACManager(tk.Frame):
         self.__log.return_(frame)
         return frame
 
-    def _create_track_performer_editor(self, master, choices):
-        """Create the UI editing controls for the track performer.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the track performer
-        :return: the track performer editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = tk.Frame(master)
-
-        (label, _, self.track_performer_entry,
-                self._track_performer_optionmenu) = \
-            self._create_choices_editor(
-                frame, "Performer", choices,
-                var=self._track_vars["performer"][1])
-
-        label.pack(side=tk.LEFT)
-        self.track_performer_entry.pack(side=tk.LEFT, padx=5)
-
-        if len(choices) > 1:
-            self._track_performer_optionmenu.pack(side=tk.LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
     def _create_track_genre_editor(self, master, choices):
         """Create the UI editing controls for the track genre.
 
@@ -1859,7 +1779,6 @@ class FLACManager(tk.Frame):
         track_include_var = self._track_vars["include"][track_number]
         track_title_var = self._track_vars["title"][track_number]
         track_artist_var = self._track_vars["artist"][track_number]
-        track_performer_var = self._track_vars["performer"][track_number]
         track_genre_var = self._track_vars["genre"][track_number]
         track_year_var = self._track_vars["year"][track_number]
 
@@ -1878,14 +1797,6 @@ class FLACManager(tk.Frame):
             self._track_artist_optionmenu, choices)
         if len(choices) > 1:
             self._track_artist_optionmenu.pack(side=tk.LEFT)
-
-        choices = self._combine_choices(
-            track_metadata["performer"], self._album_metadata["performer"])
-        self._track_performer_optionmenu = self._refresh_choices_editor(
-            track_performer_var, self.track_performer_entry,
-            self._track_performer_optionmenu, choices)
-        if len(choices) > 1:
-            self._track_performer_optionmenu.pack(side=tk.LEFT)
 
         choices = self._combine_choices(
             track_metadata["genre"], self._album_metadata["genre"])
@@ -1949,8 +1860,6 @@ class FLACManager(tk.Frame):
                 if self.album_title_var.get() else [],
             "artist": [self.album_artist_var.get()]
                 if self.album_artist_var.get() else [],
-            "performer": [self.album_performer_var.get()]
-                if self.album_performer_var.get() else [],
             "record_label": [self.album_recordlabel_var.get()]
                 if self.album_recordlabel_var.get() else [],
             "year": [self.album_year_var.get()]
@@ -1986,8 +1895,6 @@ class FLACManager(tk.Frame):
                     if track_vars["title"][track_number].get() else [],
                 "artist": [track_vars["artist"][track_number].get()]
                     if track_vars["artist"][track_number].get() else [],
-                "performer": [track_vars["performer"][track_number].get()]
-                    if track_vars["performer"][track_number].get() else [],
                 "year": [track_vars["year"][track_number].get()]
                     if track_vars["year"][track_number].get() else [],
                 "genre": [track_vars["genre"][track_number].get()]
@@ -2027,7 +1934,6 @@ class FLACManager(tk.Frame):
         album_metadata = dict(
             album_title=self.album_title_var.get(),
             album_artist=self.album_artist_var.get(),
-            album_performer=self.album_performer_var.get(),
             album_recordlabel=self.album_recordlabel_var.get(),
             album_genre=
                 re.split(r"\s*,\s*", self.album_genre_var.get()),
@@ -2049,8 +1955,6 @@ class FLACManager(tk.Frame):
                     track_number=track_number,
                     track_title=track_vars["title"][track_number].get(),
                     track_artist=track_vars["artist"][track_number].get(),
-                    track_performer=
-                        track_vars["performer"][track_number].get(),
                     track_genre=
                         re.split(
                             r"\s*,\s*",
@@ -2355,7 +2259,6 @@ class FLACManager(tk.Frame):
 
         self.album_title_var = None
         self.album_artist_var = None
-        self.album_performer_var = None
         self.album_recordlabel_var = None
         self.album_genre_var = None
         self.album_year_var = None
@@ -2368,8 +2271,6 @@ class FLACManager(tk.Frame):
         self._track_title_optionmenu = None
         self.track_artist_entry = None
         self._track_artist_optionmenu = None
-        self.track_performer_entry = None
-        self._track_performer_optionmenu = None
         self.track_genre_entry = None
         self._track_genre_optionmenu = None
         self.track_year_entry = None
@@ -4379,7 +4280,6 @@ class MetadataCollector:
         self.album = {
             "title": [],
             "artist": [],
-            "performer": [],
             "record_label": [],
             "year": [],
             "genre": [],
@@ -4397,7 +4297,6 @@ class MetadataCollector:
                 "number": i + 1,
                 "title": [],
                 "artist": [],
-                "performer": [],
                 "year": [],
                 "genre": [],
             })
@@ -4601,10 +4500,6 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
                         track_metadata["genre"].append(genre)
 
             album_ord += 1
-
-        album_metadata["performer"] = list(album_metadata["artist"])
-        for track_metadata in tracks_metadata[1:]:
-            track_metadata["performer"] = list(track_metadata["artist"])
 
     def _fetch_album(self, gn_id, is_last_album=True):
         """Make a Gracenote 'ALBUM_FETCH' request.
@@ -5043,10 +4938,6 @@ class MusicBrainzMetadataCollector(MetadataCollector):
 
                 #NOTE: MusicBrainz does not support genre information.
 
-        album_metadata["performer"] = list(album_metadata["artist"])
-        for track_metadata in tracks_metadata[1:]:
-            track_metadata["performer"] = list(track_metadata["artist"])
-
     def _prepare_discid_request(self, disc_id):
         """Build a full MusicBrainz '/discid' request path.
 
@@ -5406,8 +5297,8 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                 collector.collect()
 
                 self._merge_metadata(
-                    ["title", "artist", "performer", "record_label", "year",
-                        "genre", "cover"],
+                    ["title", "artist", "record_label", "year", "genre",
+                        "cover"],
                     collector.album, self.album)
 
                 for field in ["disc_number", "disc_total"]:
@@ -5417,7 +5308,7 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                 track_ordinal = 1
                 for track_metadata in collector.tracks[1:]:
                     self._merge_metadata(
-                        ["title", "artist", "performer", "year", "genre"],
+                        ["title", "artist", "year", "genre"],
                         track_metadata, self.tracks[track_ordinal])
                     track_ordinal += 1
         finally:
