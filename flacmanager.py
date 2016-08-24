@@ -762,7 +762,10 @@ class FLACManager(tk.Frame):
             command=self._do_disc_check)
 
         self.rip_and_tag_button = tk.Button(
-            disc_status_group, text="Rip and tag", command=self.rip_and_tag)
+            disc_status_group, text="Rip and tag",
+            bg="Dark Green", fg="White", activebackground="Lime Green",  activeforeground="Black",
+            command=self.rip_and_tag)
+        _font(self.rip_and_tag_button).config(weight=tkfont.BOLD)
 
     def _create_editor_status(self):
         """Create the labels and buttons that communicate editor status."""
