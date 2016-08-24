@@ -40,6 +40,7 @@ http://mzipay.github.io/FLACManager/usage.html
 
 """
 
+from ast import literal_eval
 import atexit
 import cgi
 from collections import namedtuple, OrderedDict
@@ -849,6 +850,10 @@ class FLACManager(tk.Frame):
             album_editor, album_metadata["is_compilation"])
         album_compilation_frame.pack(fill=tk.BOTH, pady=7)
 
+        album_custom_metadata_frame = \
+            self._create_album_custom_metadata_editor(album_editor)
+        album_custom_metadata_frame.pack(side=tk.RIGHT)
+
         album_editor.pack(fill=tk.BOTH)
 
         tracks_editor = tk.Frame(
@@ -858,11 +863,17 @@ class FLACManager(tk.Frame):
         track_editor = tk.Frame(tracks_editor)
 
         controls = tk.Frame(track_editor)
+
         track_nav_frame = self._create_track_navigator(
             controls, self._total_tracks)
         track_nav_frame.pack(side=tk.LEFT)
+
         track_include_frame = self._create_track_include_editor(controls)
         track_include_frame.pack(side=tk.LEFT, padx=29)
+
+        custom_metadata_frame = self._create_custom_metadata_editor(controls)
+        custom_metadata_frame.pack(side=tk.RIGHT)
+
         controls.pack(fill=tk.BOTH, pady=7)
 
         track_title_frame = self._create_track_title_editor(
@@ -890,7 +901,7 @@ class FLACManager(tk.Frame):
         track_year_frame = self._create_track_year_editor(
             track_editor,
             self._combine_choices(first_track["year"], album_metadata["year"]))
-        track_year_frame.pack(side=tk.LEFT)
+        track_year_frame.pack(side=tk.LEFT, pady=7)
 
         track_editor.pack(fill=tk.BOTH, padx=17, pady=17)
         tracks_editor.pack(fill=tk.BOTH, pady=29)
@@ -1388,6 +1399,31 @@ class FLACManager(tk.Frame):
         self.__log.return_(frame)
         return frame
 
+    def _create_album_custom_metadata_editor(self, master):
+        """Create the UI editing controls for editing custom metadata
+        for *all* tracks.
+
+        :param master: parent obejct of the editor frame
+        :return: the custom metadata editor
+        :rtype: :class:`tkinter.Frame`
+
+        """
+        self.__log.call(master)
+
+        frame = tk.Frame(master)
+
+        edit_album_custom_metadata_button = tk.Button(
+            frame, text="Edit custom Vorbis/ID3v2 tagging for ALL tracks",
+            command=
+                lambda self=self:
+                    EditAlbumCustomMetadataTaggingDialog(
+                        master, self._album_metadata, self._tracks_metadata,
+                        title=self.album_title_var.get()))
+        edit_album_custom_metadata_button.pack()
+
+        self.__log.return_(frame)
+        return frame
+
     def _save_cover_image(self, image_data):
         """Save raw image bytes to a temporary file.
 
@@ -1635,6 +1671,7 @@ class FLACManager(tk.Frame):
             self._track_genre_optionmenu.configure(state=tk.DISABLED)
             self.track_year_entry.configure(state=tk.DISABLED)
             self._track_year_optionmenu.configure(state=tk.DISABLED)
+            self._edit_custom_metadata_button.configure(state=tk.DISABLED)
         else:
             self.__log.debug(
                 "enabling track editors for track %s",
@@ -1649,6 +1686,7 @@ class FLACManager(tk.Frame):
             self._track_genre_optionmenu.configure(state=tk.NORMAL)
             self.track_year_entry.configure(state=tk.NORMAL)
             self._track_year_optionmenu.configure(state=tk.NORMAL)
+            self._edit_custom_metadata_button.configure(state=tk.NORMAL)
 
     def _create_track_title_editor(self, master, choices):
         """Create the UI editing controls for the track title.
@@ -1786,6 +1824,35 @@ class FLACManager(tk.Frame):
         self.__log.return_(frame)
         return frame
 
+    def _create_custom_metadata_editor(self, master):
+        """Create the UI editing controls for editing custom metadata
+        for a single track.
+
+        :param master: parent obejct of the editor frame
+        :return: the custom metadata editor
+        :rtype: :class:`tkinter.Frame`
+
+        """
+        self.__log.call(master)
+
+        frame = tk.Frame(master)
+
+        self._edit_custom_metadata_button = tk.Button(
+            frame, text="Edit custom Vorbis/ID3v2 tagging for this track",
+            command=
+                lambda self=self:
+                    EditCustomMetadataTaggingDialog(
+                        master,
+                        self._tracks_metadata[self._current_track_number],
+                        title="Track %d %s" % (
+                            self._current_track_number,
+                            self._track_vars["title"][
+                                self._current_track_number].get())))
+        self._edit_custom_metadata_button.pack()
+
+        self.__log.return_(frame)
+        return frame
+
     def refresh_track_editors(self):
         """Populate track editors with metadata for the current track.
 
@@ -1916,6 +1983,8 @@ class FLACManager(tk.Frame):
             "disc_total": int(self.album_disc_total_var.get())
                 if self.album_disc_total_var.get() else 1,
         }
+        if self._album_metadata.get("__custom"):
+            album_metadata["__custom"] = self._album_metadata["__custom"]
 
         # for persistence, replace temporary cover filenames with raw image
         # data (byte strings)
@@ -1927,7 +1996,7 @@ class FLACManager(tk.Frame):
         tracks_metadata = [None] # 1-based indexing for tracks
         for i in range(number_of_tracks):
             track_number = i + 1
-            tracks_metadata.append({
+            track_metadata = {
                 "include": track_vars["include"][track_number].get(),
                 "number": track_number,
                 "title": [track_vars["title"][track_number].get()]
@@ -1940,7 +2009,11 @@ class FLACManager(tk.Frame):
                     if track_vars["year"][track_number].get() else [],
                 "genre": [track_vars["genre"][track_number].get()]
                     if track_vars["genre"][track_number].get() else [],
-            })
+            }
+            if self._tracks_metadata[track_number].get("__custom"):
+                track_metadata["__custom"] = \
+                    self._tracks_metadata[track_number]["__custom"]
+            tracks_metadata.append(track_metadata)
 
         self._persistence.store({
             "album": album_metadata,
@@ -2001,6 +2074,9 @@ class FLACManager(tk.Frame):
                             track_vars["genre"][track_number].get()),
                     track_year=track_vars["year"][track_number].get()
                 ))
+                if self._tracks_metadata[track_number].get("__custom"):
+                    track_metadata["__custom"] = \
+                        self._tracks_metadata[track_number]["__custom"]
                 tagging_metadata.append(track_metadata)
             else:
                 self.__log.info("track %d is excluded", track_number)
@@ -3425,6 +3501,293 @@ class EditLoggingConfigurationDialog(_EditConfigurationDialog):
             width=3)
 
 
+@logged
+class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
+    """Base dialog that allows the user to add/change/remove custom
+    metadata fields for Vorbis/ID3v2 tagging.
+
+    """
+
+    def __init__(self, master, metadata, **keywords):
+        """Initialize the dialog.
+
+        :param master: the parent object of this dialog
+        :param metadata: the album or track metadata
+        :param dict keywords:
+           *name=value* keywords used to configure this dialog
+
+        """
+        self.__log.call(master, metadata, **keywords)
+
+        self._metadata = metadata
+        self._fields = [] # (vorbis_var, id3v2_var, value_var)
+        self._widgets = [] # (button, vorbis_entry, id3v2_entry, value_entry)
+        # must come last, as it will call body(frame) before returning!
+        super().__init__(master, **keywords)
+
+    def body(self, frame):
+        """Create the content of the dialog.
+
+        :param tk.Frame frame: the frame that contains the body content
+
+        """
+        self.__log.mark()
+
+        self._row = 0
+
+        self._instructions_var = tk.StringVar()
+        self._body_instructions()
+
+        tk.Label(
+            frame, textvariable=self._instructions_var,
+            anchor=tk.NW, justify=tk.LEFT,
+        ).grid(row=self._row, columnspan=4, pady=7, sticky=tk.W)
+        self._row += 1
+
+        add_button = tk.Button(
+            frame, text="Add", fg="Blue",
+            command=lambda f=self._add_field, p=frame: f(p),
+            default=tk.ACTIVE
+            )
+        _font(add_button).configure(size=11, weight=tkfont.BOLD)
+        add_button.grid(row=self._row, column=0, pady=7, sticky=tk.W)
+
+        vorbis_label = tk.Label(frame, text="Vorbis")
+        _font(vorbis_label).config(size=11, weight=tkfont.BOLD)
+        vorbis_label.grid(row=self._row, column=1, pady=5, sticky=tk.W)
+
+        id3v2_label = tk.Label(frame, text="ID3v2")
+        _font(id3v2_label).config(size=11, weight=tkfont.BOLD)
+        id3v2_label.grid(row=self._row, column=2, pady=5, sticky=tk.W)
+
+        value_label = tk.Label(frame, text="Value")
+        _font(value_label).config(size=11, weight=tkfont.BOLD)
+        value_label.grid(row=self._row, column=3, pady=5, sticky=tk.W)
+
+        self._row += 1
+
+        for ((vorbis_comment, id3v2_tag), values) \
+                in self._metadata.get("__custom", {}).items():
+            self._add_field(
+                frame, vorbis_comment=vorbis_comment, id3v2_tag=id3v2_tag,
+                values=values)
+
+    def _body_instructions(self):
+        """Populate text instructions for the dialog."""
+        self._instructions_var.set(
+            "Specify a Vorbis comment and/or ID3v2 tag name, and a value.\n"
+            "Changes to metadata are not saved unless the [Save] button is "
+            "clicked.\n"
+            "Fields with empty comment/tag names, or an empty value, are NOT "
+            "saved.\n"
+            "Specify multiple values by adding multiple fields with the same "
+            "comment and/or tag and a different value."
+        )
+
+    def _add_field(self, parent, vorbis_comment="", id3v2_tag="", values=None):
+        """Render a custom field in the dialog body.
+
+        :param parent: the object that contains the field controls
+        :keyword str vorbis_comment: the custom Vorbis comment
+        :keyword str id3v2_tag: the custom ID3v2 tag
+        :keyword list values: the value(s) for the custom comment/tag
+
+        """
+        self.__log.call(
+            parent, vorbis_comment=vorbis_comment, id3v2_tag=id3v2_tag,
+            values=values)
+
+        if values is None:
+            values = [""]
+
+        for value in values:
+            # len(self._fields) will be the index where references to the
+            # variables are stored
+            fields_ix = len(self._fields)
+
+            clear_button = tk.Button(
+                parent, text="\u00d7", fg="Red",
+                command=lambda f=self._clear_field, ix=fields_ix: f(ix)
+            )
+            _font(clear_button).config(weight=tkfont.BOLD)
+            clear_button.grid(row=self._row, column=0)
+
+            vorbis_var = tk.StringVar(parent, value=vorbis_comment)
+            vorbis_entry = tk.Entry(parent, textvariable=vorbis_var, width=17)
+            vorbis_entry.grid(row=self._row, column=1, sticky=tk.W)
+
+            id3v2_var = tk.StringVar(parent, value=id3v2_tag)
+            id3v2_entry = tk.Entry(parent, textvariable=id3v2_var, width=7)
+            id3v2_entry.grid(row=self._row, column=2, sticky=tk.W)
+
+            value_var = tk.StringVar(parent, value=value)
+            value_entry = tk.Entry(parent, textvariable=value_var, width=59)
+            value_entry.grid(row=self._row, column=3, sticky=tk.W)
+
+            self._fields.append((vorbis_var, id3v2_var, value_var))
+            self._widgets.append(
+                (clear_button, vorbis_entry, id3v2_entry, value_entry))
+
+            self._row += 1
+
+    def _clear_field(self, index):
+        """Clear (effectively removing) the *index* -th field.
+
+        :param int index: index into the *fields* list of variables
+
+        """
+        self.__log.call(index)
+
+        for var in self._fields[index]:
+            var.set("")
+        for i in range(4):
+            self._widgets[index][i].destroy()
+            
+
+    def buttonbox(self):
+        """Create the buttons to save and/or dismiss the dialog."""
+        box = tk.Frame(self)
+
+        tk.Button(box, text="Save", width=10, command=self.ok).pack(
+            side=tk.LEFT, padx=5, pady=5)
+
+        tk.Button(box, text="Cancel", width=10, command=self.cancel).pack(
+            side=tk.LEFT, padx=5, pady=5)
+
+        self.bind("<Return>", self.ok)
+        self.bind("<Escape>", self.cancel)
+
+        box.pack()
+
+    def apply(self):
+        """Save changes to *metadata*."""
+        self.__log.mark()
+
+        custom = self._metadata["__custom"] = OrderedDict()
+
+        for (vorbis_var, id3v2_var, value_var) in self._fields:
+            vorbis_comment = vorbis_var.get()
+            id3v2_tag = id3v2_var.get()
+            value = value_var.get()
+
+            if value and (vorbis_comment or id3v2_tag):
+                key = (vorbis_comment, id3v2_tag)
+
+                if key not in custom:
+                    custom[key] = [value]
+                else:
+                    custom[key].append(value)
+
+                self.__log.info("saved custom %r = %r", key, value)
+            elif vorbis_comment or id3v2_tag or value:
+                self.__log.warning(
+                    "ignoring (%r, %r) = %r", vorbis_comment, id3v2_tag, value)
+
+
+@logged
+class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
+    """Dialog that allows the user to add/change/remove custom metadata
+    fields for *all tracks* (i.e. the album) at once for Vorbis/ID3v2
+    tagging.
+
+    """
+
+    def __init__(self, master, album_metadata, tracks_metadata, **keywords):
+        """Initialize the dialog.
+
+        :param master: the parent object of this dialog
+        :param album_metadata: the album metadata
+        :param tracks_metadata: the track metadata
+        :param dict keywords:
+           *name=value* keywords used to configure this dialog
+
+        """
+        self.__log.call(master, album_metadata, tracks_metadata, **keywords)
+
+        self._tracks_metadata = tracks_metadata
+        self._cleared = set()
+        # must come last, as it will call body(frame) before returning!
+        super().__init__(master, album_metadata, **keywords)
+
+    def _body_instructions(self):
+        """Populate text instructions for the dialog."""
+        super()._body_instructions()
+        self._instructions_var.set(
+            self._instructions_var.get() + '\n' +
+            "Changes applied (saved) to custom metadata tagging fields at the "
+            "album level are applied to ALL tracks."
+        )
+
+    def _clear_field(self, index):
+        """Clear (effectively removing) the *index* -th field.
+
+        :param int index: index into the *fields* list of variables
+
+        This method keeps track of which fields have been cleared so
+        that the changes can be "replayed" for each track.
+
+        """
+        self.__log.call(index)
+
+        key = (
+            self._fields[index][0].get(), # Vorbis comment
+            self._fields[index][1].get() # ID3v2 tag
+        )
+        value = self._fields[index][2].get() # value
+        self._cleared.add((key, value))
+
+        super()._clear_field(index)
+
+    def apply(self):
+        """Save changes to the album metadata.
+
+        The changes will also be applied to all tracks.
+
+        """
+        self.__log.mark()
+
+        super().apply()
+
+        album_custom = self._metadata["__custom"]
+
+        for i in range(1, len(self._tracks_metadata)):
+            track_custom = \
+                self._tracks_metadata[i].setdefault("__custom", OrderedDict())
+
+            self._replay_clear(track_custom, i)
+
+            for (key, values) in album_custom.items():
+                track_custom[key] = values
+                self.__log.info(
+                    "applied custom %r = %r to track %d", key, values, i)
+
+    def _replay_clear(self, track_custom, i):
+        """Clear the same fields in each track that were cleared in the
+        album.
+
+        :param dict track_custom:
+           the custom metadata tagging fields for track *i*
+        :param int i:
+           the track number
+
+        """
+        self.__log.call(track_custom, i)
+
+        if self._cleared:
+            self.__log.debug("clearing %r from track %d", self._cleared, i)
+
+        for (key, value) in self._cleared:
+            track_values = track_custom.get(key)
+
+            if track_values and value in track_values:
+                track_values[:] = [v for v in track_values if v != value]
+                self.__log.info(
+                    "cleared %r = %r from track %d", key, value, i)
+
+            if track_values == []:
+                del track_custom[key]
+
+
 def resolve_path(spec):
     """Evaluate all variables in *spec* and make sure it's absolute.
 
@@ -3661,9 +4024,66 @@ def _make_tagging_map(type_, metadata):
         if value:
             tags[tag] = value
 
+    _update_custom_tagging(tags, type_, metadata)
+
     _log.return_(tags)
     return tags
 
+
+def _update_custom_tagging(tags, type_, metadata):
+    """Update *tags* with any custom Vorbis comments or ID3v2 tags from
+    *metadata["__custom"]* (if defined).
+
+    :param dict tags: the tagging map for a track
+    :param str type_: "Vorbis" or "ID3v2"
+    :param dict metadata: the metadata for a single track
+
+    *tags* is updated in place.
+    
+    .. note::
+       Custom tags with the same name as a preconfigured tag will
+       **replace** the preconfigured tag.
+
+    """
+    _log.call(metadata)
+
+    if "__custom" in metadata:
+        custom_tagpairs = []
+        for ((vorbis_comment, id3v2_tag), values) \
+                in metadata["__custom"].items():
+            if type_ == "Vorbis" and vorbis_comment:
+                custom_tagpairs.append((vorbis_comment, values))
+            elif type_ == "ID3v2" and id3v2_tag:
+                custom_tagpairs.append((id3v2_tag, values))
+            else:
+                _log.warning(
+                    "skipping custom (%r, %r) = %r",
+                    vorbis_comment, id3v2_tag, values)
+
+        _log.debug(
+            "custom tag pairs (before formatting):\n%r", custom_tagpairs)
+
+        custom_tags = OrderedDict()
+        for (tag, values) in custom_tagpairs:
+            # custom values are always formatted, but only keep if non-empty
+            values = [
+                value for value in (spec.format(**metadata) for spec in values)
+                if value]
+
+            if values:
+                if tag not in custom_tags:
+                    custom_tags[tag] = values
+                else:
+                    custom_tags[tag].extend(values)
+
+                _log.debug("custom %s %s = %r", type_, tag, custom_tags[tag])
+            else:
+                _log.warning(
+                    "custom %s %s evaluated to an empty list", type_, tag)
+
+        if custom_tags:
+            _log.info("updating tagging map with %r", custom_tags)
+            tags.update(custom_tags)
 
 #: Used to pass data between a :class:`FLACEncoder` thread and the main thread.
 _ENCODING_QUEUE = queue.PriorityQueue()
@@ -3723,6 +4143,7 @@ class FLACEncoder(threading.Thread):
                 encode_flac(
                     cdda_fn, flac_fn, metadata, stdout_filename=stdout_fn)
             except Exception as e:
+                self.__log.exception("FLAC encoding failed")
                 flac_encoding_error = e
 
             # touch the done file; see _enqueue_status_interval
@@ -3845,6 +4266,7 @@ class MP3Encoder(threading.Thread):
                 self.flac_filename, wav_filename,
                 stdout_filename=self.stdout_filename)
         except Exception as e:
+            self.__log.exception("WAV decoding failed")
             del wav_tempdir
             status = (
                 self.track_index, self.cdda_filename, self.flac_filename,
@@ -3863,6 +4285,7 @@ class MP3Encoder(threading.Thread):
         try:
             self._encode_mp3(wav_filename)
         except Exception as e:
+            self.__log.exception("MP3 encoding failed")
             status = (
                 self.track_index, self.cdda_filename, self.flac_filename,
                 self.stdout_filename, e)
@@ -4785,25 +5208,40 @@ class MetadataPersistence(MetadataCollector):
         if os.path.isfile(self.metadata_path):
             self.__log.debug("found %r", self.metadata_path)
             with open(self.metadata_path) as fp:
-                disc_metadata = json.load(fp)
+                disc_metadata = json.load(fp, object_pairs_hook=OrderedDict)
 
-            # convert album cover to byte string (raw image data) by encoding
-            # the string to "Latin-1"
-            # (see comment in the _convert_to_json_serializable(obj) method)
-            for i in range(len(disc_metadata["album"]["cover"])):
-                disc_metadata["album"]["cover"][i] = \
-                    disc_metadata["album"]["cover"][i].encode("Latin-1")
-            if "record_label" not in disc_metadata["album"]: # new in 0.8.0
-                disc_metadata["album"]["record_label"] = ""
+            self._postprocess(disc_metadata)
+
             self.album = disc_metadata["album"]
             self.tracks = disc_metadata["tracks"]
             self.restored = True
 
             self.__log.info(
-                "restored metadata for DiscId %s from %s", self.disc_id,
-                disc_metadata["timestamp"])
+                "restored metadata for DiscId %s from %s",
+                self.disc_id, disc_metadata["timestamp"])
         else:
             self.__log.info("did not find %r", self.metadata_path)
+
+    def _postprocess(self, disc_metadata):
+        """Modify *metadata* in place after deserializing from JSON.
+
+        :param dict disc_metadata: the metadata for a disc
+
+        """
+        # convert album cover to byte string (raw image data) by encoding
+        # the string to "Latin-1"
+        # (see comment in the _convert_to_json_serializable(obj) method)
+        for i in range(len(disc_metadata["album"]["cover"])):
+            disc_metadata["album"]["cover"][i] = \
+                disc_metadata["album"]["cover"][i].encode("Latin-1")
+
+        if "record_label" not in disc_metadata["album"]: # new in 0.8.0
+            disc_metadata["album"]["record_label"] = ""
+
+        self._xform_custom_keys(literal_eval, disc_metadata["album"])
+
+        for i in range(1, len(disc_metadata["tracks"])):
+            self._xform_custom_keys(literal_eval, disc_metadata["tracks"][i])
 
     def store(self, metadata):
         """Persist a disc's metadata field values.
@@ -4842,6 +5280,8 @@ class MetadataPersistence(MetadataCollector):
         ordered_metadata["album"] = metadata["album"]
         ordered_metadata["tracks"] = metadata["tracks"]
 
+        self._preprocess(ordered_metadata)
+
         with open(self.metadata_path, 'w') as fp:
             json.dump(
                 ordered_metadata, fp, separators=(',', ':'),
@@ -4849,6 +5289,36 @@ class MetadataPersistence(MetadataCollector):
 
         self.__log.info("wrote %s", self.metadata_path)
 
+    def _preprocess(self, disc_metadata):
+        """Modify *metadata* in place before serializing as JSON.
+
+        :param dict disc_metadata: the metadata for a disc
+
+        """
+        self._xform_custom_keys(repr, disc_metadata["album"])
+
+        for i in range(1, len(disc_metadata["tracks"])):
+            self._xform_custom_keys(repr, disc_metadata["tracks"][i])
+
+    def _xform_custom_keys(self, func, metadata):
+        """Convert ``key`` to ``func(key)`` for each key in
+        *metadata["__custom"]*.
+
+        :param func: the key conversion function
+        :param dict metadata: an album or track metadata mapping
+
+        Conversion is necessary because keys in JSON objects *must* be
+        strings, but FLACManager prefers to work with 2-tuple
+        ``(vorbis_comment, id3v2_tag)`` keys.
+
+        """
+        if "__custom" in metadata:
+            items = list(metadata["__custom"].items())
+            metadata["__custom"] = OrderedDict(
+                [(func(key), value) for (key, value) in items])
+            self.__log.debug(
+                "transformed __custom keys using %r:\n%r",
+                func, metadata["__custom"])
 
     def _convert_to_json_serializable(self, obj):
         """Return a JSON-serializable representation of `obj`.
@@ -4942,12 +5412,18 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                 # persisted data stores the "is_compilation" flag for albums
                 self.album["is_compilation"] = \
                     self.persistence.album["is_compilation"]
-                # persisted data stores the "include" flag for tracks
-                # (regular collectors do not)
+                # custom tagging data for the album
+                if "__custom" in self.persistence.album:
+                    self.album["__custom"] = self.persistence.album["__custom"]
+                # persisted data stores the "include" flag and "__custom"
+                # tagging data for tracks (regular collectors do not)
                 track_ordinal = 1
                 for track_metadata in self.persistence.tracks[1:]:
                     self.tracks[track_ordinal]["include"] = \
                         self.persistence.tracks[track_ordinal]["include"]
+                    if "__custom" in self.persistence.tracks[track_ordinal]:
+                        self.tracks[track_ordinal]["__custom"] = \
+                            self.persistence.tracks[track_ordinal]["__custom"]
                     track_ordinal += 1
 
     def _merge_metadata(self, fields, source, target):
