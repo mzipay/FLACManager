@@ -753,11 +753,9 @@ class FLACManager(tk.Frame):
 
         self.open_req_config_editor_button = tk.Button(
             disc_status_group,
-            text="Edit required configuration in flacmanager.ini", fg="Red",
+            text="Edit required configuration in flacmanager.ini",
+            fg="Red", activeforeground="Red",
             command=self._edit_required_config)
-        #TODO: ensure fg stays red (below doesn't work!?)
-        self.open_req_config_editor_button.bind(
-            "<Enter>", lambda event: event.widget.configure(fg="Red"))
 
         self.retry_disc_check_button = tk.Button(
             disc_status_group, text="Retry disc check",
@@ -1625,15 +1623,16 @@ class FLACManager(tk.Frame):
 
         self.track_include_checkbox = tk.Checkbutton(
             frame, text="Include this track",
+            fg="Blue", activeforeground="Blue",
             variable=self._track_vars["include"][1],
             onvalue=True, offvalue=False,
-            command=self.toggle_track_editors_states)
+            command=self.toggle_track_include_state)
         self.track_include_checkbox.pack(side=tk.LEFT, padx=11)
 
-        button = tk.Button(
-            frame, text="Apply to all tracks",
+        self.toggle_all_tracks_include_button = tk.Button(
+            frame, text="Include all tracks",
             command=self.apply_include_to_tracks)
-        button.pack(side=tk.LEFT)
+        self.toggle_all_tracks_include_button.pack(side=tk.LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1650,7 +1649,7 @@ class FLACManager(tk.Frame):
         for track_include_var in self._track_vars["include"][1:]:
             track_include_var.set(include_value)
 
-    def toggle_track_editors_states(self):
+    def toggle_track_include_state(self):
         """Enable/disable editors for the current track based on whether
         it is include or excluded, respectively.
 
@@ -1658,35 +1657,15 @@ class FLACManager(tk.Frame):
         self.__log.call()
 
         if not self._track_vars["include"][self._current_track_number].get():
-            self.__log.debug(
-                "disabling track editors for track %s",
-                self.track_spinner.get())
-            self.track_title_entry.configure(state=tk.DISABLED)
-            self._track_title_optionmenu.configure(state=tk.DISABLED)
-            self.track_artist_entry.configure(state=tk.DISABLED)
-            self._track_artist_optionmenu.configure(state=tk.DISABLED)
-            self.track_performer_entry.configure(state=tk.DISABLED)
-            self._track_performer_optionmenu.configure(state=tk.DISABLED)
-            self.track_genre_entry.configure(state=tk.DISABLED)
-            self._track_genre_optionmenu.configure(state=tk.DISABLED)
-            self.track_year_entry.configure(state=tk.DISABLED)
-            self._track_year_optionmenu.configure(state=tk.DISABLED)
-            self._edit_custom_metadata_button.configure(state=tk.DISABLED)
+            self.track_include_checkbox.config(
+                fg="Red", activeforeground="Red")
+            self.toggle_all_tracks_include_button.config(
+                text="Exclude all tracks")
         else:
-            self.__log.debug(
-                "enabling track editors for track %s",
-                self.track_spinner.get())
-            self.track_title_entry.configure(state=tk.NORMAL)
-            self._track_title_optionmenu.configure(state=tk.NORMAL)
-            self.track_artist_entry.configure(state=tk.NORMAL)
-            self._track_artist_optionmenu.configure(state=tk.NORMAL)
-            self.track_performer_entry.configure(state=tk.NORMAL)
-            self._track_performer_optionmenu.configure(state=tk.NORMAL)
-            self.track_genre_entry.configure(state=tk.NORMAL)
-            self._track_genre_optionmenu.configure(state=tk.NORMAL)
-            self.track_year_entry.configure(state=tk.NORMAL)
-            self._track_year_optionmenu.configure(state=tk.NORMAL)
-            self._edit_custom_metadata_button.configure(state=tk.NORMAL)
+            self.track_include_checkbox.config(
+                fg="Blue", activeforeground="Blue")
+            self.toggle_all_tracks_include_button.config(
+                text="Include all tracks")
 
     def _create_track_title_editor(self, master, choices):
         """Create the UI editing controls for the track title.
@@ -1870,7 +1849,7 @@ class FLACManager(tk.Frame):
             return
 
         self._current_track_number = track_number
-        self.toggle_track_editors_states()
+        self.toggle_track_include_state()
         track_metadata = self._tracks_metadata[track_number]
 
         track_include_var = self._track_vars["include"][track_number]
@@ -3545,7 +3524,7 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
         self._row += 1
 
         add_button = tk.Button(
-            frame, text="Add", fg="Blue",
+            frame, text="Add", fg="Blue", activeforeground="Blue",
             command=lambda f=self._add_field, p=frame: f(p),
             default=tk.ACTIVE
             )
@@ -3606,7 +3585,7 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
             fields_ix = len(self._fields)
 
             clear_button = tk.Button(
-                parent, text="\u00d7", fg="Red",
+                parent, text="\u00d7", fg="Red", activeforeground="Red",
                 command=lambda f=self._clear_field, ix=fields_ix: f(ix)
             )
             _font(clear_button).config(weight=tkfont.BOLD)
