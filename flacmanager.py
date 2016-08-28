@@ -3393,12 +3393,179 @@ class EditLoggingConfigurationDialog(_EditConfigurationDialog):
             width=3)
 
 
+#: A list of recommended and proposed Vorbis comment names.
+_VORBIS_COMMENTLIST = [
+    # https://xiph.org/vorbis/doc/v-comment.html
+    # [1] https://wiki.xiph.org/Field_names
+    # [2] http://age.hobba.nl/audio/mirroredpages/ogg-tagging.html
+    # [3] http://reallylongword.org/vorbiscomment/
+    "ALBUM (collection name)",
+    "ARRANGER (who arranged the piece)", # [2]
+    "ARTIST (artist responsible for the work)",
+    "AUTHOR (author of spoken work)", # [2]
+    "CATALOGNUMBER (producer/label catalog number)", # [3]
+    "COMMENT (user comment)", # [2]
+    "COMPOSER (composer of the work)", # [1]
+    "CONDUCTOR (conductor of the work)", # [2]
+    "CONTACT (creator/distributor contact info)",
+    "COPYRIGHT (Copyright attribution)",
+    "DATE (recording date)",
+    "DESCRIPTION (description of contents)",
+    "DISCNUMBER (multi-disc number)", # [1]
+    "DISCTOTAL (number of discs)", # [1]
+    #"ENCODER (user application name)", # [1]
+    "ENCODING (quality/bitrate settings)", # [2]
+    "ENGINEER (who produced the master)", # [3]
+    "ENSEMBLE (group playing the piece)", # [2]
+    "GENRE (music genre)",
+    "GUESTARTIST (collaborative artist)", # [3]
+    "ISRC (International Standard Recording Code)",
+    "LABEL (record label or imprint)", # [2]
+    "LICENSE (License information)",
+    "LOCATION (recording location)",
+    "LYRICIST (who wrote the lyrics)", # [2]
+    "OPUS (number of the work)", # [2]
+    "ORGANIZATION (production organization)",
+    "PART (division within a work)", # [2]
+    "PARTNUMBER (number of the division/part)", # [2]
+    "PERFORMER (artist(s) who performed the work)",
+    "PRODUCER (producer of the work)", # [3]
+    "PRODUCTNUMBER (UPC, EAN, JAN, etc.)", # [1]
+    "PUBLISHER (who published the disc)", # [2]
+    "REMIXER (who remixed the work)", # [3]
+    "SOURCEARTIST (original artist of performed work)", # [3]
+    "SOURCEMEDIA (recording media type)", # [1]
+    "TITLE (Track/Work name)",
+    "TRACKNUMBER (number of this piece)",
+    "TRACKTOTAL (number of tracks)", # [1]
+    "VERSION (differentiate multiple versions)",
+    "VOLUME (multi-volume work)", # [3]
+]
+
+
+#: A list of standard and common non-standard ID3v2 frames.
+_ID3V2_TAGLIST = [
+    # http://id3.org/id3v2.3.0 (unless otherwise noted)
+    "AENC (Audio encryption)",
+    "APIC (Attached picture)",
+    "COMM (Comments)",
+    "COMR (Commercial frame)",
+    "ENCR (Encryption method registration)",
+    "EQUA (Equalization)",
+    "ETCO (Event timing codes)",
+    "GEOB (General encapsulated object)",
+    "GRID (Group identification registration)",
+    "IPLS (Involved people list)",
+    "LINK (Linked information)",
+    "MCDI (Music CD identifier)",
+    "MLLT (MPEG location lookup table)",
+    "OWNE (Ownership frame)",
+    "PRIV (Private frame)",
+    "PCNT (Play counter)",
+    "POPM (Popularimeter)",
+    "POSS (Position synchronisation frame)",
+    "RBUF (Recommended buffer size)",
+    "RVAD (Relative volume adjustment)",
+    "RVRB (Reverb)",
+    "SYLT (Synchronized lyric/text)",
+    "SYTC (Synchronized tempo codes)",
+    "TALB (Album/Movie/Show title)",
+    "TBPM (BPM (beats per minute))",
+    "TCMP (iTunes Compilation Flag)", # http://id3.org/iTunes Compilation Flag
+    "TCOM (Composer)",
+    "TCON (Content type)",
+    "TCOP (Copyright message)",
+    "TDAT (Date)",
+    "TDLY (Playlist delay)",
+    #"TENC (Encoded by)",
+    "TEXT (Lyricist/Text writer)",
+    "TFLT (File type)",
+    "TIME (Time)",
+    "TIT1 (Content group description)",
+    "TIT2 (Title/songname/content description)",
+    "TIT3 (Subtitle/Description refinement)",
+    "TKEY (Initial key)",
+    "TLAN (Language(s))",
+    "TLEN (Length)",
+    "TMED (Media type)",
+    "TOAL (Original album/movie/show title)",
+    "TOFN (Original filename)",
+    "TOLY (Original lyricist(s)/text writer(s))",
+    "TOPE (Original artist(s)/performer(s))",
+    "TORY (Original release year)",
+    "TOWN (File owner/licensee)",
+    "TPE1 (Lead performer(s)/Soloist(s))",
+    "TPE2 (Band/orchestra/accompaniment)",
+    "TPE3 (Conductor/performer refinement)",
+    "TPE4 (Interpreted, remixed, or otherwise modified by)",
+    "TPOS (Part of a set)",
+    "TPUB (Publisher)",
+    "TRCK (Track number/Position in set)",
+    "TRDA (Recording dates)",
+    "TRSN (Internet radio station name)",
+    "TRSO (Internet radio station owner)",
+    "TSIZ (Size)",
+    "TSOT (iTunes Title Sort)", # http://id3.org/iTunes
+    "TSOP (iTunes Artist Sort)", # http://id3.org/iTunes
+    "TSOA (iTunes Album Sort)", # http://id3.org/iTunes
+    "TSO2 (iTunes Album Artist Sort)", # http://id3.org/iTunes
+    "TSOC (iTunes Composer Sort)", # http://id3.org/iTunes
+    "TSRC (ISRC (international standard recording code))",
+    "TSSE (Software/Hardware and settings used for encoding)",
+    "TYER (Year)",
+    "TXXX (User defined text information frame)",
+    "UFID (Unique file identifier)",
+    "USER (Terms of use)",
+    "USLT (Unsychronized lyric/text transcription)",
+    "WCOM (Commercial information)",
+    "WCOP (Copyright/Legal information)",
+    "WOAF (Official audio file webpage)",
+    "WOAR (Official artist/performer webpage)",
+    "WOAS (Official audio source webpage)",
+    "WORS (Official internet radio station homepage)",
+    "WPAY (Payment)",
+    "WPUB (Publishers official webpage)",
+    "WXXX (User defined URL link frame)",
+]
+
+
 @logged
 class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
     """Base dialog that allows the user to add/change/remove custom
     metadata fields for Vorbis/ID3v2 tagging.
 
     """
+
+    class _TaggingHelp(simpledialog.Dialog):
+    
+        _VORBIS_HELP_TEXT = None
+
+        _ID3V2_HELP_TEXT = None
+
+        @classmethod
+        def _helptext(cls, type_):
+            if type_ == "Vorbis comment":
+                if cls._VORBIS_HELP_TEXT is None:
+                    cls._VORBIS_HELP_TEXT = '\n'.join(_VORBIS_COMMENTLIST)
+                text = cls._VORBIS_HELP_TEXT
+            else: # ID3v2 tag
+                if cls._ID3V2_HELP_TEXT is None:
+                    cls._ID3V2_HELP_TEXT = '\n'.join(_ID3V2_TAGLIST)
+                text = cls._ID3V2_HELP_TEXT
+
+            return text
+
+        def __init__(self, master, type_):
+            self._type = type_
+            super().__init__(master, title="%s help" % type_)
+
+        def body(self, frame):
+            help_list = scrolledtext.ScrolledText(
+                frame, height=17, bd=0, relief=tk.FLAT, wrap=tk.NONE)
+            help_list.insert(tk.END, self._helptext(self._type))
+            help_list.config(state=tk.DISABLED)
+            help_list.pack(
+                side=tk.LEFT, fill=tk.BOTH, expand=tk.YES, padx=5, pady=5)
 
     def __init__(self, master, metadata, **keywords):
         """Initialize the dialog.
@@ -3444,13 +3611,35 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
         _font(add_button).configure(size=11, weight=tkfont.BOLD)
         add_button.grid(row=self._row, column=0, pady=7, sticky=tk.W)
 
-        vorbis_label = tk.Label(frame, text="Vorbis")
-        _font(vorbis_label).config(size=11, weight=tkfont.BOLD)
-        vorbis_label.grid(row=self._row, column=1, pady=5, sticky=tk.W)
+        vorbis_frame = tk.Frame(frame)
 
-        id3v2_label = tk.Label(frame, text="ID3v2")
+        vorbis_label = tk.Label(vorbis_frame, text="Vorbis")
+        _font(vorbis_label).config(size=11, weight=tkfont.BOLD)
+        vorbis_label.pack(side=tk.LEFT)
+
+        vorbis_help_button = tk.Button(
+            vorbis_frame, text='?',
+            command=
+                lambda self=self:
+                    self._TaggingHelp(vorbis_frame, type_="Vorbis comment"))
+        vorbis_help_button.pack(side=tk.LEFT)
+
+        vorbis_frame.grid(row=self._row, column=1, pady=5, sticky=tk.W)
+
+        id3v2_frame = tk.Frame(frame)
+
+        id3v2_label = tk.Label(id3v2_frame, text="ID3v2")
         _font(id3v2_label).config(size=11, weight=tkfont.BOLD)
-        id3v2_label.grid(row=self._row, column=2, pady=5, sticky=tk.W)
+        id3v2_label.pack(side=tk.LEFT)
+
+        id3v2_help_button = tk.Button(
+            id3v2_frame, text='?',
+            command=
+                lambda self=self:
+                    self._TaggingHelp(id3v2_frame, type_="ID3v2 tag"))
+        id3v2_help_button.pack(side=tk.LEFT)
+
+        id3v2_frame.grid(row=self._row, column=2, pady=5, sticky=tk.W)
 
         value_label = tk.Label(frame, text="Value")
         _font(value_label).config(size=11, weight=tkfont.BOLD)
