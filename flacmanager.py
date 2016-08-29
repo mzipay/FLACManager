@@ -1,44 +1,71 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
-# FLAC Manager -- audio metadata aggregator and FLAC+MP3 encoder
-# http://ninthtest.net/flac-mp3-audio-manager/
-#
-# Copyright (c) 2013-2016 Matthew Zipay.
-#
-# Permission is hereby granted, free of charge, to any person
-# obtaining a copy of this software and associated documentation
-# files (the "Software"), to deal in the Software without
-# restriction, including without limitation the rights to use,
-# copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following
-# conditions:
-#
-# The above copyright notice and this permission notice shall be
-# included in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-# OTHER DEALINGS IN THE SOFTWARE.
+"""FLACManager is an audio metadata aggregator and FLAC+MP3
+at-once tagger/encoder.
 
+Audio metadata is aggregated from the Gracenote CDDB and
+MusicBrainz services and presented to the user for acceptance,
+selection and/or modification.
 
-__author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.8.0-beta+dev"
+The file system folder and file names for ripped albums are
+fully configurable via the flacmanager.ini configuration file.
 
-"""
-Please read the following articles before using FLAC Manager!
+Vorbis comments for FLAC files and ID3v2 tags for MP3 files are
+also fully configurable.  In the default configuration, ID3v2
+tags are compatible with both the iTunes application and the
+Google Play Music service.  Custom Vorbis comments and ID3v2 tags
+can also be defined on a per-album and/or per-track basis.
+
+Immediately before tracks are encoded/tagged, FLACManager saves
+all chosen metadata fields and custom Vorbis/ID3v2 tagging data
+to a special file that is unique for that disc.  If the same disc
+is inserted again, the saved information is restored in the UI
+(including the chosen album art).  This provivdes for easy
+recovery from failed encoding operations, or the ability to
+re-encode/re-tag albums without needing to re-edit all metadata.
+
+FLAC and MP3 encoding options are fully configurable via the
+flacmanager.ini configuration file. By default, FLACManager
+detects clipping in MP3s and will automatically re-encode with
+scaled PCM data in order to eliminate clipping.
+
+Please read the following articles before using FLACManager!
 
 http://mzipay.github.io/FLACManager/prerequisites.html
 http://mzipay.github.io/FLACManager/whats-new.html
 http://mzipay.github.io/FLACManager/usage.html
 
 """
+
+__author__ = "Matthew Zipay <mattz@ninthtest.net>"
+__version__ = "0.8.0-beta+dev"
+__license__ = """\
+FLAC Manager -- audio metadata aggregator and FLAC+MP3 encoder
+http://ninthtest.net/flac-mp3-audio-manager/
+
+Copyright (c) 2013-2016 Matthew Zipay. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE."""
 
 from ast import literal_eval
 import atexit
@@ -63,7 +90,8 @@ import sys
 from tempfile import mkstemp, TemporaryDirectory
 import threading
 import time
-import tkinter as tk
+from tkinter import *
+from tkinter.ttk import *
 import tkinter.filedialog as filedialog
 import tkinter.font as tkfont
 import tkinter.messagebox as messagebox
@@ -98,9 +126,6 @@ __all__ = [
     "generate_flac_basename",
     "generate_mp3_dirname",
     "generate_mp3_basename",
-    "PrerequisitesDialog",
-    "AboutDialog",
-    "EditConfigurationDialog",
     "resolve_path",
     "encode_flac",
     "decode_wav",
@@ -173,7 +198,6 @@ logging.setLoggerClass(_TracingLogger)
 
 #: The module-level logger.
 _log = logging.getLogger(__name__)
-
 
 
 def logged(cls):
@@ -604,7 +628,7 @@ class FLACManagerError(Exception):
 
 
 @logged
-class FLACManager(tk.Tk):
+class FLACManager(Tk):
     """The FLACManager GUI application."""
 
     #: Any HTTP(S) request issued by FLACManager uses this value for the HTTP
@@ -661,9 +685,10 @@ class FLACManager(tk.Tk):
 
         """
         self.disc_status_message.config(
-            text="Required configuration is missing!", fg="Red")
+            text="Required configuration is missing!")
+        _styled(self.disc_status_message, foreground="Red")
         self.open_req_config_editor_button.pack(
-            side=tk.RIGHT, padx=7, pady=5)
+            side=RIGHT, padx=7, pady=5)
 
     def _edit_required_config(self):
         """Open a *flacmanager.ini* editor to allow the user to provide
@@ -675,21 +700,21 @@ class FLACManager(tk.Tk):
         if not self._missing_required_config():
             self.open_req_config_editor_button.pack_forget()
             self.disc_status_message.config(
-                text="Waiting for a disc to be inserted\u2026",
-                fg="Black")
+                text="Waiting for a disc to be inserted\u2026")
+            _styled(self.disc_status_message, foreground="Black")
             self._do_disc_check()
 
     def _create_menu(self):
         """Create the FLAC Manager menu bar."""
         self.__log.call()
 
-        menubar = tk.Menu(self)
+        menubar = Menu(self)
 
-        file_menu = tk.Menu(menubar, tearoff=tk.NO)
+        file_menu = Menu(menubar, tearoff=NO)
         file_menu.add_command(label="Exit", command=self._exit)
         menubar.add_cascade(label="File", menu=file_menu)
 
-        edit_menu = tk.Menu(menubar)
+        edit_menu = Menu(menubar)
         edit_menu.add_command(
             label="Configure metadata aggregation",
             command=self._edit_aggregation_config)
@@ -697,7 +722,7 @@ class FLACManager(tk.Tk):
             label="Configure default folder and file names",
             command=self._edit_organization_config)
         edit_menu.add_separator()
-        flac_menu = tk.Menu(edit_menu, tearoff=tk.NO)
+        flac_menu = Menu(edit_menu, tearoff=NO)
         flac_menu.add_command(
             label="FLAC encoding options",
             command=self._edit_flac_encoding_config)
@@ -708,7 +733,7 @@ class FLACManager(tk.Tk):
             label="FLAC folder and file names",
             command=self._edit_flac_organization_config)
         edit_menu.add_cascade(label="Configure FLAC", menu=flac_menu)
-        mp3_menu = tk.Menu(edit_menu, tearoff=tk.NO)
+        mp3_menu = Menu(edit_menu, tearoff=NO)
         mp3_menu.add_command(
             label="MP3 encoding options",
             command=self._edit_mp3_encoding_config)
@@ -723,9 +748,11 @@ class FLACManager(tk.Tk):
             label="Configure logging", command=self._edit_logging_config)
         menubar.add_cascade(label="Edit", menu=edit_menu)
 
-        help_menu = tk.Menu(menubar, tearoff=tk.NO)
-        help_menu.add_command(label="Prequisites", command=self.prerequisites)
-        help_menu.add_command(label="About", command=self.about)
+        help_menu = Menu(menubar, tearoff=NO)
+        help_menu.add_command(label="About", command=self.show_about)
+        help_menu.add_command(
+            label="Prequisites", command=self.show_prerequisites)
+        help_menu.add_command(label="License", command=self.show_license)
         menubar.add_cascade(label="Help", menu=help_menu)
 
         self.config(menu=menubar)
@@ -734,46 +761,46 @@ class FLACManager(tk.Tk):
         """Create the disc status frame."""
         self.__log.call()
 
-        disc_status_group = tk.LabelFrame(self, text="Disc status")
-        disc_status_group.pack(fill=tk.BOTH, padx=17, pady=11)
+        disc_status_group = LabelFrame(self, text="Disc status")
+        disc_status_group.pack(fill=BOTH, padx=17, pady=11)
 
-        self.disc_eject_button = tk.Button(
+        self.disc_eject_button = Button(
             disc_status_group, text="Eject", command=self._eject_disc,
-            state=tk.DISABLED)
+            state=DISABLED)
 
-        self.disc_status_message = tk.Label(
+        self.disc_status_message = Label(
             disc_status_group, text="Waiting for a disc to be inserted\u2026")
-        self.disc_status_message.pack(side=tk.LEFT, padx=5, pady=3)
+        self.disc_status_message.pack(side=LEFT, padx=5, pady=3)
 
-        self.open_req_config_editor_button = tk.Button(
-            disc_status_group,
-            text="Edit required configuration in flacmanager.ini",
-            fg="Red", activeforeground="Red",
-            command=self._edit_required_config)
+        self.open_req_config_editor_button = _styled(
+            Button(
+                disc_status_group,
+                text="Edit required configuration in flacmanager.ini",
+                command=self._edit_required_config),
+            foreground="Red")
 
-        self.retry_disc_check_button = tk.Button(
+        self.retry_disc_check_button = Button(
             disc_status_group, text="Retry disc check",
             command=self._do_disc_check)
 
-        self.rip_and_tag_button = tk.Button(
-            disc_status_group, text="Rip and tag",
-            bg="Dark Green", fg="White",
-            activebackground="Lime Green",  activeforeground="Black",
-            command=self.rip_and_tag)
-        _font(self.rip_and_tag_button).config(weight=tkfont.BOLD)
+        self.rip_and_tag_button = _styled(
+            Button(
+                disc_status_group, text="Rip and tag",
+                command=self.rip_and_tag),
+            foreground="Dark Green")
 
     def _create_editor_status(self):
         """Create the labels and buttons that communicate editor status."""
         self.__log.call()
 
-        self.status_message_var = tk.StringVar(
+        self.status_message_var = StringVar(
             value="Aggregating metadata\u2026")
-        self.status_message = tk.Label(
+        self.status_message = Label(
             self, textvariable=self.status_message_var)
-        self.retry_aggregation_button = tk.Button(
+        self.retry_aggregation_button = Button(
             self, text="Retry metadata aggregation",
             command=self._do_metadata_aggregation)
-        self.edit_offline_button = tk.Button(
+        self.edit_offline_button = Button(
             self, text="Edit metadata offline",
             command=self._edit_offline)
 
@@ -801,31 +828,31 @@ class FLACManager(tk.Tk):
         # tracks indexing is 1-based
         self._total_tracks = len(self.toc.track_offsets)
 
-        metadata_editor = self.metadata_editor = tk.Frame(self)
-        album_editor = tk.Frame(metadata_editor)
+        metadata_editor = self.metadata_editor = Frame(self)
+        album_editor = Frame(metadata_editor)
 
         album_metadata = self._album_metadata
 
         album_title_frame = self._create_album_title_editor(
             album_editor, album_metadata["title"])
-        album_title_frame.pack(fill=tk.BOTH, pady=7)
+        album_title_frame.pack(fill=BOTH, pady=7)
 
         album_artist_frame = self._create_album_artist_editor(
             album_editor, album_metadata["artist"])
-        album_artist_frame.pack(fill=tk.BOTH, pady=7)
+        album_artist_frame.pack(fill=BOTH, pady=7)
 
         album_recordlabel_frame = self._create_album_recordlabel_editor(
             album_editor, album_metadata["record_label"])
-        album_recordlabel_frame.pack(fill=tk.BOTH, pady=7)
+        album_recordlabel_frame.pack(fill=BOTH, pady=7)
 
         album_genre_frame = self._create_album_genre_editor(
             album_editor, album_metadata["genre"])
-        album_genre_frame.pack(fill=tk.BOTH, pady=7)
+        album_genre_frame.pack(fill=BOTH, pady=7)
 
-        year_disc_cover_row = tk.Frame(album_editor)
+        year_disc_cover_row = Frame(album_editor)
         album_year_frame = self._create_album_year_editor(
             year_disc_cover_row, album_metadata["year"])
-        album_year_frame.pack(side=tk.LEFT)
+        album_year_frame.pack(side=LEFT)
 
         album_disc_frame = self._create_album_disc_editor(
             year_disc_cover_row, album_metadata["disc_number"],
@@ -833,64 +860,64 @@ class FLACManager(tk.Tk):
 
         album_cover_frame = self._create_album_cover_editor(
             year_disc_cover_row, album_metadata["cover"])
-        album_cover_frame.pack(side=tk.RIGHT)
+        album_cover_frame.pack(side=RIGHT)
 
         album_disc_frame.pack()
-        year_disc_cover_row.pack(fill=tk.BOTH, pady=7)
+        year_disc_cover_row.pack(fill=BOTH, pady=7)
 
         album_compilation_frame = self._create_album_compilation_editor(
             album_editor, album_metadata["is_compilation"])
-        album_compilation_frame.pack(fill=tk.BOTH, pady=7)
+        album_compilation_frame.pack(fill=BOTH, pady=7)
 
         album_custom_metadata_frame = \
             self._create_album_custom_metadata_editor(album_editor)
-        album_custom_metadata_frame.pack(side=tk.RIGHT)
+        album_custom_metadata_frame.pack(side=RIGHT)
 
-        album_editor.pack(fill=tk.BOTH)
+        album_editor.pack(fill=BOTH)
 
-        tracks_editor = tk.Frame(
-            metadata_editor, borderwidth=5, relief=tk.RAISED)
+        tracks_editor = Frame(
+            metadata_editor, borderwidth=5, relief=RAISED)
         self._track_vars = self._create_track_vars()
         first_track = self._tracks_metadata[1]
-        track_editor = tk.Frame(tracks_editor)
+        track_editor = Frame(tracks_editor)
 
-        controls = tk.Frame(track_editor)
+        controls = Frame(track_editor)
 
         track_nav_frame = self._create_track_navigator(
             controls, self._total_tracks)
-        track_nav_frame.pack(side=tk.LEFT)
+        track_nav_frame.pack(side=LEFT)
 
         track_include_frame = self._create_track_include_editor(controls)
-        track_include_frame.pack(side=tk.LEFT, padx=29)
+        track_include_frame.pack(side=LEFT, padx=29)
 
         custom_metadata_frame = self._create_custom_metadata_editor(controls)
-        custom_metadata_frame.pack(side=tk.RIGHT)
+        custom_metadata_frame.pack(side=RIGHT)
 
-        controls.pack(fill=tk.BOTH, pady=7)
+        controls.pack(fill=BOTH, pady=7)
 
         track_title_frame = self._create_track_title_editor(
             track_editor, first_track["title"])
-        track_title_frame.pack(fill=tk.BOTH, pady=7)
+        track_title_frame.pack(fill=BOTH, pady=7)
 
         track_artist_frame = self._create_track_artist_editor(
             track_editor,
             self._combine_choices(
                 first_track["artist"], album_metadata["artist"]))
-        track_artist_frame.pack(fill=tk.BOTH, pady=7)
+        track_artist_frame.pack(fill=BOTH, pady=7)
 
         track_genre_frame = self._create_track_genre_editor(
             track_editor,
             self._combine_choices(
                 first_track["genre"], album_metadata["genre"]))
-        track_genre_frame.pack(fill=tk.BOTH, pady=7)
+        track_genre_frame.pack(fill=BOTH, pady=7)
 
         track_year_frame = self._create_track_year_editor(
             track_editor,
             self._combine_choices(first_track["year"], album_metadata["year"]))
-        track_year_frame.pack(side=tk.LEFT, pady=7)
+        track_year_frame.pack(side=LEFT, pady=7)
 
-        track_editor.pack(fill=tk.BOTH, padx=17, pady=17)
-        tracks_editor.pack(fill=tk.BOTH, pady=29)
+        track_editor.pack(fill=BOTH, padx=17, pady=17)
+        tracks_editor.pack(fill=BOTH, pady=29)
 
         self.tracks_editor = tracks_editor
 
@@ -898,9 +925,9 @@ class FLACManager(tk.Tk):
         self._initialize_track_vars()
 
         self.status_message.pack_forget()
-        metadata_editor.pack(fill=tk.BOTH, expand=tk.YES, padx=17, pady=11)
+        metadata_editor.pack(fill=BOTH, expand=YES, padx=17, pady=11)
 
-        self.rip_and_tag_button.pack(side=tk.RIGHT, padx=7, pady=5)
+        self.rip_and_tag_button.pack(side=RIGHT, padx=7, pady=5)
 
         # if persisted data was restored, manually select the cover image so
         # that it opens in Preview automatically
@@ -922,11 +949,11 @@ class FLACManager(tk.Tk):
         }
         for track_metadata in self._tracks_metadata[1:]:
             track_vars["include"].append(
-                tk.BooleanVar(value=track_metadata["include"]))
-            track_vars["title"].append(tk.StringVar())
-            track_vars["artist"].append(tk.StringVar())
-            track_vars["genre"].append(tk.StringVar())
-            track_vars["year"].append(tk.StringVar())
+                BooleanVar(value=track_metadata["include"]))
+            track_vars["title"].append(StringVar())
+            track_vars["artist"].append(StringVar())
+            track_vars["genre"].append(StringVar())
+            track_vars["year"].append(StringVar())
 
         self.__log.return_(track_vars)
         return track_vars
@@ -968,10 +995,10 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, name, choices, width=width, var=var)
 
-        label = tk.Label(master, text=name)
+        label = Label(master, text=name)
 
         if var is None:
-            var = tk.StringVar()
+            var = StringVar()
 
         if choices:
             var.set(choices[0])
@@ -980,9 +1007,9 @@ class FLACManager(tk.Tk):
             # happens, the optionmenu won't be packed
             choices = [""]
 
-        entry = tk.Entry(
-            master, exportselection=tk.NO, textvariable=var, width=width)
-        optionmenu = tk.OptionMenu(
+        entry = Entry(
+            master, exportselection=NO, textvariable=var, width=width)
+        optionmenu = OptionMenu(
             master, var, *choices, command=lambda v: var.set(v))
 
         self.__log.return_((label, var, entry, optionmenu))
@@ -1024,7 +1051,7 @@ class FLACManager(tk.Tk):
             choices = [var.get()]
 
         entry.config(textvariable=var)
-        new_optionmenu = tk.OptionMenu(
+        new_optionmenu = OptionMenu(
             master, var, *choices, command=lambda v: var.set(v))
 
         self.__log.return_(new_optionmenu)
@@ -1041,16 +1068,16 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, choices)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
         (label, self.album_title_var, entry, optionmenu) = \
             self._create_choices_editor(frame, "Album", choices)
 
-        label.pack(side=tk.LEFT)
-        entry.pack(side=tk.LEFT, padx=5)
+        label.pack(side=LEFT)
+        entry.pack(side=LEFT, padx=5)
 
         if len(choices) > 1:
-            optionmenu.pack(side=tk.LEFT)
+            optionmenu.pack(side=LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1066,21 +1093,21 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, choices)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
         (label, self.album_artist_var, entry, optionmenu) = \
             self._create_choices_editor(frame, "Artist", choices)
-        button = tk.Button(
+        button = Button(
             frame, text="Apply to all tracks",
             command=self.apply_album_artist_to_tracks)
 
-        label.pack(side=tk.LEFT)
-        entry.pack(side=tk.LEFT, padx=5)
+        label.pack(side=LEFT)
+        entry.pack(side=LEFT, padx=5)
 
         if len(choices) > 1:
-            optionmenu.pack(side=tk.LEFT)
+            optionmenu.pack(side=LEFT)
 
-        button.pack(side=tk.LEFT, padx=5)
+        button.pack(side=LEFT, padx=5)
 
         self.__log.return_(frame)
         return frame
@@ -1104,16 +1131,16 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, choices)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
         (label, self.album_recordlabel_var, entry, optionmenu) = \
             self._create_choices_editor(frame, "Label", choices)
 
-        label.pack(side=tk.LEFT)
-        entry.pack(side=tk.LEFT, padx=5)
+        label.pack(side=LEFT)
+        entry.pack(side=LEFT, padx=5)
 
         if len(choices) > 1:
-            optionmenu.pack(side=tk.LEFT)
+            optionmenu.pack(side=LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1129,7 +1156,7 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, choices)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
         genres = self._combine_genres(choices)
         (label, self.album_genre_var, entry, optionmenu) = \
@@ -1137,14 +1164,14 @@ class FLACManager(tk.Tk):
 
         self._add_lame_genres_menu(optionmenu, self.album_genre_var, genres)
 
-        button = tk.Button(
+        button = Button(
             frame, text="Apply to all tracks",
             command=self.apply_album_genre_to_tracks)
 
-        label.pack(side=tk.LEFT)
-        entry.pack(side=tk.LEFT, padx=5)
-        optionmenu.pack(side=tk.LEFT)
-        button.pack(side=tk.LEFT, padx=5)
+        label.pack(side=LEFT)
+        entry.pack(side=LEFT, padx=5)
+        optionmenu.pack(side=LEFT)
+        button.pack(side=LEFT, padx=5)
 
         self.__log.return_(frame)
         return frame
@@ -1196,7 +1223,7 @@ class FLACManager(tk.Tk):
         self.__log.call(optionmenu, var, excludes)
 
         optionmenu["menu"].add_separator()
-        menu = tk.Menu(optionmenu["menu"])
+        menu = Menu(optionmenu["menu"])
         for genre in get_lame_genres():
             if genre not in excludes:
                 menu.add_command(
@@ -1222,21 +1249,21 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, choices)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
         (label, self.album_year_var, entry, optionmenu) = \
             self._create_choices_editor(frame, "Year", choices, width=5)
-        button = tk.Button(
+        button = Button(
             frame, text="Apply to all tracks",
             command=self.apply_album_year_to_tracks)
 
-        label.pack(side=tk.LEFT)
-        entry.pack(side=tk.LEFT, padx=5)
+        label.pack(side=LEFT)
+        entry.pack(side=LEFT, padx=5)
 
         if len(choices) > 1:
-            optionmenu.pack(side=tk.LEFT)
+            optionmenu.pack(side=LEFT)
 
-        button.pack(side=tk.LEFT, padx=5)
+        button.pack(side=LEFT, padx=5)
 
         self.__log.return_(frame)
         return frame
@@ -1261,25 +1288,25 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, number, total)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
-        number_label = tk.Label(frame, text="Disc")
-        number_label.pack(side=tk.LEFT)
+        number_label = Label(frame, text="Disc")
+        number_label.pack(side=LEFT)
 
-        self.album_disc_number_var = tk.StringVar(value=str(number))
-        number_entry = tk.Entry(
-            frame, exportselection=tk.NO,
+        self.album_disc_number_var = StringVar(value=str(number))
+        number_entry = Entry(
+            frame, exportselection=NO,
             textvariable=self.album_disc_number_var, width=2)
-        number_entry.pack(side=tk.LEFT, padx=2)
+        number_entry.pack(side=LEFT, padx=2)
 
-        total_label = tk.Label(frame, text="of")
-        total_label.pack(side=tk.LEFT)
+        total_label = Label(frame, text="of")
+        total_label.pack(side=LEFT)
 
-        self.album_disc_total_var = tk.StringVar(value=str(total))
-        total_entry = tk.Entry(
-            frame, exportselection=tk.NO,
+        self.album_disc_total_var = StringVar(value=str(total))
+        total_entry = Entry(
+            frame, exportselection=NO,
             textvariable=self.album_disc_total_var, width=2)
-        total_entry.pack(side=tk.LEFT, padx=2)
+        total_entry.pack(side=LEFT, padx=2)
 
         self.__log.return_(frame)
         return frame
@@ -1300,24 +1327,24 @@ class FLACManager(tk.Tk):
         for image_data in choices:
             self._save_cover_image(image_data)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
-        label = tk.Label(frame, text="Cover")
-        label.pack(side=tk.LEFT)
+        label = Label(frame, text="Cover")
+        label.pack(side=LEFT)
 
-        self.album_cover_var = tk.StringVar(value="--none--")
-        self._covers_optionmenu = tk.OptionMenu(
+        self.album_cover_var = StringVar(value="--none--")
+        self._covers_optionmenu = OptionMenu(
             frame, self.album_cover_var, *self._album_covers.keys(),
             command=self.choose_cover_image)
-        self._covers_optionmenu.pack(side=tk.LEFT, padx=5)
+        self._covers_optionmenu.pack(side=LEFT, padx=5)
 
-        url_button = tk.Button(
+        url_button = Button(
             frame, text="Add URL", command=self.choose_cover_image_from_url)
-        url_button.pack(side=tk.LEFT, padx=5)
+        url_button.pack(side=LEFT, padx=5)
 
-        file_button = tk.Button(
+        file_button = Button(
             frame, text="Add file", command=self.choose_cover_image_from_file)
-        file_button.pack(side=tk.LEFT)
+        file_button.pack(side=LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1334,13 +1361,13 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, value)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
-        self.album_compilation_var = tk.BooleanVar(value=value)
-        checkbutton = tk.Checkbutton(
+        self.album_compilation_var = BooleanVar(value=value)
+        checkbutton = Checkbutton(
             master, text="Compilation", variable=self.album_compilation_var,
             onvalue=True, offvalue=False)
-        checkbutton.pack(side=tk.LEFT)
+        checkbutton.pack(side=LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1356,9 +1383,9 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
-        edit_album_custom_metadata_button = tk.Button(
+        edit_album_custom_metadata_button = Button(
             frame, text="Edit custom Vorbis/ID3v2 tagging for ALL tracks",
             command=
                 lambda self=self:
@@ -1427,14 +1454,14 @@ class FLACManager(tk.Tk):
         """
         self.__log.call()
 
-        self._covers_optionmenu.config(state=tk.DISABLED)
+        self._covers_optionmenu.config(state=DISABLED)
 
         # leave initialvalue empty (paste-over doesn't work in XQuartz)
         url = simpledialog.askstring(
             "Add a cover image from a URL", "Enter the image URL:",
             initialvalue="")
         if not url:
-            self._covers_optionmenu.config(state=tk.NORMAL)
+            self._covers_optionmenu.config(state=NORMAL)
             self.__log.return_()
             return
 
@@ -1463,7 +1490,7 @@ class FLACManager(tk.Tk):
                 "Cover image added",
                 "%s has been added to the available covers." % name)
         finally:
-            self._covers_optionmenu.config(state=tk.NORMAL)
+            self._covers_optionmenu.config(state=NORMAL)
 
         if name is not None:
             self.choose_cover_image(name)
@@ -1484,7 +1511,7 @@ class FLACManager(tk.Tk):
         """
         self.__log.call()
 
-        self._covers_optionmenu.config(state=tk.DISABLED)
+        self._covers_optionmenu.config(state=DISABLED)
 
         filename = filedialog.askopenfilename(
             defaultextension=".jpg",
@@ -1496,7 +1523,7 @@ class FLACManager(tk.Tk):
             initialdir=os.path.expanduser("~/Pictures"),
             title="Choose a JPEG or PNG file")
         if not filename:
-            self._covers_optionmenu.config(state=tk.NORMAL)
+            self._covers_optionmenu.config(state=NORMAL)
             self.__log.return_()
             return
 
@@ -1511,7 +1538,7 @@ class FLACManager(tk.Tk):
                 messagebox.showwarning(
                     "Image add failure",
                     "Type of %s is not recognized!" % filename)
-                self._covers_optionmenu.config(state=tk.NORMAL)
+                self._covers_optionmenu.config(state=NORMAL)
 
             name = "Cover #%d (%s)" % (
                 len(self._album_covers), image_type.upper())
@@ -1525,7 +1552,7 @@ class FLACManager(tk.Tk):
             messagebox.showerror(
                 "Image add failure", "File not found: %s" % filename)
 
-        self._covers_optionmenu.config(state=tk.NORMAL)
+        self._covers_optionmenu.config(state=NORMAL)
 
         if name is not None:
             self.choose_cover_image(name)
@@ -1541,18 +1568,18 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, total_tracks)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
-        track_label = tk.Label(frame, text="Track")
-        track_label.pack(side=tk.LEFT)
+        track_label = Label(frame, text="Track")
+        track_label.pack(side=LEFT)
 
-        self.track_spinner = tk.Spinbox(
+        self.track_spinner = Spinbox(
             frame, from_=1, to=total_tracks, width=3, wrap=True,
             command=self.refresh_track_editors)
-        self.track_spinner.pack(side=tk.LEFT, padx=5)
+        self.track_spinner.pack(side=LEFT, padx=5)
 
-        of_label = tk.Label(frame, text="of %d" % total_tracks)
-        of_label.pack(side=tk.LEFT)
+        of_label = Label(frame, text="of %d" % total_tracks)
+        of_label.pack(side=LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1567,20 +1594,21 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
-        self.track_include_checkbox = tk.Checkbutton(
-            frame, text="Include this track",
-            fg="Blue", activeforeground="Blue",
-            variable=self._track_vars["include"][1],
-            onvalue=True, offvalue=False,
-            command=self.toggle_track_include_state)
-        self.track_include_checkbox.pack(side=tk.LEFT, padx=11)
+        self.track_include_checkbox = _styled(
+            Checkbutton(
+                frame, text="Include this track",
+                variable=self._track_vars["include"][1],
+                onvalue=True, offvalue=False,
+                command=self.toggle_track_include_state),
+            foreground="Blue")
+        self.track_include_checkbox.pack(side=LEFT, padx=11)
 
-        self.toggle_all_tracks_include_button = tk.Button(
+        self.toggle_all_tracks_include_button = Button(
             frame, text="Include all tracks",
             command=self.apply_include_to_tracks)
-        self.toggle_all_tracks_include_button.pack(side=tk.LEFT)
+        self.toggle_all_tracks_include_button.pack(side=LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1605,15 +1633,13 @@ class FLACManager(tk.Tk):
         self.__log.call()
 
         if not self._track_vars["include"][self._current_track_number].get():
-            self.track_include_checkbox.config(
-                fg="Red", activeforeground="Red")
             self.toggle_all_tracks_include_button.config(
                 text="Exclude all tracks")
+            _styled(self.track_include_checkbox, foreground="Red")
         else:
-            self.track_include_checkbox.config(
-                fg="Blue", activeforeground="Blue")
             self.toggle_all_tracks_include_button.config(
                 text="Include all tracks")
+            _styled(self.track_include_checkbox, foreground="Blue")
 
     def _create_track_title_editor(self, master, choices):
         """Create the UI editing controls for the track title.
@@ -1626,17 +1652,17 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, choices)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
         (label, _, self.track_title_entry, self._track_title_optionmenu) = \
             self._create_choices_editor(
                 frame, "Title", choices, var=self._track_vars["title"][1])
 
-        label.pack(side=tk.LEFT)
-        self.track_title_entry.pack(side=tk.LEFT, padx=5)
+        label.pack(side=LEFT)
+        self.track_title_entry.pack(side=LEFT, padx=5)
 
         if len(choices) > 1:
-            self._track_title_optionmenu.pack(side=tk.LEFT)
+            self._track_title_optionmenu.pack(side=LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1652,17 +1678,17 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, choices)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
         (label, _, self.track_artist_entry, self._track_artist_optionmenu) = \
             self._create_choices_editor(
                 frame, "Artist", choices, var=self._track_vars["artist"][1])
 
-        label.pack(side=tk.LEFT)
-        self.track_artist_entry.pack(side=tk.LEFT, padx=5)
+        label.pack(side=LEFT)
+        self.track_artist_entry.pack(side=LEFT, padx=5)
 
         if len(choices) > 1:
-            self._track_artist_optionmenu.pack(side=tk.LEFT)
+            self._track_artist_optionmenu.pack(side=LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1678,7 +1704,7 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, choices)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
         genres = self._combine_genres(choices)
         (label, _, self.track_genre_entry, self._track_genre_optionmenu) = \
@@ -1689,9 +1715,9 @@ class FLACManager(tk.Tk):
         self._add_lame_genres_menu(
             self._track_genre_optionmenu, self.track_genre_entry, genres)
 
-        label.pack(side=tk.LEFT)
-        self.track_genre_entry.pack(side=tk.LEFT, padx=5)
-        self._track_genre_optionmenu.pack(side=tk.LEFT)
+        label.pack(side=LEFT)
+        self.track_genre_entry.pack(side=LEFT, padx=5)
+        self._track_genre_optionmenu.pack(side=LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1707,18 +1733,18 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, choices)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
         (label, _, self.track_year_entry, self._track_year_optionmenu) = \
             self._create_choices_editor(
                 frame, "Year", choices, width=5,
                 var=self._track_vars["year"][1])
 
-        label.pack(side=tk.LEFT)
-        self.track_year_entry.pack(side=tk.LEFT, padx=5)
+        label.pack(side=LEFT)
+        self.track_year_entry.pack(side=LEFT, padx=5)
 
         if len(choices) > 1:
-            self._track_year_optionmenu.pack(side=tk.LEFT)
+            self._track_year_optionmenu.pack(side=LEFT)
 
         self.__log.return_(frame)
         return frame
@@ -1734,9 +1760,9 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master)
 
-        frame = tk.Frame(master)
+        frame = Frame(master)
 
-        self._edit_custom_metadata_button = tk.Button(
+        self._edit_custom_metadata_button = Button(
             frame, text="Edit custom Vorbis/ID3v2 tagging for this track",
             command=
                 lambda self=self:
@@ -1784,7 +1810,7 @@ class FLACManager(tk.Tk):
             track_title_var, self.track_title_entry,
             self._track_title_optionmenu, track_metadata["title"])
         if len(track_metadata["title"]) > 1:
-            self._track_title_optionmenu.pack(side=tk.LEFT)
+            self._track_title_optionmenu.pack(side=LEFT)
 
         choices = self._combine_choices(
             track_metadata["artist"], self._album_metadata["artist"])
@@ -1792,7 +1818,7 @@ class FLACManager(tk.Tk):
             track_artist_var, self.track_artist_entry,
             self._track_artist_optionmenu, choices)
         if len(choices) > 1:
-            self._track_artist_optionmenu.pack(side=tk.LEFT)
+            self._track_artist_optionmenu.pack(side=LEFT)
 
         choices = self._combine_choices(
             track_metadata["genre"], self._album_metadata["genre"])
@@ -1803,7 +1829,7 @@ class FLACManager(tk.Tk):
             self._track_genre_optionmenu, genres)
         self._track_genre_optionmenu["menu"].add_separator()
 
-        menu = tk.Menu(self._track_genre_optionmenu["menu"])
+        menu = Menu(self._track_genre_optionmenu["menu"])
         for genre in get_lame_genres():
             if genre not in genres:
                 menu.add_command(
@@ -1813,7 +1839,7 @@ class FLACManager(tk.Tk):
             label="LAME", menu=menu)
 
         if len(choices) > 1:
-            self._track_genre_optionmenu.pack(side=tk.LEFT)
+            self._track_genre_optionmenu.pack(side=LEFT)
 
         choices = self._combine_choices(
             track_metadata["year"], self._album_metadata["year"])
@@ -1821,7 +1847,7 @@ class FLACManager(tk.Tk):
             track_year_var, self.track_year_entry,
             self._track_year_optionmenu, choices)
         if len(choices) > 1:
-            self._track_year_optionmenu.pack(side=tk.LEFT)
+            self._track_year_optionmenu.pack(side=LEFT)
 
     def _combine_choices(self, preferred, additional):
         """Combine two lists of values.
@@ -1982,7 +2008,7 @@ class FLACManager(tk.Tk):
         """
         self.__log.call(master, max_visible_tracks=max_visible_tracks)
 
-        encoding_status_frame = tk.LabelFrame(master, text="Encoding status")
+        encoding_status_frame = LabelFrame(master, text="Encoding status")
 
         track_titles = [var.get() for var in self._track_vars["title"][1:]]
         self.track_labels = [
@@ -1994,21 +2020,21 @@ class FLACManager(tk.Tk):
 
         track_total = len(self.toc.track_offsets)
 
-        list_frame = tk.Frame(encoding_status_frame)
+        list_frame = Frame(encoding_status_frame)
         if track_total > max_visible_tracks:
             visible_tracks = max_visible_tracks
-            vscrollbar = tk.Scrollbar(list_frame, orient=tk.VERTICAL)
-            vscrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            vscrollbar = Scrollbar(list_frame, orient=VERTICAL)
+            vscrollbar.pack(side=RIGHT, fill=Y)
             cfg = {"yscrollcommand": vscrollbar.set}
         else:
             visible_tracks = track_total
             vscrollbar = None
             cfg = {}
 
-        self._encoding_status_list = tk.Listbox(
-            list_frame, exportselection=tk.NO, activestyle=tk.NONE,
-            selectmode=tk.SINGLE, bd=1, height=visible_tracks,
-            listvariable=tk.StringVar(
+        self._encoding_status_list = Listbox(
+            list_frame, exportselection=NO, activestyle=NONE,
+            selectmode=SINGLE, bd=1, height=visible_tracks,
+            listvariable=StringVar(
                 value=' '.join(
                     "{%s}" % track_encoding_status.describe()
                     for track_encoding_status in
@@ -2018,13 +2044,13 @@ class FLACManager(tk.Tk):
         if vscrollbar is not None:
             vscrollbar.config(command=self._encoding_status_list.yview)
 
-        list_frame.pack(fill=tk.BOTH, padx=17, pady=17)
+        list_frame.pack(fill=BOTH, padx=17, pady=17)
 
         for i in range(track_total):
             if not track_include_flags[i]:
                 self._encoding_status_list.itemconfig(i, {"fg": "gray79"})
 
-        self._encoding_status_list.pack(fill=tk.BOTH, padx=0, pady=0)
+        self._encoding_status_list.pack(fill=BOTH, padx=0, pady=0)
 
         self.__log.return_(encoding_status_frame)
         return encoding_status_frame
@@ -2052,8 +2078,8 @@ class FLACManager(tk.Tk):
             self.encoding_status_frame.destroy()
             self.encoding_status_frame = None
 
-        self.disc_eject_button.config(state=tk.DISABLED)
-        self.rip_and_tag_button.config(state=tk.DISABLED)
+        self.disc_eject_button.config(state=DISABLED)
+        self.rip_and_tag_button.config(state=DISABLED)
 
         self._persist_metadata() # issues/1
 
@@ -2062,8 +2088,8 @@ class FLACManager(tk.Tk):
         except Exception as e:
             self.__log.exception("failed to initialize the encoder")
             show_exception_dialog(e)
-            self.disc_eject_button.config(state=tk.NORMAL)
-            self.rip_and_tag_button.config(state=tk.NORMAL)
+            self.disc_eject_button.config(state=NORMAL)
+            self.rip_and_tag_button.config(state=NORMAL)
         else:
             encoder.start()
             self.__log.info("encoding has started; monitoring progress...")
@@ -2112,7 +2138,7 @@ class FLACManager(tk.Tk):
         self.encoding_status_frame = self._create_encoder_status(self)
         self.metadata_editor.pack_forget()
         self.encoding_status_frame.pack(
-            fill=tk.BOTH, padx=17, pady=17, expand=tk.YES)
+            fill=BOTH, padx=17, pady=17, expand=YES)
 
         encoder = FLACEncoder()
         tracks_metadata = self._prepare_tagging_metadata()
@@ -2163,9 +2189,9 @@ class FLACManager(tk.Tk):
                     else:
                         _ENCODING_QUEUE.task_done()
 
-                self.disc_eject_button.config(state=tk.NORMAL)
+                self.disc_eject_button.config(state=NORMAL)
                 self.rip_and_tag_button.pack_forget()
-                self.rip_and_tag_button.config(state=tk.NORMAL)
+                self.rip_and_tag_button.config(state=NORMAL)
 
                 self.bell()
                 self.__log.trace("break out of the monitoring loop")
@@ -2211,7 +2237,7 @@ class FLACManager(tk.Tk):
 
                 # ensure that last track is always visible after delete/insert
                 if (track_index ==
-                        self._encoding_status_list.index(tk.END) - 1):
+                        self._encoding_status_list.index(END) - 1):
                     self._encoding_status_list.see(track_index)
 
             self.after(QUEUE_GET_NOWAIT_AFTER, self._monitor_encoding_progress)
@@ -2301,18 +2327,18 @@ class FLACManager(tk.Tk):
                 self.__log.error("dequeued %r", disc_info)
                 show_exception_dialog(disc_info)
                 self.retry_disc_check_button.pack(
-                    side=tk.RIGHT, padx=7, pady=5)
+                    side=RIGHT, padx=7, pady=5)
                 return None
 
             self.disc_status_message.pack_forget()
             self.disc_status_message.config(text=self._mountpoint)
-            self.disc_eject_button.pack(side=tk.LEFT, padx=7, pady=5)
-            self.disc_status_message.pack(side=tk.LEFT)
+            self.disc_eject_button.pack(side=LEFT, padx=7, pady=5)
+            self.disc_status_message.pack(side=LEFT)
 
             self.toc = read_disc_toc(self._mountpoint)
             # once we have the TOC, it's ok for the disc to be ejected (though,
             # of course, if it's ejected immediately it can't be ripped)
-            self.disc_eject_button.config(state=tk.NORMAL)
+            self.disc_eject_button.config(state=NORMAL)
 
             self._do_metadata_aggregation()
 
@@ -2330,7 +2356,7 @@ class FLACManager(tk.Tk):
         else:
             self.retry_aggregation_button.pack_forget()
             self.edit_offline_button.pack_forget()
-            self.status_message.pack(fill=tk.BOTH)
+            self.status_message.pack(anchor=CENTER)
             self._check_for_aggregator()
 
     def _check_for_aggregator(self):
@@ -2401,8 +2427,7 @@ class FLACManager(tk.Tk):
 
             self.toc = None
             self.disc_status_message.config(
-                text="Waiting for a disc to be inserted\u2026",
-                padx=5, pady=3)
+                text="Waiting for a disc to be inserted\u2026")
 
             DiscCheck().start()
             self._check_for_disc()
@@ -2468,15 +2493,22 @@ class FLACManager(tk.Tk):
         EditLoggingConfigurationDialog(
             self, title="Edit flacmanager.ini (logging/debug)")
 
-    def prerequisites(self):
-        """Open the prerequisites information dialog."""
-        self.__log.mark()
-        PrerequisitesDialog(self, title="%s prerequisites" % self.title())
-
-    def about(self):
+    def show_about(self):
         """Open the application description dialog."""
         self.__log.mark()
-        AboutDialog(self, title="About %s" % self.title())
+        _TextDialog(self, __doc__, title="About %s" % self.title())
+
+    def show_prerequisites(self):
+        """Open the prerequisites information dialog."""
+        self.__log.mark()
+        _TextDialog(
+            self, _PREREQUISITES_TEXT, title="%s prerequisites" % self.title())
+
+    def show_license(self):
+        """Open the copyright/license dialog."""
+        self.__log.mark()
+        _TextDialog(
+            self, __license__, title="%s copyright and license" % self.title())
 
     def _exit(self):
         """Quit the FLACManager application."""
@@ -2858,95 +2890,78 @@ def _subroot_trie(section, metadata):
     return nodes
 
 
-def _font(widget):
-    """Proxy *widget*'s font so that it can be configured.
+def _styled(widget, **options):
+    """Apply `Ttk Styling
+    <https://docs.python.org/3/library/tkinter.ttk.html#ttkstyling>`_ to
+    *widget*.
 
-    :param tkinter.Widget widget: any widget
-    :return: a configurable font object for *widget*
-    :rtype: :class:`tkfont.Font`
-
-    This is a helper function to allow the following shorthand::
-
-       _font(widget).config(**keywords)
-
-    .. note::
-       Updates to a :class:`tkinter.font.Font` done in this way affect
-       **only** the *widget*.
+    :param widget: any Ttk widget
+    :param dict options: the styling options for *widget*
+    :return: *widget* with styling applied
 
     """
-    font = tkfont.Font(widget, font=widget["font"])
-    widget.config(font=font)
-    return font
+    style_id = "%x.%s" % (id(widget), widget.winfo_class())
+    Style().configure(style_id, **options)
+    widget.config(style=style_id)
+
+    return widget
 
 
-class PrerequisitesDialog(simpledialog.Dialog):
-    """A dialog that describes all FLAC Manager prerequisites."""
+_PREREQUISITES_TEXT = """\
+FLACManager runs on Python 3.3+ compiled against Tk 8.5+.
 
-    def body(self, frame):
-        """Create the content of the dialog."""
-        text = scrolledtext.ScrolledText(
-            frame, height=11, bd=0, relief=tk.FLAT, wrap=tk.WORD)
-        text.insert(
-            tk.END,
-            "FLACManager runs on Python 3.3+.\n\n"
-            "FLACManager requires the following external software "
-            "components:\n"
-            "* libdiscid (http://musicbrainz.org/doc/libdiscid)\n"
-            "* flac (http://flac.sourceforge.net/)\n"
-            "* lame (http://lame.sourceforge.net/)\n\n"
-            "The flac and lame command-line binaries must exist on your $PATH."
-            "  Each of these components is also available through MacPorts "
-            "(http://www.macports.org/).\n\n"
-            "In addition to the software listed above, FLACManager relies on "
-            "the following Mac OS X command line utilties:\n"
-            "* diskutil\n"
-            "* open\n"
-            "* mkdir\n\n"
-            "You MUST register for a Gracenote developer account "
-            "(https://developer.gracenote.com/) in order for FLACManager's "
-            "metadata aggregation to function properly:\n"
-            "1. Create your Gracenote developer account.\n"
-            "2. Create an app named \"FLACManager\".\n"
-            "3. Save your Gracenote Client ID in the flacmanager.ini "
-            "configuration file.\n"
-            "\nFLACManager will automatically obtain and store the Gracenote "
-            "User ID in the flacmanager.ini file.\n\n")
-        text.pack()
-        text.focus_set()
+The following EXTERNAL software components are also required:
 
-    def buttonbox(self):
-        """Create the button to dismiss the dialog."""
-        box = tk.Frame(self)
-        tk.Button(
-            box, text="OK", width=11, command=self.ok,
-            default=tk.ACTIVE).pack(padx=5, pady=5)
-        self.bind("<Return>", self.ok)
-        box.pack()
+* libdiscid (http://musicbrainz.org/doc/libdiscid)
+* flac (http://flac.sourceforge.net/)
+* lame (http://lame.sourceforge.net/)
+* diskutil (Mac OS X command line utility)
+* open (Mac OS X command line utility)
+* mkdir (Mac OS X command line utility)
+
+The flac and lame command line binaries must be available on
+your $PATH, and the location of the libdiscid library must be
+specified in the flacmanager.ini configuration file.
+
+The libdiscid, flac and lame components can be easily installed
+from MacPorts (http://www.macports.org/).
+
+Finally, You MUST register for a Gracenote developer account in
+order for FLACManager's metadata aggregation to work properly:
+
+1. Create your Gracenote developer account at
+   https://developer.gracenote.com/.
+2. Create an app named "FLACManager".
+3. Save your Gracenote Client ID in the flacmanager.ini
+   configuration file.
+
+(FLACManager will automatically obtain and store your Gracenote
+User ID in the flacmanager.ini file.)"""
 
 
-class AboutDialog(simpledialog.Dialog):
-    """A dialog that describes FLAC Manager."""
+class _TextDialog(simpledialog.Dialog):
+    """A dialog that presents a simple formatted text message."""
+
+    def __init__(self, master, text, **options):
+        self._text = text
+        super().__init__(master, **options)
 
     def body(self, frame):
         """Create the content of the dialog."""
-        title_label = tk.Label(
-            frame, text=self.master.title(), fg="DarkOrange2")
-        _font(title_label).config(size=19, weight=tkfont.BOLD)
-        title_label.pack()
+        with StringIO(self._text) as f:
+            lines = f.readlines()
 
-        text = scrolledtext.ScrolledText(
-            frame, height=11, bd=0, relief=tk.FLAT)
-        with open("LICENSE.txt", 'r') as f:
-            text.insert(tk.END, f.read())
+        text = Text(frame, bd=0, relief=FLAT, height=len(lines), wrap=WORD)
+        text.insert(END, "".join(lines))
+        text.config(state=DISABLED)
         text.pack()
-        text.focus_set()
 
     def buttonbox(self):
         """Create the button to dismiss the dialog."""
-        box = tk.Frame(self)
-        tk.Button(
+        box = Frame(self)
+        Button(
             box, text="OK", width=11, command=self.ok,
-            default=tk.ACTIVE).pack(padx=5, pady=5)
+            default=ACTIVE).pack(padx=5, pady=5)
         self.bind("<Return>", self.ok)
         box.pack()
 
@@ -2960,7 +2975,7 @@ class _EditConfigurationDialog(simpledialog.Dialog):
     def body(self, frame):
         """Create the content of the dialog.
 
-        :param tk.Frame frame: the frame that contains the body content
+        :param Frame frame: the frame that contains the body content
 
         """
         self._row = 0
@@ -2975,9 +2990,9 @@ class _EditConfigurationDialog(simpledialog.Dialog):
         :param str section_name: the name of the configuration section
 
         """
-        section_label = tk.Label(parent, text=section_name)
-        _font(section_label).config(size=13, weight=tkfont.BOLD)
-        section_label.grid(row=self._row, columnspan=2, pady=11, sticky=tk.W)
+        section_label = _styled(
+            Label(parent, text=section_name), font="-size 13 -weight bold")
+        section_label.grid(row=self._row, columnspan=2, pady=11, sticky=W)
 
         self._row += 1
 
@@ -2993,28 +3008,28 @@ class _EditConfigurationDialog(simpledialog.Dialog):
            the display width of the entry box for this option's value
 
         """
-        tk.Label(parent, text=option_name).grid(row=self._row, sticky=tk.E)
+        Label(parent, text=option_name).grid(row=self._row, sticky=E)
 
         if type(value) is int:
-            variable = tk.IntVar(self, value=value)
+            variable = IntVar(self, value=value)
         elif type(value) is bool:
-            variable = tk.BooleanVar(self, value=value)
+            variable = BooleanVar(self, value=value)
         elif type(value) is float:
-            variable = tk.DoubleVar(self, value=value)
+            variable = DoubleVar(self, value=value)
         else:
-            variable = tk.StringVar(
+            variable = StringVar(
                 self, value=value if type(value) is not list else value[0])
 
         if type(value) is list:
-            tk.OptionMenu(parent, variable, *value[1:]).grid(
-                row=self._row, column=1, sticky=tk.W)
-        elif type(variable) is tk.BooleanVar:
-            tk.Checkbutton(
+            OptionMenu(parent, variable, *value[1:]).grid(
+                row=self._row, column=1, sticky=W)
+        elif type(variable) is BooleanVar:
+            Checkbutton(
                 parent, variable=variable, onvalue=True, offvalue=False).grid(
-                    row=self._row, column=1, sticky=tk.W)
+                    row=self._row, column=1, sticky=W)
         else:
-            tk.Entry(parent, textvariable=variable, width=width).grid(
-                row=self._row, column=1, sticky=tk.W)
+            Entry(parent, textvariable=variable, width=width).grid(
+                row=self._row, column=1, sticky=W)
 
         self._row += 1
 
@@ -3025,16 +3040,16 @@ class _EditConfigurationDialog(simpledialog.Dialog):
 
     def buttonbox(self):
         """Create the buttons to save and/or dismiss the dialog."""
-        box = tk.Frame(self)
+        box = Frame(self)
 
-        tk.Button(
-            box, text="Save", width=10, command=self.ok, default=tk.ACTIVE
-            ).pack(side=tk.LEFT, padx=5, pady=5)
+        Button(
+            box, text="Save", width=10, command=self.ok, default=ACTIVE
+            ).pack(side=LEFT, padx=5, pady=5)
 
-        tk.Button(
+        Button(
             box, text="Cancel", width=10,
             command=self.cancel
-            ).pack(side=tk.LEFT, padx=5, pady=5)
+            ).pack(side=LEFT, padx=5, pady=5)
 
         self.bind("<Return>", self.ok)
         self.bind("<Escape>", self.cancel)
@@ -3048,7 +3063,7 @@ class _EditConfigurationDialog(simpledialog.Dialog):
         for (section, optvar) in self._variables.items():
             for (option, variable) in optvar.items():
                 # values MUST be strings!
-                if type(variable) is not tk.BooleanVar:
+                if type(variable) is not BooleanVar:
                     config[section][option] = str(variable.get())
                 else:
                     config[section][option] = "yes" if variable.get() else "no"
@@ -3216,9 +3231,9 @@ class EditFLACOrganizationConfigurationDialog(_EditConfigurationDialog):
         option(
             "FLAC", "library_subroot_trie_level",
             config["FLAC"].get("library_subroot_trie_level", raw=True))
-        tk.Label(
+        Label(
             frame, text="${Organize:library_subroot_trie_level} or a number"
-            ).grid(row=self._row, column=1, sticky=tk.W)
+            ).grid(row=self._row, column=1, sticky=W)
         self._row += 1
 
         option(
@@ -3251,9 +3266,9 @@ class EditFLACOrganizationConfigurationDialog(_EditConfigurationDialog):
         option(
             "FLAC", "use_xplatform_safe_names",
             config["FLAC"].get("use_xplatform_safe_names", raw=True))
-        tk.Label(
+        Label(
             frame, text="${Organize:use_xplatform_safe_names}, yes, or no"
-            ).grid(row=self._row, column=1, sticky=tk.W)
+            ).grid(row=self._row, column=1, sticky=W)
         self._row += 1
 
 
@@ -3314,9 +3329,9 @@ class EditMP3OrganizationConfigurationDialog(_EditConfigurationDialog):
         option(
             "MP3", "library_subroot_trie_level",
             config["MP3"].get("library_subroot_trie_level", raw=True))
-        tk.Label(
+        Label(
             frame, text="${Organize:library_subroot_trie_level} or a number"
-            ).grid(row=self._row, column=1, sticky=tk.W)
+            ).grid(row=self._row, column=1, sticky=W)
         self._row += 1
 
         option(
@@ -3349,9 +3364,9 @@ class EditMP3OrganizationConfigurationDialog(_EditConfigurationDialog):
         option(
             "MP3", "use_xplatform_safe_names",
             config["MP3"].get("use_xplatform_safe_names", raw=True))
-        tk.Label(
+        Label(
             frame, text="${Organize:use_xplatform_safe_names}, yes, or no"
-            ).grid(row=self._row, column=1, sticky=tk.W)
+            ).grid(row=self._row, column=1, sticky=W)
         self._row += 1
 
 
@@ -3551,11 +3566,11 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
 
         def body(self, frame):
             help_list = scrolledtext.ScrolledText(
-                frame, height=17, bd=0, relief=tk.FLAT, wrap=tk.NONE)
-            help_list.insert(tk.END, self._helptext(self._type))
-            help_list.config(state=tk.DISABLED)
+                frame, height=17, bd=0, relief=FLAT, wrap=NONE)
+            help_list.insert(END, self._helptext(self._type))
+            help_list.config(state=DISABLED)
             help_list.pack(
-                side=tk.LEFT, fill=tk.BOTH, expand=tk.YES, padx=5, pady=5)
+                side=LEFT, fill=BOTH, expand=YES, padx=5, pady=5)
 
     def __init__(self, master, metadata, **keywords):
         """Initialize the dialog.
@@ -3577,63 +3592,60 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
     def body(self, frame):
         """Create the content of the dialog.
 
-        :param tk.Frame frame: the frame that contains the body content
+        :param Frame frame: the frame that contains the body content
 
         """
         self.__log.mark()
 
         self._row = 0
 
-        self._instructions_var = tk.StringVar()
+        self._instructions_var = StringVar()
         self._body_instructions()
 
-        tk.Label(
-            frame, textvariable=self._instructions_var,
-            anchor=tk.NW, justify=tk.LEFT,
-        ).grid(row=self._row, columnspan=4, pady=7, sticky=tk.W)
+        Label(
+            frame, textvariable=self._instructions_var, anchor=NW
+        ).grid(row=self._row, columnspan=4, pady=7, sticky=W)
         self._row += 1
 
-        add_button = tk.Button(
-            frame, text="Add", fg="Blue", activeforeground="Blue",
-            command=lambda f=self._add_field, p=frame: f(p),
-            default=tk.ACTIVE
-            )
-        _font(add_button).configure(size=11, weight=tkfont.BOLD)
-        add_button.grid(row=self._row, column=0, pady=7, sticky=tk.W)
+        add_button = _styled(
+            Button(
+                frame, text="Add", default=ACTIVE,
+                command=lambda f=self._add_field, p=frame: f(p)),
+            foreground="Blue")
+        add_button.grid(row=self._row, column=0, pady=7, sticky=W)
 
-        vorbis_frame = tk.Frame(frame)
+        vorbis_frame = Frame(frame)
 
-        vorbis_label = tk.Label(vorbis_frame, text="Vorbis")
-        _font(vorbis_label).config(size=11, weight=tkfont.BOLD)
-        vorbis_label.pack(side=tk.LEFT)
+        vorbis_label = _styled(
+            Label(vorbis_frame, text="Vorbis"), font="-weight bold")
+        vorbis_label.pack(side=LEFT)
 
-        vorbis_help_button = tk.Button(
-            vorbis_frame, text='?',
+        vorbis_help_button = Button(
+            vorbis_frame, text='?', width=1,
             command=
                 lambda self=self:
                     self._TaggingHelp(vorbis_frame, type_="Vorbis comment"))
-        vorbis_help_button.pack(side=tk.LEFT)
+        vorbis_help_button.pack(side=LEFT)
 
-        vorbis_frame.grid(row=self._row, column=1, pady=5, sticky=tk.W)
+        vorbis_frame.grid(row=self._row, column=1, pady=5, sticky=W)
 
-        id3v2_frame = tk.Frame(frame)
+        id3v2_frame = Frame(frame)
 
-        id3v2_label = tk.Label(id3v2_frame, text="ID3v2")
-        _font(id3v2_label).config(size=11, weight=tkfont.BOLD)
-        id3v2_label.pack(side=tk.LEFT)
+        id3v2_label = _styled(
+            Label(id3v2_frame, text="ID3v2"), font="-weight bold")
+        id3v2_label.pack(side=LEFT)
 
-        id3v2_help_button = tk.Button(
-            id3v2_frame, text='?',
+        id3v2_help_button = Button(
+            id3v2_frame, text='?', width=1,
             command=
                 lambda self=self:
                     self._TaggingHelp(id3v2_frame, type_="ID3v2 tag"))
-        id3v2_help_button.pack(side=tk.LEFT)
+        id3v2_help_button.pack(side=LEFT)
 
-        id3v2_frame.grid(row=self._row, column=2, pady=5, sticky=tk.W)
+        id3v2_frame.grid(row=self._row, column=2, pady=5, sticky=W)
 
-        value_label = tk.Label(frame, text="Value")
-        _font(value_label).config(size=11, weight=tkfont.BOLD)
-        value_label.grid(row=self._row, column=3, pady=5, sticky=tk.W)
+        value_label = _styled(Label(frame, text="Value"), font="-weight bold")
+        value_label.grid(row=self._row, column=3, pady=5, sticky=W)
 
         self._row += 1
 
@@ -3676,24 +3688,24 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
             # variables are stored
             fields_ix = len(self._fields)
 
-            clear_button = tk.Button(
-                parent, text="\u00d7", fg="Red", activeforeground="Red",
-                command=lambda f=self._clear_field, ix=fields_ix: f(ix)
-            )
-            _font(clear_button).config(weight=tkfont.BOLD)
+            clear_button = _styled(
+                Button(
+                    parent, text="\u00d7", width=1,
+                    command=lambda f=self._clear_field, ix=fields_ix: f(ix)),
+                foreground="Red", font="-weight bold")
             clear_button.grid(row=self._row, column=0)
 
-            vorbis_var = tk.StringVar(parent, value=vorbis_comment)
-            vorbis_entry = tk.Entry(parent, textvariable=vorbis_var, width=17)
-            vorbis_entry.grid(row=self._row, column=1, sticky=tk.W)
+            vorbis_var = StringVar(parent, value=vorbis_comment)
+            vorbis_entry = Entry(parent, textvariable=vorbis_var, width=17)
+            vorbis_entry.grid(row=self._row, column=1, sticky=W)
 
-            id3v2_var = tk.StringVar(parent, value=id3v2_tag)
-            id3v2_entry = tk.Entry(parent, textvariable=id3v2_var, width=7)
-            id3v2_entry.grid(row=self._row, column=2, sticky=tk.W)
+            id3v2_var = StringVar(parent, value=id3v2_tag)
+            id3v2_entry = Entry(parent, textvariable=id3v2_var, width=7)
+            id3v2_entry.grid(row=self._row, column=2, sticky=W)
 
-            value_var = tk.StringVar(parent, value=value)
-            value_entry = tk.Entry(parent, textvariable=value_var, width=59)
-            value_entry.grid(row=self._row, column=3, sticky=tk.W)
+            value_var = StringVar(parent, value=value)
+            value_entry = Entry(parent, textvariable=value_var, width=59)
+            value_entry.grid(row=self._row, column=3, sticky=W)
 
             self._fields.append((vorbis_var, id3v2_var, value_var))
             self._widgets.append(
@@ -3717,13 +3729,13 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
 
     def buttonbox(self):
         """Create the buttons to save and/or dismiss the dialog."""
-        box = tk.Frame(self)
+        box = Frame(self)
 
-        tk.Button(box, text="Save", width=10, command=self.ok).pack(
-            side=tk.LEFT, padx=5, pady=5)
+        Button(box, text="Save", width=10, command=self.ok).pack(
+            side=LEFT, padx=5, pady=5)
 
-        tk.Button(box, text="Cancel", width=10, command=self.cancel).pack(
-            side=tk.LEFT, padx=5, pady=5)
+        Button(box, text="Cancel", width=10, command=self.cancel).pack(
+            side=LEFT, padx=5, pady=5)
 
         self.bind("<Return>", self.ok)
         self.bind("<Escape>", self.cancel)
@@ -3813,7 +3825,7 @@ class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
 
         if (vorbis_comment or id3v2_tag) and values:
             for widget in self._widgets[-1][1:]:
-                widget.config(state=tk.DISABLED)
+                widget.config(state=DISABLED)
 
     def _clear_field(self, index):
         """Clear (effectively removing) the *index* -th field.
