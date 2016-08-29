@@ -397,6 +397,13 @@ def get_config():
                 # always make sure this is accurate
                 _config["FLACManager"] = OrderedDict(__version__=__version__)
 
+                for (key, default_value) in [
+                        ("title", "FLACManager ${__version__}"),
+                        ("minwidth", "1024"),
+                        ("minheight", "768"),
+                        ]:
+                    _config["FLACManager"].setdefault(key, default_value)
+
                 if "Logging" not in _config:
                     _config["Logging"] = OrderedDict()
                 for (key, default_value) in [
@@ -633,15 +640,18 @@ class FLACManager(Tk):
 
     #: Any HTTP(S) request issued by FLACManager uses this value for the HTTP
     #: User-Agent header value.
-    USER_AGENT = "FLAManager/{v} Python/{vi[0]:d}.{vi[1]:d}.{vi[2]:d}".format(
+    USER_AGENT = "FLACManager/{v} Python/{vi[0]:d}.{vi[1]:d}.{vi[2]:d}".format(
         v=__version__, vi=sys.version_info)
 
     def __init__(self):
         self.__log.mark()
         super().__init__()
 
-        self.title("FLACManager %s" % __version__)
-        self.minsize(1024, 768)
+        config = get_config()
+        self.title(config["FLACManager"]["title"])
+        self.minsize(
+            config["FLACManager"].getint("minwidth"),
+            config["FLACManager"].getint("minheight"))
 
         self._create_menu()
         self._create_disc_status()
