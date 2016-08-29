@@ -604,36 +604,32 @@ class FLACManagerError(Exception):
 
 
 @logged
-class FLACManager(tk.Frame):
-    """The FLAC Manager user interface."""
+class FLACManager(tk.Tk):
+    """The FLACManager GUI application."""
 
-    #: The user-friendly application name.
-    TITLE = "FLAC Manager"
-
-    #: Any HTTP(S) request issued by FLAC Manager uses this value for the HTTP
+    #: Any HTTP(S) request issued by FLACManager uses this value for the HTTP
     #: User-Agent header value.
-    USER_AGENT = "FLACManager/%s Python/%s" % (
-        __version__, sys.version.split()[0])
+    USER_AGENT = "FLAManager/{v} Python/{vi[0]:d}.{vi[1]:d}.{vi[2]:d}".format(
+        v=__version__, vi=sys.version_info)
 
-    def __init__(self, master=None):
-        """
-        :keyword master: the parent object of this frame
+    def __init__(self):
+        self.__log.mark()
+        super().__init__()
 
-        """
-        self.__log.call(master)
-        super().__init__(master)
+        self.title("FLACManager %s" % __version__)
+        self.minsize(1024, 768)
 
         self._create_menu()
         self._create_disc_status()
         self._create_editor_status()
         self.encoding_status_frame = None
 
-        self.pack(fill=tk.BOTH, expand=tk.YES)
-
         if not self._missing_required_config():
             self._do_disc_check()
         else:
             self._prompt_edit_required_config()
+
+        self.update()
 
     def _missing_required_config(self):
         """Determine whether or not required configuration settings have
@@ -675,7 +671,7 @@ class FLACManager(tk.Frame):
 
         """
         EditRequiredConfigurationDialog(
-            self.master, title="Edit flacmanager.ini (required settings)")
+            self, title="Edit flacmanager.ini (required settings)")
         if not self._missing_required_config():
             self.open_req_config_editor_button.pack_forget()
             self.disc_status_message.config(
@@ -732,7 +728,7 @@ class FLACManager(tk.Frame):
         help_menu.add_command(label="About", command=self.about)
         menubar.add_cascade(label="Help", menu=help_menu)
 
-        self.master.config(menu=menubar)
+        self.config(menu=menubar)
 
     def _create_disc_status(self):
         """Create the disc status frame."""
@@ -2171,7 +2167,7 @@ class FLACManager(tk.Frame):
                 self.rip_and_tag_button.pack_forget()
                 self.rip_and_tag_button.config(state=tk.NORMAL)
 
-                self.master.bell()
+                self.bell()
                 self.__log.trace("break out of the monitoring loop")
                 return
 
@@ -2422,75 +2418,71 @@ class FLACManager(tk.Frame):
         """Open the configuration editor dialog."""
         self.__log.mark()
         EditAggregationConfigurationDialog(
-            self.master, title="Edit flacmanager.ini (metadata aggregation)")
+            self, title="Edit flacmanager.ini (metadata aggregation)")
 
     def _edit_organization_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
         EditOrganizationConfigurationDialog(
-            self.master,
-            title="Edit flacmanager.ini (default folder and file names)")
+            self, title="Edit flacmanager.ini (default folder and file names)")
 
     def _edit_flac_encoding_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
         EditFLACEncodingConfigurationDialog(
-            self.master, title="Edit flacmanager.ini (FLAC encoding)")
+            self, title="Edit flacmanager.ini (FLAC encoding)")
 
     def _edit_vorbis_comments_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
         EditVorbisCommentsConfigurationDialog(
-            self.master,
-            title="Edit flacmanager.ini (default FLAC Vorbis comments)")
+            self, title="Edit flacmanager.ini (default FLAC Vorbis comments)")
 
     def _edit_flac_organization_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
         EditFLACOrganizationConfigurationDialog(
-            self.master,
-            title="Edit flacmanager.ini (FLAC folder and file names)")
+            self, title="Edit flacmanager.ini (FLAC folder and file names)")
 
     def _edit_mp3_encoding_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
         EditMP3EncodingConfigurationDialog(
-            self.master, title="Edit flacmanager.ini (MP3 encoding)")
+            self, title="Edit flacmanager.ini (MP3 encoding)")
 
     def _edit_id3v2_tags_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
         EditID3v2TagsConfigurationDialog(
-            self.master, title="Edit flacmanager.ini (default MP3 ID3v2 tags)")
+            self, title="Edit flacmanager.ini (default MP3 ID3v2 tags)")
 
     def _edit_mp3_organization_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
         EditMP3OrganizationConfigurationDialog(
-            self.master,
-            title="Edit flacmanager.ini (MP3 folder and file names)")
+            self, title="Edit flacmanager.ini (MP3 folder and file names)")
 
     def _edit_logging_config(self):
         """Open the configuration editor dialog."""
         self.__log.mark()
         EditLoggingConfigurationDialog(
-            self.master, title="Edit flacmanager.ini (logging/debug)")
+            self, title="Edit flacmanager.ini (logging/debug)")
 
     def prerequisites(self):
         """Open the prerequisites information dialog."""
         self.__log.mark()
-        PrerequisitesDialog(self.master, title="%s prerequisites" % self.TITLE)
+        PrerequisitesDialog(self, title="%s prerequisites" % self.title())
 
     def about(self):
         """Open the application description dialog."""
         self.__log.mark()
-        AboutDialog(self.master, title="About %s" % self.TITLE)
+        AboutDialog(self, title="About %s" % self.title())
 
     def _exit(self):
         """Quit the FLACManager application."""
-        self.master.withdraw()
+        self.withdraw()
         self.destroy()
-        self.master.quit()
+        self.quit()
 
 
 @total_ordering
@@ -2890,36 +2882,35 @@ def _font(widget):
 class PrerequisitesDialog(simpledialog.Dialog):
     """A dialog that describes all FLAC Manager prerequisites."""
 
-    #: The content of the dialog.
-    TEXT = (
-        "%(title)s runs on Python 3.3+.\n\n"
-        "%(title)s requires the following external software components:\n"
-        "* libdiscid (http://musicbrainz.org/doc/libdiscid)\n"
-        "* flac (http://flac.sourceforge.net/)\n"
-        "* lame (http://lame.sourceforge.net/)\n\n"
-        "The flac and lame command-line binaries must exist on your $PATH. "
-        "Each of these components is also available through MacPorts "
-        "(http://www.macports.org/).\n\n"
-        "In addition to the software listed above, %(title)s relies on the "
-        "following Mac OS X command line utilties:\n"
-        "* diskutil\n"
-        "* open\n"
-        "* mkdir\n\n"
-        "You must register for a Gracenote developer account "
-        "(https://developer.gracenote.com/) in order for %(title)s's metadata "
-        "aggregation to function properly:\n"
-        "1. Create your Gracenote developer account.\n"
-        "2. Create an app named \"%(title)s.\"\n"
-        "3. Save your Gracenote Client ID in %(title)s's configuration file.\n"
-        "\n%(title)s will automatically obtain and store the Gracenote User "
-        "ID in the flacmanager.ini file.\n\n"
-    ) % dict(title=FLACManager.TITLE)
-
     def body(self, frame):
         """Create the content of the dialog."""
         text = scrolledtext.ScrolledText(
             frame, height=11, bd=0, relief=tk.FLAT, wrap=tk.WORD)
-        text.insert(tk.END, self.TEXT)
+        text.insert(
+            tk.END,
+            "FLACManager runs on Python 3.3+.\n\n"
+            "FLACManager requires the following external software "
+            "components:\n"
+            "* libdiscid (http://musicbrainz.org/doc/libdiscid)\n"
+            "* flac (http://flac.sourceforge.net/)\n"
+            "* lame (http://lame.sourceforge.net/)\n\n"
+            "The flac and lame command-line binaries must exist on your $PATH."
+            "  Each of these components is also available through MacPorts "
+            "(http://www.macports.org/).\n\n"
+            "In addition to the software listed above, FLACManager relies on "
+            "the following Mac OS X command line utilties:\n"
+            "* diskutil\n"
+            "* open\n"
+            "* mkdir\n\n"
+            "You MUST register for a Gracenote developer account "
+            "(https://developer.gracenote.com/) in order for FLACManager's "
+            "metadata aggregation to function properly:\n"
+            "1. Create your Gracenote developer account.\n"
+            "2. Create an app named \"FLACManager\".\n"
+            "3. Save your Gracenote Client ID in the flacmanager.ini "
+            "configuration file.\n"
+            "\nFLACManager will automatically obtain and store the Gracenote "
+            "User ID in the flacmanager.ini file.\n\n")
         text.pack()
         text.focus_set()
 
@@ -2939,8 +2930,7 @@ class AboutDialog(simpledialog.Dialog):
     def body(self, frame):
         """Create the content of the dialog."""
         title_label = tk.Label(
-            frame, text="%s v%s\n" % (FLACManager.TITLE, __version__),
-            fg="DarkOrange2")
+            frame, text=self.master.title(), fg="DarkOrange2")
         _font(title_label).config(size=19, weight=tkfont.BOLD)
         title_label.pack()
 
@@ -5580,8 +5570,8 @@ def show_exception_dialog(e, aborting=False):
 
     if aborting:
         message += (
-            "\n\nWARNING! %s will abort after this message is dismissed!" %
-                FLACManager.TITLE)
+            "\n\nWARNING! FLACManager will abort after this message is "
+            "dismissed!")
 
     messagebox.showerror(title=title, message=message.strip())
 
@@ -5611,12 +5601,8 @@ if __name__ == "__main__":
 
     initialize_logging()
 
-    root = tk.Tk()
-    root.title(FLACManager.TITLE)
-    root.minsize(1024, 768)
-
     try:
-        FLACManager(master=root).mainloop()
+        FLACManager().mainloop()
     except Exception as e:
         _log.exception("aborting")
         show_exception_dialog(e, aborting=True)
