@@ -3980,8 +3980,9 @@ class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
             values=values)
 
         if (vorbis_comment or id3v2_tag) and values:
-            for widget in self._widgets[-1][1:]:
-                widget.config(state=DISABLED)
+            for added in self._widgets[-len(values):]:
+                for widget in added[1:]:
+                    widget.config(state=DISABLED)
 
     def _clear_field(self, index):
         """Clear (effectively removing) the *index* -th field.
