@@ -208,7 +208,10 @@ def logged(cls):
     :rtype: :obj:`type`
 
     """
-    setattr(cls, "_%s__log" % cls.__name__, logging.getLogger(cls.__name__))
+    setattr(
+        cls,
+        "_%s__log" % re.sub(r"^_+", "", cls.__name__),
+        logging.getLogger(cls.__name__))
     return cls
 
 
@@ -644,7 +647,7 @@ class FLACManager(Tk):
         v=__version__, vi=sys.version_info)
 
     def __init__(self):
-        self.__log.mark()
+        self.__log.call()
         super().__init__()
 
         config = get_config()
@@ -654,65 +657,63 @@ class FLACManager(Tk):
             config["FLACManager"].getint("minheight"))
 
         self._create_menu()
-        self._create_disc_status()
-        self._create_editor_status()
-        self.encoding_status_frame = None
 
-        if not self._missing_required_config():
-            self._do_disc_check()
+        self._disc_frame = _FMDiscFrame(self, name="_disc_frame", text="Disc")
+
+        self.reset()
+
+    def reset(self):
+        self._remove()
+
+        self._disc_frame.reset()
+        self._disc_frame.pack(anchor=N, fill=X, padx=5, pady=5)
+
+        self._create_metadata_status_frame()
+        self._encoding_status_frame = None
+
+        if self.has_required_config:
+            self.check_for_disc()
         else:
-            self._prompt_edit_required_config()
+            self._disc_frame.required_configuration_missing()
 
         self.update()
 
-    def _missing_required_config(self):
+    def _remove(self):
+        # _disc_frame never gets unpacked
+        pass
+
+    @property
+    def has_required_config(self):
         """Determine whether or not required configuration settings have
         been specified.
 
         :return:
-           ``True`` if any required configuration settings are missing,
+           ``True`` if all required configuration options have values,
            otherwise ``False``
 
         """
-        self.__log.call()
-
         config = get_config()
+
         # the following options MUST be set by the user before FLACManager can
         # be used
-        flag = (
-            not config["Organize"].get("library_root") or
-            not config["Gracenote"].get("client_id") or
-            not config["MusicBrainz"].get("contact_url_or_email") or
-            not config["MusicBrainz"].get("libdiscid_location")
-            )
+        return (
+            config["Organize"].get("library_root") and
+            config["Gracenote"].get("client_id") and
+            config["MusicBrainz"].get("contact_url_or_email") and
+            config["MusicBrainz"].get("libdiscid_location")
+        )
 
-        self.__log.return_(flag)
-        return flag
-
-    def _prompt_edit_required_config(self):
-        """Let the user know that required configuration settings are
-        not present, and provide a button to open an editor.
-
-        """
-        self.disc_status_message.config(
-            text="Required configuration is missing!")
-        _styled(self.disc_status_message, foreground="Red")
-        self.open_req_config_editor_button.pack(
-            side=RIGHT, padx=7, pady=5)
-
-    def _edit_required_config(self):
+    def edit_required_config(self):
         """Open a *flacmanager.ini* editor to allow the user to provide
         required configuration settings.
 
         """
         EditRequiredConfigurationDialog(
             self, title="Edit flacmanager.ini (required settings)")
-        if not self._missing_required_config():
-            self.open_req_config_editor_button.pack_forget()
-            self.disc_status_message.config(
-                text="Waiting for a disc to be inserted\u2026")
-            _styled(self.disc_status_message, foreground="Black")
-            self._do_disc_check()
+
+        if self.has_required_config:
+            self._disc_frame.reset()
+            self.check_for_disc()
 
     def _create_menu(self):
         """Create the FLAC Manager menu bar."""
@@ -767,68 +768,66 @@ class FLACManager(Tk):
 
         self.config(menu=menubar)
 
-    def _create_disc_status(self):
-        """Create the disc status frame."""
-        self.__log.call()
-
-        disc_status_group = LabelFrame(self, text="Disc status")
-        disc_status_group.pack(fill=BOTH, padx=17, pady=11)
-
-        self.disc_eject_button = Button(
-            disc_status_group, text="Eject", command=self._eject_disc,
-            state=DISABLED)
-
-        self.disc_status_message = Label(
-            disc_status_group, text="Waiting for a disc to be inserted\u2026")
-        self.disc_status_message.pack(side=LEFT, padx=5, pady=3)
-
-        self.open_req_config_editor_button = _styled(
-            Button(
-                disc_status_group,
-                text="Edit required configuration in flacmanager.ini",
-                command=self._edit_required_config),
-            foreground="Red")
-
-        self.retry_disc_check_button = Button(
-            disc_status_group, text="Retry disc check",
-            command=self._do_disc_check)
-
-        self.rip_and_tag_button = _styled(
-            Button(
-                disc_status_group, text="Rip and tag",
-                command=self.rip_and_tag),
-            foreground="Dark Green")
-
-    def _create_editor_status(self):
+    def _create_metadata_status_frame(self):
         """Create the labels and buttons that communicate editor status."""
         self.__log.call()
 
-        self.status_message_var = StringVar(
-            value="Aggregating metadata\u2026")
-        self.status_message = Label(
-            self, textvariable=self.status_message_var)
-        self.retry_aggregation_button = Button(
-            self, text="Retry metadata aggregation",
+        self._metadata_status_frame = Frame(
+            self, name="_metadata_status_frame")
+
+        rowconf = self._metadata_status_frame.grid_rowconfigure
+        colconf = self._metadata_status_frame.grid_columnconfigure
+        for r in range(2):
+            rowconf(r, weight=1)
+        for c in range(2):
+            colconf(c, weight=1)
+
+        self._metadata_status_label = Label(
+            self._metadata_status_frame, name="_metadata_status_label")
+        self.set_metadata_status_message("Aggregating metadata\u2026")
+        self._metadata_status_label.grid(
+            row=0, column=0, columnspan=2, padx=5, pady=5)
+
+        self._retry_aggregation_button = Button(
+            self._metadata_status_frame, name="_retry_aggregation_button",
+            text="Retry metadata aggregation",
             command=self._do_metadata_aggregation)
-        self.edit_offline_button = Button(
-            self, text="Edit metadata offline",
-            command=self._edit_offline)
+
+        self._edit_offline_button = Button(
+            self._metadata_status_frame, name="_edit_offline_button",
+            text="Edit metadata offline", command=self._edit_offline)
+
+    def set_metadata_status_message(self, message, fg="Grey"):
+        self._metadata_status_label.config(text=message)
+        _styled(
+            self._metadata_status_label, foreground=fg, font="-weight bold")
+
+    def show_metadata_status_buttons(self):
+        self._retry_aggregation_button.grid(
+            row=1, column=0, padx=5, pady=5, sticky=NE)
+        self._edit_offline_button.grid(
+            row=1, column=1, padx=5, pady=5, sticky=NW)
+
+    def hide_metadata_status_buttons(self):
+        self._retry_aggregation_button.grid_remove()
+        self._edit_offline_button.grid_remove()
 
     def _edit_offline(self):
         """Create the metadata editor without info from a CDDB."""
         self.__log.call()
 
-        self.retry_aggregation_button.pack_forget()
-        self.edit_offline_button.pack_forget()
+        self._metadata_status_frame.pack_forget()
 
         try:
             self._create_metadata_editor()
         except Exception as e:
             self.__log.exception("failed to create metadata editor")
             show_exception_dialog(e)
-            self.status_message.pack_forget()
-            self.retry_aggregation_button.pack()
-            self.edit_offline_button.pack()
+
+            self.set_metadata_status_message(
+                "Failed to initialize offline editors", fg="Red")
+            self.show_metadata_status_buttons()
+            self._metadata_status_frame.pack(anchor=N, fill=X, padx=5, pady=5)
 
     def _create_metadata_editor(self):
         """Create the metadata editor."""
@@ -934,10 +933,10 @@ class FLACManager(Tk):
         # see comments in _initialize_track_vars!
         self._initialize_track_vars()
 
-        self.status_message.pack_forget()
-        metadata_editor.pack(fill=BOTH, expand=YES, padx=17, pady=11)
+        self._metadata_status_frame.pack_forget()
+        metadata_editor.pack(expand=YES, fill=BOTH)
 
-        self.rip_and_tag_button.pack(side=RIGHT, padx=7, pady=5)
+        self._disc_frame.rip_and_tag_ready()
 
         # if persisted data was restored, manually select the cover image so
         # that it opens in Preview automatically
@@ -2084,12 +2083,11 @@ class FLACManager(Tk):
         """Create tagged FLAC and MP3 files of all included tracks."""
         self.__log.call()
 
-        if self.encoding_status_frame is not None:
-            self.encoding_status_frame.destroy()
-            self.encoding_status_frame = None
+        if self._encoding_status_frame is not None:
+            self._encoding_status_frame.destroy()
+            self._encoding_status_frame = None
 
-        self.disc_eject_button.config(state=DISABLED)
-        self.rip_and_tag_button.config(state=DISABLED)
+        self._disc_frame.rip_and_tag_in_progress()
 
         self._persist_metadata() # issues/1
 
@@ -2098,8 +2096,7 @@ class FLACManager(Tk):
         except Exception as e:
             self.__log.exception("failed to initialize the encoder")
             show_exception_dialog(e)
-            self.disc_eject_button.config(state=NORMAL)
-            self.rip_and_tag_button.config(state=NORMAL)
+            self._disc_frame.rip_and_tag_failed()
         else:
             encoder.start()
             self.__log.info("encoding has started; monitoring progress...")
@@ -2145,9 +2142,9 @@ class FLACManager(Tk):
                 "Cannot use MP3 library root %s: %s" % (mp3_library_root, e),
                 context_hint="MP3 encoding", cause=e)
 
-        self.encoding_status_frame = self._create_encoder_status(self)
+        self._encoding_status_frame = self._create_encoder_status(self)
         self.metadata_editor.pack_forget()
-        self.encoding_status_frame.pack(
+        self._encoding_status_frame.pack(
             fill=BOTH, padx=17, pady=17, expand=YES)
 
         encoder = FLACEncoder()
@@ -2199,9 +2196,7 @@ class FLACManager(Tk):
                     else:
                         _ENCODING_QUEUE.task_done()
 
-                self.disc_eject_button.config(state=NORMAL)
-                self.rip_and_tag_button.pack_forget()
-                self.rip_and_tag_button.config(state=NORMAL)
+                self._disc_frame.rip_and_tag_finished()
 
                 self.bell()
                 self.__log.trace("break out of the monitoring loop")
@@ -2279,7 +2274,7 @@ class FLACManager(Tk):
         return status_line
 
     def _destroy_metadata_editor(self):
-        """Cleanup up UI resources created for the metadata editor."""
+        """Clean up UI resources created for the metadata editor."""
         self.__log.call()
 
         if self.metadata_editor is not None:
@@ -2309,15 +2304,15 @@ class FLACManager(Tk):
         self._track_year_optionmenu = None
         self._track_vars = None
 
-    def _do_disc_check(self):
+    def check_for_disc(self):
         """Spawn the :class:`DiscCheck` thread."""
         self.__log.call()
 
-        self.retry_disc_check_button.pack_forget()
+        self._disc_frame.reset()
         DiscCheck().start()
-        self._check_for_disc()
+        self._update_disc_info()
 
-    def _check_for_disc(self):
+    def _update_disc_info(self):
         """Update the UI if a CD-DA disc is present.
 
         If a disc is **not** present, set a UI timer to check again.
@@ -2327,7 +2322,7 @@ class FLACManager(Tk):
         try:
             disc_info = _DISC_QUEUE.get_nowait()
         except queue.Empty:
-            self.after(QUEUE_GET_NOWAIT_AFTER, self._check_for_disc)
+            self.after(QUEUE_GET_NOWAIT_AFTER, self._update_disc_info)
         else:
             _DISC_QUEUE.task_done()
             self.__log.debug("dequeued %r", disc_info)
@@ -2336,19 +2331,12 @@ class FLACManager(Tk):
             if isinstance(disc_info, Exception):
                 self.__log.error("dequeued %r", disc_info)
                 show_exception_dialog(disc_info)
-                self.retry_disc_check_button.pack(
-                    side=RIGHT, padx=7, pady=5)
+                self._disc_frame.disc_check_failed()
                 return None
 
-            self.disc_status_message.pack_forget()
-            self.disc_status_message.config(text=self._mountpoint)
-            self.disc_eject_button.pack(side=LEFT, padx=7, pady=5)
-            self.disc_status_message.pack(side=LEFT)
+            self._disc_frame.disc_mounted(self._mountpoint)
 
             self.toc = read_disc_toc(self._mountpoint)
-            # once we have the TOC, it's ok for the disc to be ejected (though,
-            # of course, if it's ejected immediately it can't be ripped)
-            self.disc_eject_button.config(state=NORMAL)
 
             self._do_metadata_aggregation()
 
@@ -2356,20 +2344,26 @@ class FLACManager(Tk):
         """Spawn the :class:`MetadataAggregator` thread."""
         self.__log.call()
 
+        if getattr(self, "metadata_editor", None) is not None:
+            self.metadata_editor.pack_forget()
+        self.set_metadata_status_message("Aggregating metadata\u2026")
+        self._metadata_status_frame.pack(anchor=N, fill=X, padx=5, pady=5)
+
         try:
             MetadataAggregator(self.toc).start()
         except Exception as e:
             self.__log.exception("failed to start metadata aggregator")
             show_exception_dialog(e)
-            self.retry_aggregation_button.pack()
-            self.edit_offline_button.pack()
-        else:
-            self.retry_aggregation_button.pack_forget()
-            self.edit_offline_button.pack_forget()
-            self.status_message.pack(anchor=CENTER)
-            self._check_for_aggregator()
 
-    def _check_for_aggregator(self):
+            self.set_metadata_status_message(
+                "Metadata aggregation failed", fg="Red")
+            self.show_metadata_status_buttons()
+        else:
+            self.hide_metadata_status_buttons()
+
+            self._update_aggregated_metadata()
+
+    def _update_aggregated_metadata(self):
         """Update the UI if aggregated metadata is ready.
 
         If aggregated metadata is **not** ready, set a UI timer to check
@@ -2381,7 +2375,7 @@ class FLACManager(Tk):
         try:
             aggregator = _AGGREGATOR_QUEUE.get_nowait()
         except queue.Empty:
-            self.after(500, self._check_for_aggregator)
+            self.after(500, self._update_aggregated_metadata)
         else:
             self.__log.debug("dequeued %r", aggregator)
             _AGGREGATOR_QUEUE.task_done()
@@ -2398,17 +2392,18 @@ class FLACManager(Tk):
                 except Exception as e:
                     self.__log.exception("failed to create metadata editor")
                     show_exception_dialog(e)
-                    self.status_message.pack_forget()
-                    self.retry_aggregation_button.pack()
-                    self.edit_offline_button.pack()
+
+                    self.set_metadata_status_message(
+                        "Failed to initialize metadata editors", fg="Red")
+                    self.show_metadata_status_buttons()
             else:
                 show_exception_dialog(aggregator.exception)
-                self.status_message.pack_forget()
-                self.retry_aggregation_button.pack()
-                self.edit_offline_button.pack()
 
+                self.set_metadata_status_message(
+                    "Metadata aggregation failed", fg="Red")
+                self.show_metadata_status_buttons()
 
-    def _eject_disc(self):
+    def eject_disc(self):
         """Eject the current CD-DA disc and update the UI."""
         self.__log.call()
 
@@ -2419,28 +2414,23 @@ class FLACManager(Tk):
             self.__log.info(
                 "ejected %s mounted at %s", self._disk, self._mountpoint)
 
-            self.rip_and_tag_button.pack_forget()
             self._destroy_metadata_editor()
 
-            if self.encoding_status_frame is not None:
-                self.encoding_status_frame.destroy()
-                self.encoding_status_frame = None
+            if self._encoding_status_frame is not None:
+                self._encoding_status_frame.destroy()
+                self._encoding_status_frame = None
                 self._encoding_status_list.destroy()
                 self._encoding_status_list = None
 
             self._disk = self._mountpoint = None
 
-            self.disc_eject_button.pack_forget()
-            self.retry_aggregation_button.pack_forget()
-            self.edit_offline_button.pack_forget()
-            self.status_message.pack_forget()
+            self._metadata_status_frame.pack_forget()
 
             self.toc = None
-            self.disc_status_message.config(
-                text="Waiting for a disc to be inserted\u2026")
+            self._disc_frame.reset()
 
             DiscCheck().start()
-            self._check_for_disc()
+            self._update_disc_info()
         else:
             self.__log.error(
                 "unable to eject %s mounted at %s",
@@ -2451,72 +2441,72 @@ class FLACManager(Tk):
 
     def _edit_aggregation_config(self):
         """Open the configuration editor dialog."""
-        self.__log.mark()
+        self.__log.call()
         EditAggregationConfigurationDialog(
             self, title="Edit flacmanager.ini (metadata aggregation)")
 
     def _edit_organization_config(self):
         """Open the configuration editor dialog."""
-        self.__log.mark()
+        self.__log.call()
         EditOrganizationConfigurationDialog(
             self, title="Edit flacmanager.ini (default folder and file names)")
 
     def _edit_flac_encoding_config(self):
         """Open the configuration editor dialog."""
-        self.__log.mark()
+        self.__log.call()
         EditFLACEncodingConfigurationDialog(
             self, title="Edit flacmanager.ini (FLAC encoding)")
 
     def _edit_vorbis_comments_config(self):
         """Open the configuration editor dialog."""
-        self.__log.mark()
+        self.__log.call()
         EditVorbisCommentsConfigurationDialog(
             self, title="Edit flacmanager.ini (default FLAC Vorbis comments)")
 
     def _edit_flac_organization_config(self):
         """Open the configuration editor dialog."""
-        self.__log.mark()
+        self.__log.call()
         EditFLACOrganizationConfigurationDialog(
             self, title="Edit flacmanager.ini (FLAC folder and file names)")
 
     def _edit_mp3_encoding_config(self):
         """Open the configuration editor dialog."""
-        self.__log.mark()
+        self.__log.call()
         EditMP3EncodingConfigurationDialog(
             self, title="Edit flacmanager.ini (MP3 encoding)")
 
     def _edit_id3v2_tags_config(self):
         """Open the configuration editor dialog."""
-        self.__log.mark()
+        self.__log.call()
         EditID3v2TagsConfigurationDialog(
             self, title="Edit flacmanager.ini (default MP3 ID3v2 tags)")
 
     def _edit_mp3_organization_config(self):
         """Open the configuration editor dialog."""
-        self.__log.mark()
+        self.__log.call()
         EditMP3OrganizationConfigurationDialog(
             self, title="Edit flacmanager.ini (MP3 folder and file names)")
 
     def _edit_logging_config(self):
         """Open the configuration editor dialog."""
-        self.__log.mark()
+        self.__log.call()
         EditLoggingConfigurationDialog(
             self, title="Edit flacmanager.ini (logging/debug)")
 
     def show_about(self):
         """Open the application description dialog."""
-        self.__log.mark()
+        self.__log.call()
         _TextDialog(self, __doc__, title="About %s" % self.title())
 
     def show_prerequisites(self):
         """Open the prerequisites information dialog."""
-        self.__log.mark()
+        self.__log.call()
         _TextDialog(
             self, _PREREQUISITES_TEXT, title="%s prerequisites" % self.title())
 
     def show_license(self):
         """Open the copyright/license dialog."""
-        self.__log.mark()
+        self.__log.call()
         _TextDialog(
             self, __license__, title="%s copyright and license" % self.title())
 
@@ -2525,6 +2515,162 @@ class FLACManager(Tk):
         self.withdraw()
         self.destroy()
         self.quit()
+
+
+@logged
+class _FMDiscFrame(LabelFrame):
+    """The disc status/operation frame for FLACManager."""
+
+    def __init__(self, *args, **options):
+        """
+        :param tuple args: positional arguments to initialize the frame
+        :param dict options: ``config`` options to initialize the frame
+
+        All widgets for this frame are initialized, but grid layout is
+        deferred until methods are called to transition between states.
+
+        """
+        self.__log.call(*args, **options)
+
+        super().__init__(*args, **options)
+
+        fm = self.master
+
+        self._disc_eject_button = Button(
+            self, name="_disc_eject_button", text="Eject",
+            command=fm.eject_disc)
+
+        self._disc_status_label = Label(self, name="_disc_status_label")
+
+        self._open_req_config_editor_button = _styled(
+            Button(
+                self, name="_open_req_config_editor_button",
+                text="Edit required configuration in flacmanager.ini",
+                command=fm.edit_required_config),
+            foreground="Red")
+
+        self._retry_disc_check_button = Button(
+            self, name="_retry_disc_check_button", text="Retry disc check",
+            command=fm.check_for_disc)
+
+        self._rip_and_tag_button = _styled(
+            Button(
+                self, name="_rip_and_tag_button", text="Rip and Tag",
+                command=fm.rip_and_tag),
+            foreground="Dark Green", font="-weight bold")
+
+        self.grid_columnconfigure(1, weight=1)
+
+    def _set_status_message(self, value, fg="Black"):
+        """Set the disc status label text and color."""
+        self.__log.call(value, fg=fg)
+        self._disc_status_label.config(text=value)
+        _styled(self._disc_status_label, foreground=fg)
+
+    def required_configuration_missing(self):
+        """Let the user know that required configuration settings are
+        not present, and provide a button to open an editor.
+
+        """
+        self.__log.call()
+
+        self._remove()
+
+        self._set_status_message(
+            "Required configuration is missing!", fg="Red")
+        self._disc_status_label.grid(row=0, column=1, sticky=W, padx=5, pady=5)
+
+        self._open_req_config_editor_button.grid(
+            row=0, column=2, sticky=E, padx=5, pady=5)
+
+    def disc_mounted(self, mountpoint):
+        """Show the disk mointpoint and a button to eject the disc.
+
+        :param str mountpoint: where the CD-DA disc is mounted
+
+        """
+        self.__log.call(mountpoint)
+
+        self._remove()
+
+        self._disc_eject_button.config(state=NORMAL)
+        self._disc_eject_button.grid(row=0, column=0, sticky=W, padx=5, pady=5)
+
+        self._set_status_message(mountpoint)
+        self._disc_status_label.grid(row=0, column=1, sticky=W, padx=5, pady=5)
+
+    def disc_check_failed(self):
+        """Alert the user that the disc check failed and provide a
+        button to retry.
+
+        """
+        self.__log.call()
+
+        self.reset()
+
+        self._retry_disc_check_button.grid(
+            row=0, column=2, sticky=E, padx=5, pady=5)
+
+    def rip_and_tag_ready(self):
+        """Provide a button to begin ripping and tagging the tracks."""
+        self.__log.call()
+
+        self._rip_and_tag_button.grid(
+            row=0, column=2, sticky=E, padx=5, pady=5)
+
+    def rip_and_tag_in_progress(self):
+        """Change the state of the disc controls while tracks are being
+        ripped and tagged.
+
+        """
+        self.__log.call()
+
+        self._disc_eject_button.config(state=DISABLED)
+        self._rip_and_tag_button.config(state=DISABLED)
+
+    def rip_and_tag_failed(self):
+        """Restore the state of the disc controls after an encoding
+        failure.
+
+        """
+        self.__log.call()
+
+        self._disc_eject_button.config(state=NORMAL)
+        self._rip_and_tag_button.config(state=NORMAL)
+
+    def rip_and_tag_finished(self):
+        """Change the state of the disc controls to reflect that a disc
+        has been ripped and tagged.
+
+        """
+        self.__log.call()
+
+        self._disc_eject_button.config(state=NORMAL)
+        self._rip_and_tag_button.grid_remove()
+
+    def reset(self):
+        """Populate the disc status/operation frame widgets in their
+        default/initial states.
+
+        """
+        self.__log.call()
+
+        self._remove()
+
+        self._disc_eject_button.config(state=DISABLED)
+
+        self._set_status_message("Waiting for a disc to be inserted\u2026")
+        self._disc_status_label.grid(row=0, column=1, sticky=W, padx=5, pady=5)
+
+    def _remove(self):
+        """Remove all widgets from the current layout."""
+        self.__log.call()
+
+        self._disc_eject_button.grid_remove()
+        self._disc_status_label.grid_remove()
+        self._open_req_config_editor_button.grid_remove()
+        self._retry_disc_check_button.grid_remove()
+        self._rip_and_tag_button.grid_remove()
 
 
 @total_ordering
@@ -2701,7 +2847,7 @@ def generate_flac_dirname(library_root, metadata):
     :rtype: :obj:`str`
 
     """
-    _log.mark()
+    _log.call(library_root, metadata)
     return _generate_dirname("FLAC", library_root, metadata)
 
 
@@ -2713,7 +2859,7 @@ def generate_flac_basename(metadata):
     :rtype: :obj:`str`
 
     """
-    _log.mark()
+    _log.call(metadata)
     return _generate_basename("FLAC", metadata)
 
 
@@ -2726,7 +2872,7 @@ def generate_mp3_dirname(library_root, metadata):
     :rtype: :obj:`str`
 
     """
-    _log.mark()
+    _log.call(library_root, metadata)
     return _generate_dirname("MP3", library_root, metadata)
 
 
@@ -2738,7 +2884,7 @@ def generate_mp3_basename(metadata):
     :rtype: :obj:`str`
 
     """
-    _log.mark()
+    _log.call(metadata)
     return _generate_basename("MP3", metadata)
 
 
@@ -3605,7 +3751,7 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
         :param Frame frame: the frame that contains the body content
 
         """
-        self.__log.mark()
+        self.__log.call(frame)
 
         self._row = 0
 
@@ -3754,7 +3900,7 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
 
     def apply(self):
         """Save changes to *metadata*."""
-        self.__log.mark()
+        self.__log.call()
 
         custom = self._metadata["__custom"] = OrderedDict()
 
@@ -3863,7 +4009,7 @@ class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
         The changes will also be applied to all tracks.
 
         """
-        self.__log.mark()
+        self.__log.call()
 
         super().apply()
 
@@ -4071,7 +4217,7 @@ def make_vorbis_comments(metadata):
           Just a proposal, but linked directly from Xiph Wiki
 
     """
-    _log.mark()
+    _log.call(metadata)
 
     comments = _make_tagging_map("Vorbis", metadata)
 
@@ -4103,7 +4249,7 @@ def make_id3v2_tags(metadata):
           time, but Picard is a fantastic post-encoding fixer-upper.
 
     """
-    _log.mark()
+    _log.call(metadata)
 
     tags = _make_tagging_map("ID3v2", metadata)
 
