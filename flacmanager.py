@@ -4222,6 +4222,10 @@ def make_vorbis_comments(metadata):
 
     comments = _make_tagging_map("Vorbis", metadata)
 
+    # only use COMPILATION=1
+    if comments["COMPILATION"] == ['0']:
+        del comments["COMPILATION"]
+
     # flac automatically includes a vendor string to identify itself
     comments["ENCODER"] = [
         "http://ninthtest.net/flac-mp3-audio-manager/ %s" % __version__]
@@ -4253,6 +4257,10 @@ def make_id3v2_tags(metadata):
     _log.call(metadata)
 
     tags = _make_tagging_map("ID3v2", metadata)
+
+    # only use TCMP=1
+    if tags["TCMP"] == ['0']:
+        del tags["TCMP"]
 
     # lame automatically includes TSSE to identify itself
     tags["TENC"] = ["http://ninthtest.net/flac-mp3-audio-manager/"]
