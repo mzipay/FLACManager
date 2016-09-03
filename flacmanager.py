@@ -513,18 +513,18 @@ def get_config():
                 if "Vorbis" not in _config:
                     _config["Vorbis"] = OrderedDict()
                 for (key, default_value) in [
-                        ("ALBUM", "{album_title}"),
-                        ("ALBUMARTIST", "{album_artist}"),
-                        ("ORGANIZATION", "{album_recordlabel}"),
+                        ("ALBUM", "album_title"),
+                        ("ALBUMARTIST", "album_artist"),
+                        ("ORGANIZATION", "album_recordlabel"),
                         ("LABEL", "${ORGANIZATION}"),
                         ("DISCNUMBER", "{disc_number:d}"),
                         ("DISCTOTAL", "{disc_total:d}"),
                         ("TRACKNUMBER", "{track_number:d}"),
                         ("TRACKTOTAL", "{track_total:d}"),
-                        ("TITLE", "{track_title}"),
-                        ("ARTIST", "{track_artist}"),
+                        ("TITLE", "track_title"),
+                        ("ARTIST", "track_artist"),
                         ("GENRE", "track_genre"),
-                        ("DATE", "{track_year}"),
+                        ("DATE", "track_year"),
                         ("COMPILATION", "{is_compilation:d}"),
                         ]:
                     _config["Vorbis"].setdefault(key, default_value)
@@ -564,16 +564,16 @@ def get_config():
                 if "ID3v2" not in _config:
                     _config["ID3v2"] = OrderedDict()
                 for (key, default_value) in [
-                        ("TALB", "{album_title}"),
-                        ("TPE2", "{album_artist}"),
-                        ("TPUB", "{album_recordlabel}"),
+                        ("TALB", "album_title"),
+                        ("TPE2", "album_artist"),
+                        ("TPUB", "album_recordlabel"),
                         ("TPOS", "{disc_number:d}/{disc_total:d}"),
                         ("TRCK", "{track_number:d}/{track_total:d}"),
-                        ("TIT2", "{track_title}"),
+                        ("TIT2", "track_title"),
                         ("TIT1", "${TPE1}"),
-                        ("TPE1", "{track_artist}"),
+                        ("TPE1", "track_artist"),
                         ("TCON", "track_genre"),
-                        ("TYER", "{track_year}"),
+                        ("TYER", "track_year"),
                         ("TDRC", "${TYER}"),
                         ("TCMP", "{is_compilation:d}"),
                         ]:
@@ -4279,16 +4279,13 @@ def _make_tagging_map(type_, metadata):
 
     tags = OrderedDict()
     for (tag, spec) in config[type_].items():
-        if spec[0] == '{': # format specification
-            formatted = spec.format(**metadata)
-            value = [formatted] if formatted else None
-        else: # direct key lookup
-            value = metadata[spec] if type(metadata[spec]) is list \
-                else [metadata[spec]]
+        value = (
+            spec.format(**metadata) if spec[0] == '{' # format specification
+            else metadata[spec]) # direct key lookup
 
-        # ignore empty values
+        # only include truthy values
         if value:
-            tags[tag] = value
+            tags[tag] = value if type(value) is list else [value]
 
     _update_custom_tagging(tags, type_, metadata)
 
@@ -4351,9 +4348,9 @@ def _update_custom_tagging(tags, type_, metadata):
             _log.info("updating tagging map with %r", custom_tags)
             tags.update(custom_tags)
 
+
 #: Used to pass data between a :class:`FLACEncoder` thread and the main thread.
 _ENCODING_QUEUE = queue.PriorityQueue()
-
 
 #: The number of seconds to wait between enqueuing a FLAC encoding status.
 FLAC_ENCODING_STATUS_WAIT = 1.25
