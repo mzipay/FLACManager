@@ -4174,12 +4174,26 @@ def encode_mp3(
         command.extend(["--ti", track_metadata["album_cover"]])
 
     id3v2_tags = make_id3v2_tags(track_metadata)
+    id3v2_utf16_tags = []
     for (name, values) in id3v2_tags.items():
         if not values:
             continue
+
         # ID3v2 spec calls for '/' separator, but iTunes only handles ','
         # separator correctly
-        command.extend(["--tv", "%s=%s" % (name, ", ".join(values))])
+        tag = "%s=%s" % (name, ", ".join(values))
+
+        try:
+            tag.encode("latin-1")
+        except UnicodeEncodeError:
+            id3v2_utf16_tags.extend(["--tv", tag])
+        else:
+            command.extend(["--tv", tag])
+
+    # add any UTF-16 tags
+    if id3v2_utf16_tags:
+        command.append("--id3v2-utf16")
+        command.extend(id3v2_utf16_tags)
 
     command.append(wav_filename)
     command.append(mp3_filename)
