@@ -659,6 +659,7 @@ class FLACManager(Tk):
         self._create_menu()
 
         self._disc_frame = _FMDiscFrame(self, name="_disc_frame", text="Disc")
+        self._status_frame = _FMStatusFrame(self, name="_status_frame")
 
         self.reset()
 
@@ -666,9 +667,11 @@ class FLACManager(Tk):
         self._remove()
 
         self._disc_frame.reset()
-        self._disc_frame.pack(anchor=N, fill=X, padx=5, pady=5)
+        self._disc_frame.pack(anchor=N, fill=X, padx=7, pady=7)
 
-        self._create_metadata_status_frame()
+        self._status_frame.reset()
+        self._status_frame.pack(anchor=N, fill=X, padx=7, pady=7)
+
         self._encoding_status_frame = None
 
         if self.has_required_config:
@@ -768,55 +771,11 @@ class FLACManager(Tk):
 
         self.config(menu=menubar)
 
-    def _create_metadata_status_frame(self):
-        """Create the labels and buttons that communicate editor status."""
-        self.__log.call()
-
-        self._metadata_status_frame = Frame(
-            self, name="_metadata_status_frame")
-
-        rowconf = self._metadata_status_frame.grid_rowconfigure
-        colconf = self._metadata_status_frame.grid_columnconfigure
-        for r in range(2):
-            rowconf(r, weight=1)
-        for c in range(2):
-            colconf(c, weight=1)
-
-        self._metadata_status_label = Label(
-            self._metadata_status_frame, name="_metadata_status_label")
-        self.set_metadata_status_message("Aggregating metadata\u2026")
-        self._metadata_status_label.grid(
-            row=0, column=0, columnspan=2, padx=5, pady=5)
-
-        self._retry_aggregation_button = Button(
-            self._metadata_status_frame, name="_retry_aggregation_button",
-            text="Retry metadata aggregation",
-            command=self._do_metadata_aggregation)
-
-        self._edit_offline_button = Button(
-            self._metadata_status_frame, name="_edit_offline_button",
-            text="Edit metadata offline", command=self._edit_offline)
-
-    def set_metadata_status_message(self, message, fg="Grey"):
-        self._metadata_status_label.config(text=message)
-        _styled(
-            self._metadata_status_label, foreground=fg, font="-weight bold")
-
-    def show_metadata_status_buttons(self):
-        self._retry_aggregation_button.grid(
-            row=1, column=0, padx=5, pady=5, sticky=NE)
-        self._edit_offline_button.grid(
-            row=1, column=1, padx=5, pady=5, sticky=NW)
-
-    def hide_metadata_status_buttons(self):
-        self._retry_aggregation_button.grid_remove()
-        self._edit_offline_button.grid_remove()
-
     def _edit_offline(self):
         """Create the metadata editor without info from a CDDB."""
         self.__log.call()
 
-        self._metadata_status_frame.pack_forget()
+        self._status_frame.pack_forget()
 
         try:
             self._create_metadata_editor()
@@ -824,10 +783,8 @@ class FLACManager(Tk):
             self.__log.exception("failed to create metadata editor")
             show_exception_dialog(e)
 
-            self.set_metadata_status_message(
-                "Failed to initialize offline editors", fg="Red")
-            self.show_metadata_status_buttons()
-            self._metadata_status_frame.pack(anchor=N, fill=X, padx=5, pady=5)
+            self._status_frame.editor_initialization_failed()
+            self._status_frame.pack(anchor=N, fill=X, padx=7, pady=7)
 
     def _create_metadata_editor(self):
         """Create the metadata editor."""
@@ -933,7 +890,7 @@ class FLACManager(Tk):
         # see comments in _initialize_track_vars!
         self._initialize_track_vars()
 
-        self._metadata_status_frame.pack_forget()
+        self._status_frame.pack_forget()
         metadata_editor.pack(expand=YES, fill=BOTH)
 
         self._disc_frame.rip_and_tag_ready()
@@ -2087,7 +2044,7 @@ class FLACManager(Tk):
             self._encoding_status_frame.destroy()
             self._encoding_status_frame = None
 
-        self._disc_frame.rip_and_tag_in_progress()
+        self._disc_frame.ripping_and_tagging()
 
         self._persist_metadata() # issues/1
 
@@ -2346,8 +2303,8 @@ class FLACManager(Tk):
 
         if getattr(self, "metadata_editor", None) is not None:
             self.metadata_editor.pack_forget()
-        self.set_metadata_status_message("Aggregating metadata\u2026")
-        self._metadata_status_frame.pack(anchor=N, fill=X, padx=5, pady=5)
+        self._status_frame.aggregating_metadata()
+        self._status_frame.pack(anchor=N, fill=X, padx=7, pady=7)
 
         try:
             MetadataAggregator(self.toc).start()
@@ -2355,12 +2312,8 @@ class FLACManager(Tk):
             self.__log.exception("failed to start metadata aggregator")
             show_exception_dialog(e)
 
-            self.set_metadata_status_message(
-                "Metadata aggregation failed", fg="Red")
-            self.show_metadata_status_buttons()
+            self._status_frame.aggregation_failed()
         else:
-            self.hide_metadata_status_buttons()
-
             self._update_aggregated_metadata()
 
     def _update_aggregated_metadata(self):
@@ -2393,15 +2346,10 @@ class FLACManager(Tk):
                     self.__log.exception("failed to create metadata editor")
                     show_exception_dialog(e)
 
-                    self.set_metadata_status_message(
-                        "Failed to initialize metadata editors", fg="Red")
-                    self.show_metadata_status_buttons()
+                    self._status_frame.editor_initialization_failed()
             else:
                 show_exception_dialog(aggregator.exception)
-
-                self.set_metadata_status_message(
-                    "Metadata aggregation failed", fg="Red")
-                self.show_metadata_status_buttons()
+                self._status_frame.aggregation_failed()
 
     def eject_disc(self):
         """Eject the current CD-DA disc and update the UI."""
@@ -2424,7 +2372,7 @@ class FLACManager(Tk):
 
             self._disk = self._mountpoint = None
 
-            self._metadata_status_frame.pack_forget()
+            self._status_frame.pack_forget()
 
             self.toc = None
             self._disc_frame.reset()
@@ -2618,7 +2566,7 @@ class _FMDiscFrame(LabelFrame):
         self._rip_and_tag_button.grid(
             row=0, column=2, sticky=E, padx=5, pady=5)
 
-    def rip_and_tag_in_progress(self):
+    def ripping_and_tagging(self):
         """Change the state of the disc controls while tracks are being
         ripped and tagged.
 
@@ -2671,6 +2619,119 @@ class _FMDiscFrame(LabelFrame):
         self._open_req_config_editor_button.grid_remove()
         self._retry_disc_check_button.grid_remove()
         self._rip_and_tag_button.grid_remove()
+
+
+@logged
+class _FMStatusFrame(Frame):
+    """The application status frame for FLACManager."""
+
+    def __init__(self, *args, **options):
+        """
+        :param tuple args: positional arguments to initialize the frame
+        :param dict options: ``config`` options to initialize the frame
+
+        All widgets for this frame are initialized, but grid layout is
+        deferred until methods are called to transition between states.
+
+        """
+        self.__log.call(*args, **options)
+
+        super().__init__(*args, **options)
+
+        fm = self.master
+
+        self._status_label = _styled(
+            Label(self, name="_status_label"), font="-weight bold")
+
+        self._retry_aggregation_button = Button(
+            self, name="_retry_aggregation_button",
+            text="Retry metadata aggregation",
+            command=fm._do_metadata_aggregation)
+
+        self._edit_offline_button = Button(
+            self, name="_edit_offline_button", text="Edit metadata offline",
+            command=fm._edit_offline)
+
+        for r in range(2):
+            self.grid_rowconfigure(r, weight=1)
+        for c in range(2):
+            self.grid_columnconfigure(c, weight=1)
+
+    def _set_status_message(self, value, fg="Black"):
+        """Set the status label text and color."""
+        self.__log.call(value, fg=fg)
+        self._status_label.config(text=value)
+        _styled(self._status_label, foreground=fg)
+
+    def _show_metadata_status_buttons(self):
+        """Display the buttons that allow the user to choose an action
+        after metadata aggregation has failed.
+
+        """
+        self.__log.call()
+
+        self._retry_aggregation_button.grid(
+            row=1, column=0, padx=5, pady=5, sticky=NE)
+        self._edit_offline_button.grid(
+            row=1, column=1, padx=5, pady=5, sticky=NW)
+
+    def _hide_metadata_status_buttons(self):
+        """Remove the buttons for handling metadata aggregation
+        failures.
+
+        """
+        self.__log.call()
+
+        self._retry_aggregation_button.grid_remove()
+        self._edit_offline_button.grid_remove()
+
+    def aggregating_metadata(self):
+        """Change this frame to reflect that metadata is being
+        aggregated.
+
+        """
+        self.__log.call()
+        self.reset()
+
+    def aggregation_failed(self):
+        """Message the user that metadata aggregation has failed and
+        provide options for a next action.
+
+        """
+        self.__log.call()
+
+        self._set_status_message("Metadata aggregation failed!", fg="Red")
+        self._show_metadata_status_buttons()
+
+    def editor_initialization_failed(self):
+        """Message the user that the metadata editors could not be
+        initialized, and provide options for a next action.
+
+        """
+        self.__log.call()
+
+        self._set_status_message(
+            "Failed to initialize metadata editor!", fg="Red")
+        self._show_metadata_status_buttons()
+
+    def reset(self):
+        """Populate the status frame widgets in their default/initial
+        states.
+
+        """
+        self.__log.call()
+
+        self._remove()
+
+        self._set_status_message("Aggregating metadata\u2026", fg="Grey")
+        self._status_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+
+    def _remove(self):
+        """Remove all widgets from the current layout."""
+        self.__log.call()
+
+        self._status_label.grid_remove()
+        self._hide_metadata_status_buttons()
 
 
 @total_ordering
