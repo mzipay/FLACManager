@@ -677,7 +677,7 @@ class FLACManager(Tk):
         if self.has_required_config:
             self.check_for_disc()
         else:
-            self._disc_frame.required_configuration_missing()
+            self._status_frame.required_configuration_missing()
 
         self.update()
 
@@ -715,6 +715,7 @@ class FLACManager(Tk):
             self, title="Edit flacmanager.ini (required settings)")
 
         if self.has_required_config:
+            self._status_frame.reset()
             self._disc_frame.reset()
             self.check_for_disc()
 
@@ -2490,13 +2491,6 @@ class _FMDiscFrame(LabelFrame):
 
         self._disc_status_label = Label(self, name="_disc_status_label")
 
-        self._open_req_config_editor_button = _styled(
-            Button(
-                self, name="_open_req_config_editor_button",
-                text="Edit required configuration in flacmanager.ini",
-                command=fm.edit_required_config),
-            foreground="Red")
-
         self._retry_disc_check_button = Button(
             self, name="_retry_disc_check_button", text="Retry disc check",
             command=fm.check_for_disc)
@@ -2514,22 +2508,6 @@ class _FMDiscFrame(LabelFrame):
         self.__log.call(value, fg=fg)
         self._disc_status_label.config(text=value)
         _styled(self._disc_status_label, foreground=fg)
-
-    def required_configuration_missing(self):
-        """Let the user know that required configuration settings are
-        not present, and provide a button to open an editor.
-
-        """
-        self.__log.call()
-
-        self._remove()
-
-        self._set_status_message(
-            "Required configuration is missing!", fg="Red")
-        self._disc_status_label.grid(row=0, column=1, sticky=W, padx=5, pady=5)
-
-        self._open_req_config_editor_button.grid(
-            row=0, column=2, sticky=E, padx=5, pady=5)
 
     def disc_mounted(self, mountpoint):
         """Show the disk mointpoint and a button to eject the disc.
@@ -2616,7 +2594,6 @@ class _FMDiscFrame(LabelFrame):
 
         self._disc_eject_button.grid_remove()
         self._disc_status_label.grid_remove()
-        self._open_req_config_editor_button.grid_remove()
         self._retry_disc_check_button.grid_remove()
         self._rip_and_tag_button.grid_remove()
 
@@ -2652,6 +2629,11 @@ class _FMStatusFrame(Frame):
             self, name="_edit_offline_button", text="Edit metadata offline",
             command=fm._edit_offline)
 
+        self._open_req_config_editor_button = Button(
+            self, name="_open_req_config_editor_button",
+            text="Edit flacmanager.ini",
+            command=fm.edit_required_config)
+
         for r in range(2):
             self.grid_rowconfigure(r, weight=1)
         for c in range(2):
@@ -2684,6 +2666,22 @@ class _FMStatusFrame(Frame):
 
         self._retry_aggregation_button.grid_remove()
         self._edit_offline_button.grid_remove()
+
+    def required_configuration_missing(self):
+        """Let the user know that required configuration settings are
+        not present, and provide a button to open an editor.
+
+        """
+        self.__log.call()
+
+        self._remove()
+
+        self._set_status_message(
+            "Required configuration is missing!", fg="Red")
+        self._status_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+
+        self._open_req_config_editor_button.grid(
+            row=1, column=0, columnspan=2, padx=5, pady=5)
 
     def aggregating_metadata(self):
         """Change this frame to reflect that metadata is being
@@ -2732,6 +2730,7 @@ class _FMStatusFrame(Frame):
 
         self._status_label.grid_remove()
         self._hide_metadata_status_buttons()
+        self._open_req_config_editor_button.grid_remove()
 
 
 @total_ordering
