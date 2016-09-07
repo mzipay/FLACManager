@@ -656,7 +656,7 @@ class FLACManager(Tk):
             config["FLACManager"].getint("minwidth"),
             config["FLACManager"].getint("minheight"))
 
-        self._create_menu()
+        self.config(menu=_FMMenu(self))
 
         self._disc_frame = _FMDiscFrame(self, name="_disc_frame", text="Disc")
         self._status_frame = _FMStatusFrame(self, name="_status_frame")
@@ -683,7 +683,7 @@ class FLACManager(Tk):
 
     def _remove(self):
         # _disc_frame never gets unpacked
-        pass
+        self._status_frame.pack_forget()
 
     @property
     def has_required_config(self):
@@ -718,59 +718,6 @@ class FLACManager(Tk):
             self._status_frame.reset()
             self._disc_frame.reset()
             self.check_for_disc()
-
-    def _create_menu(self):
-        """Create the FLAC Manager menu bar."""
-        self.__log.call()
-
-        menubar = Menu(self)
-
-        file_menu = Menu(menubar, tearoff=NO)
-        file_menu.add_command(label="Exit", command=self._exit)
-        menubar.add_cascade(label="File", menu=file_menu)
-
-        edit_menu = Menu(menubar)
-        edit_menu.add_command(
-            label="Configure metadata aggregation",
-            command=self._edit_aggregation_config)
-        edit_menu.add_command(
-            label="Configure default folder and file names",
-            command=self._edit_organization_config)
-        edit_menu.add_separator()
-        flac_menu = Menu(edit_menu, tearoff=NO)
-        flac_menu.add_command(
-            label="FLAC encoding options",
-            command=self._edit_flac_encoding_config)
-        flac_menu.add_command(
-            label="FLAC Vorbis comments",
-            command=self._edit_vorbis_comments_config)
-        flac_menu.add_command(
-            label="FLAC folder and file names",
-            command=self._edit_flac_organization_config)
-        edit_menu.add_cascade(label="Configure FLAC", menu=flac_menu)
-        mp3_menu = Menu(edit_menu, tearoff=NO)
-        mp3_menu.add_command(
-            label="MP3 encoding options",
-            command=self._edit_mp3_encoding_config)
-        mp3_menu.add_command(
-            label="MP3 ID3v2 tags", command=self._edit_id3v2_tags_config)
-        mp3_menu.add_command(
-            label="MP3 folder and file names",
-            command=self._edit_mp3_organization_config)
-        edit_menu.add_cascade(label="Configure MP3", menu=mp3_menu)
-        edit_menu.add_separator()
-        edit_menu.add_command(
-            label="Configure logging", command=self._edit_logging_config)
-        menubar.add_cascade(label="Edit", menu=edit_menu)
-
-        help_menu = Menu(menubar, tearoff=NO)
-        help_menu.add_command(label="About", command=self.show_about)
-        help_menu.add_command(
-            label="Prequisites", command=self.show_prerequisites)
-        help_menu.add_command(label="License", command=self.show_license)
-        menubar.add_cascade(label="Help", menu=help_menu)
-
-        self.config(menu=menubar)
 
     def _edit_offline(self):
         """Create the metadata editor without info from a CDDB."""
@@ -2296,9 +2243,9 @@ class FLACManager(Tk):
 
             self.toc = read_disc_toc(self._mountpoint)
 
-            self._do_metadata_aggregation()
+            self.aggregate_metadata()
 
-    def _do_metadata_aggregation(self):
+    def aggregate_metadata(self):
         """Spawn the :class:`MetadataAggregator` thread."""
         self.__log.call()
 
@@ -2388,55 +2335,55 @@ class FLACManager(Tk):
                 title="Disk eject failure",
                 message="Unable to eject %s" % self._mountpoint)
 
-    def _edit_aggregation_config(self):
+    def edit_aggregation_config(self):
         """Open the configuration editor dialog."""
         self.__log.call()
         EditAggregationConfigurationDialog(
             self, title="Edit flacmanager.ini (metadata aggregation)")
 
-    def _edit_organization_config(self):
+    def edit_organization_config(self):
         """Open the configuration editor dialog."""
         self.__log.call()
         EditOrganizationConfigurationDialog(
             self, title="Edit flacmanager.ini (default folder and file names)")
 
-    def _edit_flac_encoding_config(self):
+    def edit_flac_encoding_config(self):
         """Open the configuration editor dialog."""
         self.__log.call()
         EditFLACEncodingConfigurationDialog(
             self, title="Edit flacmanager.ini (FLAC encoding)")
 
-    def _edit_vorbis_comments_config(self):
+    def edit_vorbis_comments_config(self):
         """Open the configuration editor dialog."""
         self.__log.call()
         EditVorbisCommentsConfigurationDialog(
             self, title="Edit flacmanager.ini (default FLAC Vorbis comments)")
 
-    def _edit_flac_organization_config(self):
+    def edit_flac_organization_config(self):
         """Open the configuration editor dialog."""
         self.__log.call()
         EditFLACOrganizationConfigurationDialog(
             self, title="Edit flacmanager.ini (FLAC folder and file names)")
 
-    def _edit_mp3_encoding_config(self):
+    def edit_mp3_encoding_config(self):
         """Open the configuration editor dialog."""
         self.__log.call()
         EditMP3EncodingConfigurationDialog(
             self, title="Edit flacmanager.ini (MP3 encoding)")
 
-    def _edit_id3v2_tags_config(self):
+    def edit_id3v2_tags_config(self):
         """Open the configuration editor dialog."""
         self.__log.call()
         EditID3v2TagsConfigurationDialog(
             self, title="Edit flacmanager.ini (default MP3 ID3v2 tags)")
 
-    def _edit_mp3_organization_config(self):
+    def edit_mp3_organization_config(self):
         """Open the configuration editor dialog."""
         self.__log.call()
         EditMP3OrganizationConfigurationDialog(
             self, title="Edit flacmanager.ini (MP3 folder and file names)")
 
-    def _edit_logging_config(self):
+    def edit_logging_config(self):
         """Open the configuration editor dialog."""
         self.__log.call()
         EditLoggingConfigurationDialog(
@@ -2459,11 +2406,78 @@ class FLACManager(Tk):
         _TextDialog(
             self, __license__, title="%s copyright and license" % self.title())
 
-    def _exit(self):
+    def exit(self):
         """Quit the FLACManager application."""
         self.withdraw()
         self.destroy()
         self.quit()
+
+
+@logged
+class _FMMenu(Menu):
+    """The FLACManager application menu bar."""
+
+    def __init__(self, *args, **options):
+        """
+        :param tuple args: positional arguments to initialize the menu
+        :param dict options: ``config`` options to initialize the menu
+
+        """
+        self.__log.call(*args, **options)
+
+        super().__init__(*args, **options)
+
+        fm = self.master
+
+        file_menu = Menu(self, tearoff=NO)
+        file_menu.add_command(label="Exit", command=fm.exit)
+        self.add_cascade(label="File", menu=file_menu)
+
+        edit_menu = Menu(self, tearoff=YES)
+        edit_menu.add_command(
+            label="Configure metadata aggregation",
+            command=fm.edit_aggregation_config)
+        edit_menu.add_command(
+            label="Configure default folder and file names",
+            command=fm.edit_organization_config)
+
+        edit_menu.add_separator()
+
+        flac_menu = Menu(edit_menu, tearoff=NO)
+        flac_menu.add_command(
+            label="FLAC encoding options",
+            command=fm.edit_flac_encoding_config)
+        flac_menu.add_command(
+            label="FLAC Vorbis comments",
+            command=fm.edit_vorbis_comments_config)
+        flac_menu.add_command(
+            label="FLAC folder and file names",
+            command=fm.edit_flac_organization_config)
+        edit_menu.add_cascade(label="Configure FLAC", menu=flac_menu)
+
+        mp3_menu = Menu(edit_menu, tearoff=NO)
+        mp3_menu.add_command(
+            label="MP3 encoding options",
+            command=fm.edit_mp3_encoding_config)
+        mp3_menu.add_command(
+            label="MP3 ID3v2 tags", command=fm.edit_id3v2_tags_config)
+        mp3_menu.add_command(
+            label="MP3 folder and file names",
+            command=fm.edit_mp3_organization_config)
+        edit_menu.add_cascade(label="Configure MP3", menu=mp3_menu)
+
+        edit_menu.add_separator()
+
+        edit_menu.add_command(
+            label="Configure logging", command=fm.edit_logging_config)
+        self.add_cascade(label="Edit", menu=edit_menu)
+
+        help_menu = Menu(self, tearoff=NO)
+        help_menu.add_command(label="About", command=fm.show_about)
+        help_menu.add_command(
+            label="Prequisites", command=fm.show_prerequisites)
+        help_menu.add_command(label="License", command=fm.show_license)
+        self.add_cascade(label="Help", menu=help_menu)
 
 
 @logged
@@ -2623,7 +2637,7 @@ class _FMStatusFrame(Frame):
         self._retry_aggregation_button = Button(
             self, name="_retry_aggregation_button",
             text="Retry metadata aggregation",
-            command=fm._do_metadata_aggregation)
+            command=fm.aggregate_metadata)
 
         self._edit_offline_button = Button(
             self, name="_edit_offline_button", text="Edit metadata offline",
