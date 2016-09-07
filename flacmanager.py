@@ -715,8 +715,8 @@ class FLACManager(Tk):
             self, title="Edit flacmanager.ini (required settings)")
 
         if self.has_required_config:
-            self._status_frame.reset()
             self._disc_frame.reset()
+            self._status_frame.reset()
             self.check_for_disc()
 
     def _edit_offline(self):
@@ -2230,15 +2230,15 @@ class FLACManager(Tk):
             self.after(QUEUE_GET_NOWAIT_AFTER, self._update_disc_info)
         else:
             _DISC_QUEUE.task_done()
-            self.__log.debug("dequeued %r", disc_info)
-            (self._disk, self._mountpoint) = disc_info
 
             if isinstance(disc_info, Exception):
                 self.__log.error("dequeued %r", disc_info)
                 show_exception_dialog(disc_info)
                 self._disc_frame.disc_check_failed()
-                return None
+                return
 
+            self.__log.debug("dequeued %r", disc_info)
+            (self._disk, self._mountpoint) = disc_info
             self._disc_frame.disc_mounted(self._mountpoint)
 
             self.toc = read_disc_toc(self._mountpoint)
@@ -2249,8 +2249,6 @@ class FLACManager(Tk):
         """Spawn the :class:`MetadataAggregator` thread."""
         self.__log.call()
 
-        if getattr(self, "metadata_editor", None) is not None:
-            self.metadata_editor.pack_forget()
         self._status_frame.aggregating_metadata()
         self._status_frame.pack(anchor=N, fill=X, padx=7, pady=7)
 
@@ -2276,7 +2274,8 @@ class FLACManager(Tk):
         try:
             aggregator = _AGGREGATOR_QUEUE.get_nowait()
         except queue.Empty:
-            self.after(500, self._update_aggregated_metadata)
+            self.after(
+                QUEUE_GET_NOWAIT_AFTER, self._update_aggregated_metadata)
         else:
             self.__log.debug("dequeued %r", aggregator)
             _AGGREGATOR_QUEUE.task_done()
