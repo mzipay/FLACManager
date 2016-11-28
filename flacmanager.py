@@ -39,7 +39,7 @@ http://mzipay.github.io/FLACManager/usage.html
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.net>"
-__version__ = "0.8.0-beta+dev"
+__version__ = "0.8.0"
 __license__ = """\
 FLAC Manager -- audio metadata aggregator and FLAC+MP3 encoder
 http://ninthtest.net/flac-mp3-audio-manager/
@@ -72,10 +72,11 @@ import atexit
 import cgi
 from collections import namedtuple, OrderedDict
 from configparser import ConfigParser, ExtendedInterpolation
+from copy import deepcopy
 import ctypes as C
 import datetime
-from functools import partial, total_ordering
-from http.client import HTTPConnection, HTTPSConnection
+from functools import lru_cache, partial, total_ordering
+from http.client import HTTPConnection, HTTPMessage, HTTPSConnection
 import imghdr
 from io import BytesIO, StringIO
 import json
@@ -99,7 +100,7 @@ import tkinter.scrolledtext as scrolledtext
 import tkinter.simpledialog as simpledialog
 import uuid
 from urllib.parse import urlparse
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
 __all__ = [
@@ -154,7 +155,7 @@ class _TracingLogger(logging.getLoggerClass()):
 
     def __init__(self, name):
         """
-        :param str name: the logger name
+        :arg str name: the logger name
 
         """
         super().__init__(name)
@@ -162,8 +163,8 @@ class _TracingLogger(logging.getLoggerClass()):
     def call(self, *args, **kwargs):
         """Log entry into a callable with severity :attr:`TRACE`.
 
-        :param tuple args: the positional arguments to the callable
-        :param dict kwargs: the keyword arguments to the callable
+        :arg tuple args: the positional arguments to the callable
+        :arg dict kwargs: the keyword arguments to the callable
 
         """
         if self.isEnabledFor(TRACE):
@@ -187,7 +188,7 @@ class _TracingLogger(logging.getLoggerClass()):
     def return_(self, value=None):
         """Log return from a callable with severity :attr:`TRACE`.
 
-        :keyword value: the value returned from the callable
+        :key value: the value returned from the callable
 
         """
         if self.isEnabledFor(TRACE):
@@ -203,7 +204,7 @@ _log = logging.getLogger(__name__)
 def logged(cls):
     """Decorate *cls* to provide a logger.
 
-    :param type cls: a class (type) object
+    :arg type cls: a class (type) object
     :return: *cls* with a provided ``__log`` member
     :rtype: :obj:`type`
 
@@ -255,7 +256,7 @@ def identify_cdda_device():
 def identify_cdda_mount_point(device):
     """Locate the file system mount point for the CD-DA *device*.
 
-    :param str device: the CD-DA device ("/dev/*")
+    :arg str device: the CD-DA device ("/dev/*")
     :return: the *device* mount point
     :rtype: :obj:`str`
 
@@ -331,7 +332,7 @@ TOC = namedtuple(
 def read_disc_toc(mountpoint):
     """Return the :obj:`TOC` for the currently mounted disc.
 
-    :param str mountpoint: the mount point of an inserted CD-DA disc
+    :arg str mountpoint: the mount point of an inserted CD-DA disc
     :return: a populated TOC for the inserted CD-DA disc
     :rtype: :obj:`TOC`
 
@@ -468,11 +469,11 @@ def get_config():
                             "${compilation_album_folder}"),
                         ("track_filename", "{track_number:02d} {track_title}"),
                         ("ndisc_track_filename",
-                            "{disc_number:02d}-${track_filename}"),
+                            "{album_discnumber:02d}-${track_filename}"),
                         ("compilation_track_filename",
                             "${track_filename} ({track_artist})"),
                         ("ndisc_compilation_track_filename",
-                            "{disc_number:02d}-${compilation_track_filename}"),
+                            "{album_discnumber:02d}-${compilation_track_filename}"),
                         ("use_xplatform_safe_names", "yes"),
                         ]:
                     _config["Organize"].setdefault(key, default_value)
@@ -517,15 +518,15 @@ def get_config():
                         ("ALBUMARTIST", "album_artist"),
                         ("ORGANIZATION", "album_recordlabel"),
                         ("LABEL", "${ORGANIZATION}"),
-                        ("DISCNUMBER", "{disc_number:d}"),
-                        ("DISCTOTAL", "{disc_total:d}"),
+                        ("DISCNUMBER", "{album_discnumber:d}"),
+                        ("DISCTOTAL", "{album_disctotal:d}"),
                         ("TRACKNUMBER", "{track_number:d}"),
-                        ("TRACKTOTAL", "{track_total:d}"),
+                        ("TRACKTOTAL", "{album_tracktotal:d}"),
                         ("TITLE", "track_title"),
                         ("ARTIST", "track_artist"),
                         ("GENRE", "track_genre"),
                         ("DATE", "track_year"),
-                        ("COMPILATION", "{is_compilation:d}"),
+                        ("COMPILATION", "{album_compilation:d}"),
                         ]:
                     _config["Vorbis"].setdefault(key, default_value)
 
@@ -567,15 +568,15 @@ def get_config():
                         ("TALB", "album_title"),
                         ("TPE2", "album_artist"),
                         ("TPUB", "album_recordlabel"),
-                        ("TPOS", "{disc_number:d}/{disc_total:d}"),
-                        ("TRCK", "{track_number:d}/{track_total:d}"),
+                        ("TPOS", "{album_discnumber:d}/{album_disctotal:d}"),
+                        ("TRCK", "{track_number:d}/{album_tracktotal:d}"),
                         ("TIT2", "track_title"),
                         ("TIT1", "${TPE1}"),
                         ("TPE1", "track_artist"),
                         ("TCON", "track_genre"),
                         ("TYER", "track_year"),
                         ("TDRC", "${TYER}"),
-                        ("TCMP", "{is_compilation:d}"),
+                        ("TCMP", "{album_compilation:d}"),
                         ]:
                     _config["ID3v2"].setdefault(key, default_value)
 
@@ -596,8 +597,8 @@ def save_config():
 def make_tempfile(suffix=".tmp", prefix="fm"):
     """Create a temporary file.
 
-    :keyword str suffix: the default file extenstion
-    :keyword str prefix: prepended to the beginning of the filename
+    :key str suffix: the default file extenstion
+    :key str prefix: prepended to the beginning of the filename
     :return: the temporary file name
     :rtype: :obj:`str`
 
@@ -619,9 +620,9 @@ class FLACManagerError(Exception):
 
     def __init__(self, message, context_hint=None, cause=None):
         """
-        :param str message: error message for logging or display
-        :keyword context_hint: describes the error context
-        :keyword Exception cause: the exception that caused this error
+        :arg str message: error message for logging or display
+        :key context_hint: describes the error context
+        :key Exception cause: the exception that caused this error
 
         The optional *context_hint* is not part of the message, and may
         take any type or form. Exception handlers that catch
@@ -658,8 +659,9 @@ class FLACManager(Tk):
 
         self.config(menu=_FMMenu(self))
 
-        self._disc_frame = _FMDiscFrame(self, name="_disc_frame", text="Disc")
-        self._status_frame = _FMStatusFrame(self, name="_status_frame")
+        self._disc_frame = _FMDiscFrame(self, name="disc_frame", text="Disc")
+        self._status_frame = _FMStatusFrame(self, name="status_frame")
+        self._editor_frame = _FMEditorFrame(self, name="editor_frame")
 
         self.reset()
 
@@ -672,6 +674,9 @@ class FLACManager(Tk):
         self._status_frame.reset()
         self._status_frame.pack(anchor=N, fill=X, padx=7, pady=7)
 
+        # not repacked until metadata for an inserted disc has been aggregated
+        self._editor_frame.reset()
+
         self._encoding_status_frame = None
 
         if self.has_required_config:
@@ -683,7 +688,10 @@ class FLACManager(Tk):
 
     def _remove(self):
         # _disc_frame never gets unpacked
+        self._editor_frame.pack_forget()
         self._status_frame.pack_forget()
+
+        self._persistence = None
 
     @property
     def has_required_config(self):
@@ -719,381 +727,102 @@ class FLACManager(Tk):
             self._status_frame.reset()
             self.check_for_disc()
 
-    def _edit_offline(self):
-        """Create the metadata editor without info from a CDDB."""
+    def check_for_disc(self):
+        """Spawn the :class:`DiscCheck` thread."""
         self.__log.call()
 
-        self._status_frame.pack_forget()
+        self._disc_frame.reset()
+        DiscCheck().start()
+        self._update_disc_info()
+
+    def _update_disc_info(self):
+        """Update the UI if a CD-DA disc is present.
+
+        If a disc is **not** present, set a UI timer to check again.
+
+        """
+        # do not trace; called indefinitely until a disc is found
+        try:
+            disc_info = _DISC_QUEUE.get_nowait()
+        except queue.Empty:
+            self.after(QUEUE_GET_NOWAIT_AFTER, self._update_disc_info)
+        else:
+            _DISC_QUEUE.task_done()
+
+            if isinstance(disc_info, Exception):
+                self.__log.error("dequeued %r", disc_info)
+                show_exception_dialog(disc_info)
+                self._disc_frame.disc_check_failed()
+                return
+
+            self.__log.debug("dequeued %r", disc_info)
+            (self._disk, self._mountpoint) = disc_info
+            self._disc_frame.disc_mounted(self._mountpoint)
+
+            self.toc = read_disc_toc(self._mountpoint)
+
+            self.aggregate_metadata()
+
+    def aggregate_metadata(self):
+        """Spawn the :class:`MetadataAggregator` thread."""
+        self.__log.call()
+
+        self._status_frame.aggregating_metadata()
+        self._status_frame.pack(anchor=N, fill=X, padx=7, pady=7)
 
         try:
-            self._create_metadata_editor()
+            MetadataAggregator(self.toc).start()
         except Exception as e:
-            self.__log.exception("failed to create metadata editor")
+            self.__log.exception("failed to start metadata aggregator")
             show_exception_dialog(e)
 
-            self._status_frame.editor_initialization_failed()
-            self._status_frame.pack(anchor=N, fill=X, padx=7, pady=7)
+            self._status_frame.aggregation_failed()
+        else:
+            self._update_aggregated_metadata()
 
-    def _create_metadata_editor(self):
-        """Create the metadata editor."""
+    def _update_aggregated_metadata(self):
+        """Update the UI if aggregated metadata is ready.
+
+        If aggregated metadata is **not** ready, set a UI timer to check
+        again.
+
+        """
+        # don't log entry into this method - it calls itself recursively until
+        # the aggregated metadata is ready
+        try:
+            aggregator = _AGGREGATOR_QUEUE.get_nowait()
+        except queue.Empty:
+            self.after(
+                QUEUE_GET_NOWAIT_AFTER, self._update_aggregated_metadata)
+        else:
+            self.__log.debug("dequeued %r", aggregator)
+            _AGGREGATOR_QUEUE.task_done()
+
+            self._persistence = aggregator.persistence
+            # metadata may be "partial" if an error occurred while collecting
+            # or aggregating, but initialize the editor frame regardless
+            self._editor_frame.metadata_ready_for_editing(aggregator.metadata)
+
+            if not aggregator.exceptions:
+                self._edit_metadata()
+            else:
+                show_exception_dialog(aggregator.exceptions[0])
+                self._status_frame.aggregation_failed()
+
+    def _edit_metadata(self):
+        """Display the metadata editor."""
         self.__log.call()
-
-        self._current_track_number = 1
-        # tracks indexing is 1-based
-        self._total_tracks = len(self.toc.track_offsets)
-
-        metadata_editor = self.metadata_editor = Frame(self)
-        album_editor = Frame(metadata_editor)
-
-        album_metadata = self._album_metadata
-
-        album_title_frame = self._create_album_title_editor(
-            album_editor, album_metadata["title"])
-        album_title_frame.pack(fill=BOTH, pady=7)
-
-        album_artist_frame = self._create_album_artist_editor(
-            album_editor, album_metadata["artist"])
-        album_artist_frame.pack(fill=BOTH, pady=7)
-
-        album_recordlabel_frame = self._create_album_recordlabel_editor(
-            album_editor, album_metadata["record_label"])
-        album_recordlabel_frame.pack(fill=BOTH, pady=7)
-
-        album_genre_frame = self._create_album_genre_editor(
-            album_editor, album_metadata["genre"])
-        album_genre_frame.pack(fill=BOTH, pady=7)
-
-        year_disc_cover_row = Frame(album_editor)
-        album_year_frame = self._create_album_year_editor(
-            year_disc_cover_row, album_metadata["year"])
-        album_year_frame.pack(side=LEFT)
-
-        album_disc_frame = self._create_album_disc_editor(
-            year_disc_cover_row, album_metadata["disc_number"],
-            album_metadata["disc_total"])
-
-        album_cover_frame = self._create_album_cover_editor(
-            year_disc_cover_row, album_metadata["cover"])
-        album_cover_frame.pack(side=RIGHT)
-
-        album_disc_frame.pack()
-        year_disc_cover_row.pack(fill=BOTH, pady=7)
-
-        album_compilation_frame = self._create_album_compilation_editor(
-            album_editor, album_metadata["is_compilation"])
-        album_compilation_frame.pack(fill=BOTH, pady=7)
-
-        album_custom_metadata_frame = \
-            self._create_album_custom_metadata_editor(album_editor)
-        album_custom_metadata_frame.pack(side=RIGHT)
-
-        album_editor.pack(fill=BOTH)
-
-        tracks_editor = Frame(
-            metadata_editor, borderwidth=5, relief=RAISED)
-        self._track_vars = self._create_track_vars()
-        first_track = self._tracks_metadata[1]
-        track_editor = Frame(tracks_editor)
-
-        controls = Frame(track_editor)
-
-        track_nav_frame = self._create_track_navigator(
-            controls, self._total_tracks)
-        track_nav_frame.pack(side=LEFT)
-
-        track_include_frame = self._create_track_include_editor(controls)
-        track_include_frame.pack(side=LEFT, padx=29)
-
-        custom_metadata_frame = self._create_custom_metadata_editor(controls)
-        custom_metadata_frame.pack(side=RIGHT)
-
-        controls.pack(fill=BOTH, pady=7)
-
-        track_title_frame = self._create_track_title_editor(
-            track_editor, first_track["title"])
-        track_title_frame.pack(fill=BOTH, pady=7)
-
-        track_artist_frame = self._create_track_artist_editor(
-            track_editor,
-            self._combine_choices(
-                first_track["artist"], album_metadata["artist"]))
-        track_artist_frame.pack(fill=BOTH, pady=7)
-
-        track_genre_frame = self._create_track_genre_editor(
-            track_editor,
-            self._combine_choices(
-                first_track["genre"], album_metadata["genre"]))
-        track_genre_frame.pack(fill=BOTH, pady=7)
-
-        track_year_frame = self._create_track_year_editor(
-            track_editor,
-            self._combine_choices(first_track["year"], album_metadata["year"]))
-        track_year_frame.pack(side=LEFT, pady=7)
-
-        track_editor.pack(fill=BOTH, padx=17, pady=17)
-        tracks_editor.pack(fill=BOTH, pady=29)
-
-        self.tracks_editor = tracks_editor
-
-        # see comments in _initialize_track_vars!
-        self._initialize_track_vars()
 
         self._status_frame.pack_forget()
-        metadata_editor.pack(expand=YES, fill=BOTH)
-
+        self._editor_frame.pack(anchor=N, fill=BOTH, padx=7, pady=7)
         self._disc_frame.rip_and_tag_ready()
 
-        # if persisted data was restored, manually select the cover image so
-        # that it opens in Preview automatically
-        if self._persistence.restored and len(self._album_covers) > 1:
-            # first cover is always "--none--"
-            preferred_album_cover = list(self._album_covers.keys())[1]
-            self.choose_cover_image(preferred_album_cover)
-
-    def _create_track_vars(self):
-        """Create metadata variables for each track."""
-        self.__log.call()
-
-        track_vars = {
-            "include": [None],
-            "title": [None],
-            "artist": [None],
-            "genre": [None],
-            "year": [None],
-        }
-        for track_metadata in self._tracks_metadata[1:]:
-            track_vars["include"].append(
-                BooleanVar(value=track_metadata["include"]))
-            track_vars["title"].append(StringVar())
-            track_vars["artist"].append(StringVar())
-            track_vars["genre"].append(StringVar())
-            track_vars["year"].append(StringVar())
-
-        self.__log.return_(track_vars)
-        return track_vars
-
-    def _initialize_track_vars(self):
-        """Set default values for all track variables."""
-        self.__log.call()
-
-        # use the tracks Spinbox as a convenient way to make sure all track
-        # editors have valid values; but make sure this method is only called
-        # BEFORE the metadata editor is packed, otherwise the user will be very
-        # confused ;)
-        while int(self.track_spinner.get()) != self._total_tracks:
-            self.track_spinner.invoke("buttonup")
-
-        # now reset the spinner back to track #1 by "wrapping around"
-        self.track_spinner.invoke("buttonup")
-
-    def _create_choices_editor(
-            self, master, name, choices, width=59, var=None):
-        """Create the UI to allow a value to be selected from a list of
-        choices or entered directly.
-
-        :param master: the parent object of the editor frame
-        :param str name: the label for the entry and option menu
-        :param list choices: a list of choices for the metadata field
-        :keyword int width: the default width of the entry box
-        :keyword tkinter.StringVar var:
-           the variable that stores the metadata field value
-        :return: the 4-tuple (label, var, entry, option_menu)
-        :rtype:
-           obj:`tuple` of (:class:`tkinter.Label`,
-           :class:`tkinter.Variable`, :class:`tkinter.Entry`,
-           :class:`tkinter.OptionMenu`)
-
-        The optional *var* is created as a :class:`tkinter.StringVar`
-        if it is not provided.
-
-        """
-        self.__log.call(master, name, choices, width=width, var=var)
-
-        label = Label(master, text=name)
-
-        if var is None:
-            var = StringVar()
-
-        if choices:
-            var.set(choices[0])
-        else:
-            # this is just so that the OptionMenu can be created; but if this
-            # happens, the optionmenu won't be packed
-            choices = [""]
-
-        entry = Entry(
-            master, exportselection=NO, textvariable=var, width=width)
-        optionmenu = OptionMenu(
-            master, var, *choices, command=lambda v: var.set(v))
-
-        self.__log.return_((label, var, entry, optionmenu))
-        return (label, var, entry, optionmenu)
-
-    def _refresh_choices_editor(self, var, entry, optionmenu, choices):
-        """Update the values for the given editor controls.
-
-        :param tkinter.Variable var:
-           holds the value for a metadata field
-        :param tkinter.Entry entry:
-           the data entry control for a metadata field
-        :param tkinter.OptionMenu optionmenu:
-           the drop-down option menu for a metadata field
-        :param list choices:
-           new choices for the metadata field
-        :return: a new drop-down option menu for the metadata field
-        :rtype: :class:`tkinter.OptionMenu`
-
-        .. note::
-           If *choices* is empty, the caller will not pack the
-           newly-created :class:`tkinter.OptionMenu` returned by this
-           method.
-
-        """
-        self.__log.call(var, entry, optionmenu, choices)
-
-        master = optionmenu.master
-        optionmenu.destroy()
-        optionmenu = None
-
-        # always prefer the current value if it's not empty
-        if not var.get():
-            var.set(choices[0] if choices else "")
-
-        if not choices:
-            # this is just so that the OptionMenu can be created; but if this
-            # happens, the new_optionmenu won't be packed
-            choices = [var.get()]
-
-        entry.config(textvariable=var)
-        new_optionmenu = OptionMenu(
-            master, var, *choices, command=lambda v: var.set(v))
-
-        self.__log.return_(new_optionmenu)
-        return new_optionmenu
-
-    def _create_album_title_editor(self, master, choices):
-        """Create the UI editing controls for the album title.
-
-        :param master: parent object of the editor frame
-        :param list choices: aggregated values for the album title
-        :return: the album title editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = Frame(master)
-
-        (label, self.album_title_var, entry, optionmenu) = \
-            self._create_choices_editor(frame, "Album", choices)
-
-        label.pack(side=LEFT)
-        entry.pack(side=LEFT, padx=5)
-
-        if len(choices) > 1:
-            optionmenu.pack(side=LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
-    def _create_album_artist_editor(self, master, choices):
-        """Create the UI editing controls for the album title.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the album artist
-        :return: the album artist editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = Frame(master)
-
-        (label, self.album_artist_var, entry, optionmenu) = \
-            self._create_choices_editor(frame, "Artist", choices)
-        button = Button(
-            frame, text="Apply to all tracks",
-            command=self.apply_album_artist_to_tracks)
-
-        label.pack(side=LEFT)
-        entry.pack(side=LEFT, padx=5)
-
-        if len(choices) > 1:
-            optionmenu.pack(side=LEFT)
-
-        button.pack(side=LEFT, padx=5)
-
-        self.__log.return_(frame)
-        return frame
-
-    def apply_album_artist_to_tracks(self):
-        """Set each track artist to the album artist."""
-        self.__log.call()
-
-        album_artist_value = self.album_artist_var.get()
-        for track_artist_var in self._track_vars["artist"][1:]:
-            track_artist_var.set(album_artist_value)
-
-    def _create_album_recordlabel_editor(self, master, choices):
-        """Create the UI editing controls for the record label.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the record label
-        :return: the record label editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = Frame(master)
-
-        (label, self.album_recordlabel_var, entry, optionmenu) = \
-            self._create_choices_editor(frame, "Label", choices)
-
-        label.pack(side=LEFT)
-        entry.pack(side=LEFT, padx=5)
-
-        if len(choices) > 1:
-            optionmenu.pack(side=LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
-    def _create_album_genre_editor(self, master, choices):
-        """Create the UI editing controls for the album genre.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the album genre
-        :return: the album genre editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = Frame(master)
-
-        genres = self._combine_genres(choices)
-        (label, self.album_genre_var, entry, optionmenu) = \
-            self._create_choices_editor(frame, "Genre", genres, width=29)
-
-        self._add_lame_genres_menu(optionmenu, self.album_genre_var, genres)
-
-        button = Button(
-            frame, text="Apply to all tracks",
-            command=self.apply_album_genre_to_tracks)
-
-        label.pack(side=LEFT)
-        entry.pack(side=LEFT, padx=5)
-        optionmenu.pack(side=LEFT)
-        button.pack(side=LEFT, padx=5)
-
-        self.__log.return_(frame)
-        return frame
-
+    # TODO: still needed?
+    '''
     def _combine_genres(self, choices):
         """Create a custom genre list from a list of aggregated genres.
 
-        :param list choices: aggregated values for the album genre
+        :arg list choices: aggregated values for the album genre
         :return: customized :obj:`list` of values for the album genre
 
         If a genre choice has been restored from persisted data, it will
@@ -1123,15 +852,18 @@ class FLACManager(Tk):
 
         self.__log.return_(genres)
         return genres
+    '''
 
+    # TODO: still needed?
+    '''
     def _add_lame_genres_menu(self, optionmenu, var, excludes):
         """Add a submenu to *optionmenu* that contains the LAME genres.
 
-        :param tkinter.OptionMenu optionmenu:
+        :arg tkinter.OptionMenu optionmenu:
            a drop-down menu of LAME genre choices
-        :param tkinter.StringVar var:
+        :arg tkinter.StringVar var:
            a variable to hold the selected genre
-        :param list excludes: LAME genres to exclude from the submenu
+        :arg list excludes: LAME genres to exclude from the submenu
 
         """
         self.__log.call(optionmenu, var, excludes)
@@ -1143,778 +875,15 @@ class FLACManager(Tk):
                 menu.add_command(
                     label=genre, command=lambda v=var, g=genre: v.set(g))
         optionmenu["menu"].add_cascade(label="LAME", menu=menu)
-
-    def apply_album_genre_to_tracks(self):
-        """Set each track genre to the album genre."""
-        self.__log.call()
-
-        album_genre_value = self.album_genre_var.get()
-        for track_genre_var in self._track_vars["genre"][1:]:
-            track_genre_var.set(album_genre_value)
-
-    def _create_album_year_editor(self, master, choices):
-        """Create the UI editing controls for the album year.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the album year
-        :return: the album genre editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = Frame(master)
-
-        (label, self.album_year_var, entry, optionmenu) = \
-            self._create_choices_editor(frame, "Year", choices, width=5)
-        button = Button(
-            frame, text="Apply to all tracks",
-            command=self.apply_album_year_to_tracks)
-
-        label.pack(side=LEFT)
-        entry.pack(side=LEFT, padx=5)
-
-        if len(choices) > 1:
-            optionmenu.pack(side=LEFT)
-
-        button.pack(side=LEFT, padx=5)
-
-        self.__log.return_(frame)
-        return frame
-
-    def apply_album_year_to_tracks(self):
-        """Set each track genre to the album genre."""
-        self.__log.call()
-
-        album_year_value = self.album_year_var.get()
-        for track_year_var in self._track_vars["year"][1:]:
-            track_year_var.set(album_year_value)
-
-    def _create_album_disc_editor(self, master, number, total):
-        """Create the UI editing controls for the album disc.
-
-        :param master: parent obejct of the editor frame
-        :param int number: default disc number
-        :param int total: default disc total
-        :return: the album disc number/total editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, number, total)
-
-        frame = Frame(master)
-
-        number_label = Label(frame, text="Disc")
-        number_label.pack(side=LEFT)
-
-        self.album_disc_number_var = StringVar(value=str(number))
-        number_entry = Entry(
-            frame, exportselection=NO,
-            textvariable=self.album_disc_number_var, width=2)
-        number_entry.pack(side=LEFT, padx=2)
-
-        total_label = Label(frame, text="of")
-        total_label.pack(side=LEFT)
-
-        self.album_disc_total_var = StringVar(value=str(total))
-        total_entry = Entry(
-            frame, exportselection=NO,
-            textvariable=self.album_disc_total_var, width=2)
-        total_entry.pack(side=LEFT, padx=2)
-
-        self.__log.return_(frame)
-        return frame
-
-    def _create_album_cover_editor(self, master, choices):
-        """Create the UI editing controls for the album cover.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the album cover
-        :return: the album cover editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        self._album_covers = OrderedDict()
-        self._album_covers["--none--"] = None
-        for image_data in choices:
-            self._save_cover_image(image_data)
-
-        frame = Frame(master)
-
-        label = Label(frame, text="Cover")
-        label.pack(side=LEFT)
-
-        self.album_cover_var = StringVar(value="--none--")
-        self._covers_optionmenu = OptionMenu(
-            frame, self.album_cover_var, *self._album_covers.keys(),
-            command=self.choose_cover_image)
-        self._covers_optionmenu.pack(side=LEFT, padx=5)
-
-        url_button = Button(
-            frame, text="Add URL", command=self.choose_cover_image_from_url)
-        url_button.pack(side=LEFT, padx=5)
-
-        file_button = Button(
-            frame, text="Add file", command=self.choose_cover_image_from_file)
-        file_button.pack(side=LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
-    def _create_album_compilation_editor(self, master, value):
-        """Create a checkbox to indicate that the album is a
-        compilation.
-
-        :param master: parent obejct of the editor frame
-        :param bool value: initial value of the checkbox
-        :return: the compilation checkbox editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, value)
-
-        frame = Frame(master)
-
-        self.album_compilation_var = BooleanVar(value=value)
-        checkbutton = Checkbutton(
-            master, text="Compilation", variable=self.album_compilation_var,
-            onvalue=True, offvalue=False)
-        checkbutton.pack(side=LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
-    def _create_album_custom_metadata_editor(self, master):
-        """Create the UI editing controls for editing custom metadata
-        for *all* tracks.
-
-        :param master: parent obejct of the editor frame
-        :return: the custom metadata editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master)
-
-        frame = Frame(master)
-
-        edit_album_custom_metadata_button = Button(
-            frame, text="Edit custom Vorbis/ID3v2 tagging for ALL tracks",
-            command=
-                lambda self=self:
-                    EditAlbumCustomMetadataTaggingDialog(
-                        master, self._album_metadata, self._tracks_metadata,
-                        title=self.album_title_var.get()))
-        edit_album_custom_metadata_button.pack()
-
-        self.__log.return_(frame)
-        return frame
-
-    def _save_cover_image(self, image_data):
-        """Save raw image bytes to a temporary file.
-
-        :param bytes image_data: the raw image data
-        :return: 2-tuple (:obj:`str` label, :obj:`str` filename)
-
-        """
-        self.__log.call(image_data)
-
-        image_type = imghdr.what("_ignored_", h=image_data)
-        if image_type is None:
-            raise MetadataError(
-                "Unrecognized image type.", context_hint="Save image")
-
-        name = "Cover #%d (%s)" % (len(self._album_covers), image_type.upper())
-        filename = make_tempfile(suffix='.' + image_type)
-        with open(filename, "wb") as f:
-            f.write(image_data)
-        self._album_covers[name] = filename
-
-        self.__log.debug("%r -> %s", name, filename)
-        return (name, filename)
-
-    def choose_cover_image(self, name):
-        """Select the named cover image and open in Mac OS X Preview.
-
-        :param str name: label for the image
-
-        """
-        self.__log.call(name)
-
-        filename = self._album_covers.get(name)
-        if filename:
-            status = subprocess.call(["open", "-a", "Preview", filename])
-            if status == 0:
-                self.album_cover_var.set(name)
-            else:
-                self.__log.warning(
-                    "exit status %d attempting to preview %s",
-                    status, filename)
-        else:
-            # should never happen
-            self.__log.warning("%r is not mapped to a filename", name)
-            messagebox.showwarning(
-                "Invalid image choice",
-                "%s is not a valid image choice!" % name)
-
-    def choose_cover_image_from_url(self):
-        """Download a cover image from a user-provided URL and open in
-        Mac OS X Preview.
-
-        The downloaded cover image is made available in the cover image
-        dropdown.
-
-        """
-        self.__log.call()
-
-        self._covers_optionmenu.config(state=DISABLED)
-
-        # leave initialvalue empty (paste-over doesn't work in XQuartz)
-        url = simpledialog.askstring(
-            "Add a cover image from a URL", "Enter the image URL:",
-            initialvalue="")
-        if not url:
-            self._covers_optionmenu.config(state=NORMAL)
-            self.__log.return_()
-            return
-
-        self.__log.debug("url = %r", url)
-        name = None
-        try:
-            response = urlopen(
-                url, timeout=get_config().getfloat("HTTP", "timeout"))
-            image_data = response.read()
-            response.close()
-
-            if response.status != 200:
-                raise RuntimeError(
-                    "HTTP %d %s" % (response.status, response.reason))
-
-            (name, filename) = self._save_cover_image(image_data)
-        except Exception as e:
-            self.__log.exception("failed to obtain image from %r", url)
-            messagebox.showerror(
-                "Image download failure",
-                "An unexpected error occurred while "
-                    "downloading the image from %s." % url)
-        else:
-            self._add_album_cover_option(name)
-            messagebox.showinfo(
-                "Cover image added",
-                "%s has been added to the available covers." % name)
-        finally:
-            self._covers_optionmenu.config(state=NORMAL)
-
-        if name is not None:
-            self.choose_cover_image(name)
-
-    def _add_album_cover_option(self, name):
-        """Add *name* to the cover image dropdown menu."""
-        self.__log.call(name)
-
-        self._covers_optionmenu["menu"].add_command(
-            label=name,
-            command=lambda f=self.choose_cover_image, v=name: f(v))
-
-    def choose_cover_image_from_file(self):
-        """Open a user-defined cover image in Mac OS X Preview.
-
-        The cover image is made available in the cover image dropdown.
-
-        """
-        self.__log.call()
-
-        self._covers_optionmenu.config(state=DISABLED)
-
-        filename = filedialog.askopenfilename(
-            defaultextension=".jpg",
-            filetypes=[
-                ("JPEG", "*.jpg"),
-                ("JPEG", "*.jpeg"),
-                ("PNG", "*.png"),
-            ],
-            initialdir=os.path.expanduser("~/Pictures"),
-            title="Choose a JPEG or PNG file")
-        if not filename:
-            self._covers_optionmenu.config(state=NORMAL)
-            self.__log.return_()
-            return
-
-        self.__log.debug("filename = %r", filename)
-        name = None
-        if os.path.isfile(filename):
-            with open(filename, "rb") as f:
-                image_data = f.read()
-
-            image_type = imghdr.what("_ignored_", h=image_data)
-            if image_type is None:
-                messagebox.showwarning(
-                    "Image add failure",
-                    "Type of %s is not recognized!" % filename)
-                self._covers_optionmenu.config(state=NORMAL)
-
-            name = "Cover #%d (%s)" % (
-                len(self._album_covers), image_type.upper())
-            self._album_covers[name] = filename
-            self._add_album_cover_option(name)
-            messagebox.showinfo(
-                "Cover image added",
-                "%s has been added to the available covers." % name)
-        else:
-            self.__log.error("file not found: %r", filename)
-            messagebox.showerror(
-                "Image add failure", "File not found: %s" % filename)
-
-        self._covers_optionmenu.config(state=NORMAL)
-
-        if name is not None:
-            self.choose_cover_image(name)
-
-    def _create_track_navigator(self, master, total_tracks):
-        """Create the UI controls for navigating between tracks.
-
-        :param master: parent object of the navigation frame
-        :param int total_tracks: number of tracks on the album
-        :return: track navigation controls
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, total_tracks)
-
-        frame = Frame(master)
-
-        track_label = Label(frame, text="Track")
-        track_label.pack(side=LEFT)
-
-        self.track_spinner = Spinbox(
-            frame, from_=1, to=total_tracks, width=3, wrap=True,
-            command=self.refresh_track_editors)
-        self.track_spinner.pack(side=LEFT, padx=5)
-
-        of_label = Label(frame, text="of %d" % total_tracks)
-        of_label.pack(side=LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
-    def _create_track_include_editor(self, master):
-        """Create the UI controls for including/excluding a track.
-
-        :param master: parent object of the editor frame
-        :return: the track include editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master)
-
-        frame = Frame(master)
-
-        self.track_include_checkbox = _styled(
-            Checkbutton(
-                frame, text="Include this track",
-                variable=self._track_vars["include"][1],
-                onvalue=True, offvalue=False,
-                command=self.toggle_track_include_state),
-            foreground="Blue")
-        self.track_include_checkbox.pack(side=LEFT, padx=11)
-
-        self.toggle_all_tracks_include_button = Button(
-            frame, text="Include all tracks",
-            command=self.apply_include_to_tracks)
-        self.toggle_all_tracks_include_button.pack(side=LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
-    def apply_include_to_tracks(self):
-        """Set each track to be included/excluded based on the current
-        track's include/exclude state.
-
-        """
-        self.__log.call()
-
-        include_value = \
-            self._track_vars["include"][self._current_track_number].get()
-        for track_include_var in self._track_vars["include"][1:]:
-            track_include_var.set(include_value)
-
-    def toggle_track_include_state(self):
-        """Enable/disable editors for the current track based on whether
-        it is include or excluded, respectively.
-
-        """
-        self.__log.call()
-
-        if not self._track_vars["include"][self._current_track_number].get():
-            self.toggle_all_tracks_include_button.config(
-                text="Exclude all tracks")
-            _styled(self.track_include_checkbox, foreground="Red")
-        else:
-            self.toggle_all_tracks_include_button.config(
-                text="Include all tracks")
-            _styled(self.track_include_checkbox, foreground="Blue")
-
-    def _create_track_title_editor(self, master, choices):
-        """Create the UI editing controls for the track title.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the track title
-        :return: the track title editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = Frame(master)
-
-        (label, _, self.track_title_entry, self._track_title_optionmenu) = \
-            self._create_choices_editor(
-                frame, "Title", choices, var=self._track_vars["title"][1])
-
-        label.pack(side=LEFT)
-        self.track_title_entry.pack(side=LEFT, padx=5)
-
-        if len(choices) > 1:
-            self._track_title_optionmenu.pack(side=LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
-    def _create_track_artist_editor(self, master, choices):
-        """Create the UI editing controls for the track artist.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the track artist
-        :return: the track artist editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = Frame(master)
-
-        (label, _, self.track_artist_entry, self._track_artist_optionmenu) = \
-            self._create_choices_editor(
-                frame, "Artist", choices, var=self._track_vars["artist"][1])
-
-        label.pack(side=LEFT)
-        self.track_artist_entry.pack(side=LEFT, padx=5)
-
-        if len(choices) > 1:
-            self._track_artist_optionmenu.pack(side=LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
-    def _create_track_genre_editor(self, master, choices):
-        """Create the UI editing controls for the track genre.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the track genre
-        :return: the track genre editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = Frame(master)
-
-        genres = self._combine_genres(choices)
-        (label, _, self.track_genre_entry, self._track_genre_optionmenu) = \
-            self._create_choices_editor(
-                frame, "Genre", genres, width=29,
-                var=self._track_vars["genre"][1])
-
-        self._add_lame_genres_menu(
-            self._track_genre_optionmenu, self.track_genre_entry, genres)
-
-        label.pack(side=LEFT)
-        self.track_genre_entry.pack(side=LEFT, padx=5)
-        self._track_genre_optionmenu.pack(side=LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
-    def _create_track_year_editor(self, master, choices):
-        """Create the UI editing controls for the track year.
-
-        :param master: parent obejct of the editor frame
-        :param list choices: aggregated values for the track year
-        :return: the track year editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master, choices)
-
-        frame = Frame(master)
-
-        (label, _, self.track_year_entry, self._track_year_optionmenu) = \
-            self._create_choices_editor(
-                frame, "Year", choices, width=5,
-                var=self._track_vars["year"][1])
-
-        label.pack(side=LEFT)
-        self.track_year_entry.pack(side=LEFT, padx=5)
-
-        if len(choices) > 1:
-            self._track_year_optionmenu.pack(side=LEFT)
-
-        self.__log.return_(frame)
-        return frame
-
-    def _create_custom_metadata_editor(self, master):
-        """Create the UI editing controls for editing custom metadata
-        for a single track.
-
-        :param master: parent obejct of the editor frame
-        :return: the custom metadata editor
-        :rtype: :class:`tkinter.Frame`
-
-        """
-        self.__log.call(master)
-
-        frame = Frame(master)
-
-        self._edit_custom_metadata_button = Button(
-            frame, text="Edit custom Vorbis/ID3v2 tagging for this track",
-            command=
-                lambda self=self:
-                    EditCustomMetadataTaggingDialog(
-                        master,
-                        self._tracks_metadata[self._current_track_number],
-                        title="Track %d %s" % (
-                            self._current_track_number,
-                            self._track_vars["title"][
-                                self._current_track_number].get())))
-        self._edit_custom_metadata_button.pack()
-
-        self.__log.return_(frame)
-        return frame
-
-    def refresh_track_editors(self):
-        """Populate track editors with metadata for the current track.
-
-        This method is called when navigating to another track. If
-        navigation is at either end of the track list already (i.e.
-        navigating "down" from track 1 or "up" from the last track),
-        then this method is a no-op.
-
-        """
-        self.__log.call()
-
-        track_number = int(self.track_spinner.get())
-        if self._current_track_number == track_number:
-            self.__log.return_()
-            return
-
-        self._current_track_number = track_number
-        self.toggle_track_include_state()
-        track_metadata = self._tracks_metadata[track_number]
-
-        track_include_var = self._track_vars["include"][track_number]
-        track_title_var = self._track_vars["title"][track_number]
-        track_artist_var = self._track_vars["artist"][track_number]
-        track_genre_var = self._track_vars["genre"][track_number]
-        track_year_var = self._track_vars["year"][track_number]
-
-        self.track_include_checkbox.config(variable=track_include_var)
-
-        self._track_title_optionmenu = self._refresh_choices_editor(
-            track_title_var, self.track_title_entry,
-            self._track_title_optionmenu, track_metadata["title"])
-        if len(track_metadata["title"]) > 1:
-            self._track_title_optionmenu.pack(side=LEFT)
-
-        choices = self._combine_choices(
-            track_metadata["artist"], self._album_metadata["artist"])
-        self._track_artist_optionmenu = self._refresh_choices_editor(
-            track_artist_var, self.track_artist_entry,
-            self._track_artist_optionmenu, choices)
-        if len(choices) > 1:
-            self._track_artist_optionmenu.pack(side=LEFT)
-
-        choices = self._combine_choices(
-            track_metadata["genre"], self._album_metadata["genre"])
-        genres = self._combine_genres(choices)
-
-        self._track_genre_optionmenu = self._refresh_choices_editor(
-            track_genre_var, self.track_genre_entry,
-            self._track_genre_optionmenu, genres)
-        self._track_genre_optionmenu["menu"].add_separator()
-
-        menu = Menu(self._track_genre_optionmenu["menu"])
-        for genre in get_lame_genres():
-            if genre not in genres:
-                menu.add_command(
-                    label=genre,
-                    command=lambda v=track_genre_var, g=genre: v.set(g))
-        self._track_genre_optionmenu["menu"].add_cascade(
-            label="LAME", menu=menu)
-
-        if len(choices) > 1:
-            self._track_genre_optionmenu.pack(side=LEFT)
-
-        choices = self._combine_choices(
-            track_metadata["year"], self._album_metadata["year"])
-        self._track_year_optionmenu = self._refresh_choices_editor(
-            track_year_var, self.track_year_entry,
-            self._track_year_optionmenu, choices)
-        if len(choices) > 1:
-            self._track_year_optionmenu.pack(side=LEFT)
-
-    def _combine_choices(self, preferred, additional):
-        """Combine two lists of values.
-
-        :param list preferred: the preferred choices
-        :param list additional: additional choices
-        :return: the union of *preferred* and *additional*
-
-        A new list is always returned. All items from *preferred* are
-        added to the new list. Only items from *additional* that
-        are **not** already in *preferred* are added to the new list.
-        The order of preferred/additional choices is maintained.
-
-        """
-        self.__log.call(preferred, additional)
-
-        combined = list(preferred)
-        for choice in additional:
-            if choice not in combined:
-                combined.append(choice)
-
-        self.__log.return_(combined)
-        return combined
-
-    def _persist_metadata(self):
-        """Store the current metadata field/value pairs."""
-        self.__log.call()
-
-        number_of_tracks = len(self.toc.track_offsets)
-        album_metadata = {
-            "title": [self.album_title_var.get()]
-                if self.album_title_var.get() else [],
-            "artist": [self.album_artist_var.get()]
-                if self.album_artist_var.get() else [],
-            "record_label": [self.album_recordlabel_var.get()]
-                if self.album_recordlabel_var.get() else [],
-            "year": [self.album_year_var.get()]
-                if self.album_year_var.get() else [],
-            "genre": [self.album_genre_var.get()]
-                if self.album_genre_var.get() else [],
-            "cover": [self._album_covers.get(self.album_cover_var.get())]
-                if self.album_cover_var.get() != "--none--" else [],
-            "number_of_tracks": number_of_tracks,
-            "is_compilation": self.album_compilation_var.get(),
-            "disc_number": int(self.album_disc_number_var.get())
-                if self.album_disc_number_var.get() else 1,
-            "disc_total": int(self.album_disc_total_var.get())
-                if self.album_disc_total_var.get() else 1,
-        }
-        if self._album_metadata.get("__custom"):
-            album_metadata["__custom"] = self._album_metadata["__custom"]
-
-        # for persistence, replace temporary cover filenames with raw image
-        # data (byte strings)
-        for i in range(len(album_metadata["cover"])):
-            with open(album_metadata["cover"][i], "rb") as fp:
-                album_metadata["cover"][i] = fp.read()
-
-        track_vars = self._track_vars
-        tracks_metadata = [None] # 1-based indexing for tracks
-        for i in range(number_of_tracks):
-            track_number = i + 1
-            track_metadata = {
-                "include": track_vars["include"][track_number].get(),
-                "number": track_number,
-                "title": [track_vars["title"][track_number].get()]
-                    if track_vars["title"][track_number].get() else [],
-                "artist": [track_vars["artist"][track_number].get()]
-                    if track_vars["artist"][track_number].get() else [],
-                "year": [track_vars["year"][track_number].get()]
-                    if track_vars["year"][track_number].get() else [],
-                "genre": [track_vars["genre"][track_number].get()]
-                    if track_vars["genre"][track_number].get() else [],
-            }
-            if self._tracks_metadata[track_number].get("__custom"):
-                track_metadata["__custom"] = \
-                    self._tracks_metadata[track_number]["__custom"]
-            tracks_metadata.append(track_metadata)
-
-        self._persistence.store({
-            "album": album_metadata,
-            "tracks": tracks_metadata,
-        })
-
-    def _prepare_tagging_metadata(self):
-        """Build the track-centric data structure that contains the
-        final metadata values to be used for tagging.
-
-        :return:
-           the :obj:`list` of metadata :obj:`dict` objects for all
-           included tracks
-
-        .. note::
-           Any tracks that are "excluded" are not processed, and
-           ``None`` is added to the returned list instead of a dict.
-
-        """
-        self.__log.call()
-
-        # not set from metadata collectors, so set it now
-        self._album_metadata["is_compilation"] = \
-            self.album_compilation_var.get()
-
-        # metadata per track will be initialized with a copy of this
-        # mapping
-        album_metadata = dict(
-            album_title=self.album_title_var.get(),
-            album_artist=self.album_artist_var.get(),
-            album_recordlabel=self.album_recordlabel_var.get(),
-            album_genre=
-                re.split(r"\s*,\s*", self.album_genre_var.get()),
-            album_year=self.album_year_var.get(),
-            disc_number=int(self.album_disc_number_var.get()),
-            disc_total=int(self.album_disc_total_var.get()),
-            album_cover=self._album_covers.get(self.album_cover_var.get()),
-            is_compilation=self.album_compilation_var.get(),
-            track_total=len(self.toc.track_offsets)
-        )
-
-        track_vars = self._track_vars
-        tagging_metadata = []
-        for i in range(album_metadata["track_total"]):
-            track_number = i + 1
-            if track_vars["include"][track_number].get():
-                track_metadata = dict(album_metadata)
-                track_metadata.update(dict(
-                    track_number=track_number,
-                    track_title=track_vars["title"][track_number].get(),
-                    track_artist=track_vars["artist"][track_number].get(),
-                    track_genre=
-                        re.split(
-                            r"\s*,\s*",
-                            track_vars["genre"][track_number].get()),
-                    track_year=track_vars["year"][track_number].get()
-                ))
-                if self._tracks_metadata[track_number].get("__custom"):
-                    track_metadata["__custom"] = \
-                        self._tracks_metadata[track_number]["__custom"]
-                tagging_metadata.append(track_metadata)
-            else:
-                self.__log.info("track %d is excluded", track_number)
-                tagging_metadata.append(None)
-
-        self.__log.return_(tagging_metadata)
-        return tagging_metadata
+    '''
 
     def _create_encoder_status(self, master, max_visible_tracks=29):
         """Create UI widgets that communicate encoding status to the
         user.
 
-        :param master:
+        :arg master:
            parent object of the encoding status widgets frame
-        :keyword int max_visible_tracks:
+        :key int max_visible_tracks:
            the number of tracks displayed before scrolling
         :return: the encoding status widgets
         :rtype: :class:`tkinter.Frame`
@@ -1972,7 +941,7 @@ class FLACManager(Tk):
     def _initialize_track_encoding_statuses(self, track_include_flags):
         """Create the state machines for each track's encoding status.
 
-        :param list track_include_flags:
+        :arg list track_include_flags:
            ``True`` or ``False`` values for each track indicating
            whether or not it is included for the encoding process
 
@@ -1994,7 +963,8 @@ class FLACManager(Tk):
 
         self._disc_frame.ripping_and_tagging()
 
-        self._persist_metadata() # issues/1
+        # issues/1
+        self._persistence.store(self._editor_frame.metadata_snapshot)
 
         try:
             encoder = self._prepare_encoder()
@@ -2053,12 +1023,11 @@ class FLACManager(Tk):
             fill=BOTH, padx=17, pady=17, expand=YES)
 
         encoder = FLACEncoder()
-        tracks_metadata = self._prepare_tagging_metadata()
-        for (index, metadata) in enumerate(tracks_metadata):
-            if metadata is None:
+        for (i, metadata) in enumerate(self._editor_frame.flattened_metadata):
+            if not metadata["track_include"]:
                 continue
-            cdda_filename = os.path.join(
-                self._mountpoint, disc_filenames[index])
+
+            cdda_filename = os.path.join(self._mountpoint, disc_filenames[i])
 
             flac_dirname = generate_flac_dirname(flac_library_root, metadata)
             flac_basename = generate_flac_basename(metadata)
@@ -2071,7 +1040,7 @@ class FLACManager(Tk):
             self.__log.info("%s -> %s", flac_filename, mp3_filename)
 
             encoder.add_instruction(
-                index, cdda_filename, flac_filename, mp3_filename, metadata)
+                i, cdda_filename, flac_filename, mp3_filename, metadata)
 
         self.__log.return_(encoder)
         return encoder
@@ -2156,8 +1125,8 @@ class FLACManager(Tk):
         """Extract the most recent FLAC encoding update from
         *stdout_fn*.
 
-        :param str cdda_basename: a grep pattern for *stdout_fn*
-        :param str stdout_fn:
+        :arg str cdda_basename: a grep pattern for *stdout_fn*
+        :arg str stdout_fn:
            filename to which stdout has been redirected
         :return: a line of update text from *stdout_fn*
         :rtype: :obj:`str`
@@ -2177,126 +1146,6 @@ class FLACManager(Tk):
                     #   ${prefix}${status1}(BS)+${status2}(BS)+..${statusN}
                     status_line = line.replace(prefix, "").split('\x08')[-1]
         return status_line
-
-    def _destroy_metadata_editor(self):
-        """Clean up UI resources created for the metadata editor."""
-        self.__log.call()
-
-        if self.metadata_editor is not None:
-            self.metadata_editor.destroy()
-        self.metadata_editor = None
-        self._persistence = None
-        self._album_metadata = None
-        self._tracks_metadata = None
-
-        self.album_title_var = None
-        self.album_artist_var = None
-        self.album_recordlabel_var = None
-        self.album_genre_var = None
-        self.album_year_var = None
-        self.album_disc_number_var = None
-        self.album_disc_total_var = None
-        self.album_cover_var = None
-        self._album_covers = None
-
-        self.track_title_entry = None
-        self._track_title_optionmenu = None
-        self.track_artist_entry = None
-        self._track_artist_optionmenu = None
-        self.track_genre_entry = None
-        self._track_genre_optionmenu = None
-        self.track_year_entry = None
-        self._track_year_optionmenu = None
-        self._track_vars = None
-
-    def check_for_disc(self):
-        """Spawn the :class:`DiscCheck` thread."""
-        self.__log.call()
-
-        self._disc_frame.reset()
-        DiscCheck().start()
-        self._update_disc_info()
-
-    def _update_disc_info(self):
-        """Update the UI if a CD-DA disc is present.
-
-        If a disc is **not** present, set a UI timer to check again.
-
-        """
-        # do not trace; called indefinitely until a disc is found
-        try:
-            disc_info = _DISC_QUEUE.get_nowait()
-        except queue.Empty:
-            self.after(QUEUE_GET_NOWAIT_AFTER, self._update_disc_info)
-        else:
-            _DISC_QUEUE.task_done()
-
-            if isinstance(disc_info, Exception):
-                self.__log.error("dequeued %r", disc_info)
-                show_exception_dialog(disc_info)
-                self._disc_frame.disc_check_failed()
-                return
-
-            self.__log.debug("dequeued %r", disc_info)
-            (self._disk, self._mountpoint) = disc_info
-            self._disc_frame.disc_mounted(self._mountpoint)
-
-            self.toc = read_disc_toc(self._mountpoint)
-
-            self.aggregate_metadata()
-
-    def aggregate_metadata(self):
-        """Spawn the :class:`MetadataAggregator` thread."""
-        self.__log.call()
-
-        self._status_frame.aggregating_metadata()
-        self._status_frame.pack(anchor=N, fill=X, padx=7, pady=7)
-
-        try:
-            MetadataAggregator(self.toc).start()
-        except Exception as e:
-            self.__log.exception("failed to start metadata aggregator")
-            show_exception_dialog(e)
-
-            self._status_frame.aggregation_failed()
-        else:
-            self._update_aggregated_metadata()
-
-    def _update_aggregated_metadata(self):
-        """Update the UI if aggregated metadata is ready.
-
-        If aggregated metadata is **not** ready, set a UI timer to check
-        again.
-
-        """
-        # don't log entry into this method - it calls itself recursively until
-        # the aggregated metadata is ready
-        try:
-            aggregator = _AGGREGATOR_QUEUE.get_nowait()
-        except queue.Empty:
-            self.after(
-                QUEUE_GET_NOWAIT_AFTER, self._update_aggregated_metadata)
-        else:
-            self.__log.debug("dequeued %r", aggregator)
-            _AGGREGATOR_QUEUE.task_done()
-
-            # set these whether an error occurred or not - they're needed by
-            # offline editing mode as well
-            self._persistence = aggregator.persistence
-            self._album_metadata = aggregator.album
-            self._tracks_metadata = aggregator.tracks
-
-            if aggregator.exception is None:
-                try:
-                    self._create_metadata_editor()
-                except Exception as e:
-                    self.__log.exception("failed to create metadata editor")
-                    show_exception_dialog(e)
-
-                    self._status_frame.editor_initialization_failed()
-            else:
-                show_exception_dialog(aggregator.exception)
-                self._status_frame.aggregation_failed()
 
     def eject_disc(self):
         """Eject the current CD-DA disc and update the UI."""
@@ -2418,8 +1267,8 @@ class _FMMenu(Menu):
 
     def __init__(self, *args, **options):
         """
-        :param tuple args: positional arguments to initialize the menu
-        :param dict options: ``config`` options to initialize the menu
+        :arg tuple args: positional arguments to initialize the menu
+        :arg dict options: ``config`` options to initialize the menu
 
         """
         self.__log.call(*args, **options)
@@ -2485,10 +1334,10 @@ class _FMDiscFrame(LabelFrame):
 
     def __init__(self, *args, **options):
         """
-        :param tuple args: positional arguments to initialize the frame
-        :param dict options: ``config`` options to initialize the frame
+        :arg tuple args: positional arguments to initialize the frame
+        :arg dict options: ``config`` options to initialize the frame
 
-        All widgets for this frame are initialized, but grid layout is
+        All widgets for this frame are initialized, but layout is
         deferred until methods are called to transition between states.
 
         """
@@ -2525,7 +1374,7 @@ class _FMDiscFrame(LabelFrame):
     def disc_mounted(self, mountpoint):
         """Show the disk mointpoint and a button to eject the disc.
 
-        :param str mountpoint: where the CD-DA disc is mounted
+        :arg str mountpoint: where the CD-DA disc is mounted
 
         """
         self.__log.call(mountpoint)
@@ -2617,10 +1466,10 @@ class _FMStatusFrame(Frame):
 
     def __init__(self, *args, **options):
         """
-        :param tuple args: positional arguments to initialize the frame
-        :param dict options: ``config`` options to initialize the frame
+        :arg tuple args: positional arguments to initialize the frame
+        :arg dict options: ``config`` options to initialize the frame
 
-        All widgets for this frame are initialized, but grid layout is
+        All widgets for this frame are initialized, but layout is
         deferred until methods are called to transition between states.
 
         """
@@ -2638,9 +1487,9 @@ class _FMStatusFrame(Frame):
             text="Retry metadata aggregation",
             command=fm.aggregate_metadata)
 
-        self._edit_offline_button = Button(
-            self, name="_edit_offline_button", text="Edit metadata offline",
-            command=fm._edit_offline)
+        self._edit_asis_button = Button(
+            self, name="_edit_asis_button", text="Edit metadata as-is",
+            command=fm._edit_metadata)
 
         self._open_req_config_editor_button = Button(
             self, name="_open_req_config_editor_button",
@@ -2667,7 +1516,7 @@ class _FMStatusFrame(Frame):
 
         self._retry_aggregation_button.grid(
             row=1, column=0, padx=5, pady=5, sticky=NE)
-        self._edit_offline_button.grid(
+        self._edit_asis_button.grid(
             row=1, column=1, padx=5, pady=5, sticky=NW)
 
     def _hide_metadata_status_buttons(self):
@@ -2678,7 +1527,7 @@ class _FMStatusFrame(Frame):
         self.__log.call()
 
         self._retry_aggregation_button.grid_remove()
-        self._edit_offline_button.grid_remove()
+        self._edit_asis_button.grid_remove()
 
     def required_configuration_missing(self):
         """Let the user know that required configuration settings are
@@ -2702,7 +1551,10 @@ class _FMStatusFrame(Frame):
 
         """
         self.__log.call()
-        self.reset()
+
+        self._remove()
+        self._set_status_message("Aggregating metadata\u2026", fg="Grey")
+        self._status_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
 
     def aggregation_failed(self):
         """Message the user that metadata aggregation has failed and
@@ -2711,18 +1563,9 @@ class _FMStatusFrame(Frame):
         """
         self.__log.call()
 
-        self._set_status_message("Metadata aggregation failed!", fg="Red")
-        self._show_metadata_status_buttons()
-
-    def editor_initialization_failed(self):
-        """Message the user that the metadata editors could not be
-        initialized, and provide options for a next action.
-
-        """
-        self.__log.call()
-
         self._set_status_message(
-            "Failed to initialize metadata editor!", fg="Red")
+            "Aggregation failed. Metadata may be missing or incomplete.",
+            fg="Red")
         self._show_metadata_status_buttons()
 
     def reset(self):
@@ -2734,7 +1577,7 @@ class _FMStatusFrame(Frame):
 
         self._remove()
 
-        self._set_status_message("Aggregating metadata\u2026", fg="Grey")
+        self._set_status_message("Please insert a disc.", fg="Grey")
         self._status_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
 
     def _remove(self):
@@ -2746,6 +1589,763 @@ class _FMStatusFrame(Frame):
         self._open_req_config_editor_button.grid_remove()
 
 
+@logged
+class _FMEditorFrame(Frame):
+    """The metadata editing frame for FLACManager."""
+
+    def __init__(self, *args, **options):
+        """
+        :arg tuple args: positional arguments to initialize the frame
+        :arg dict options: ``config`` options to initialize the frame
+
+        All widgets for this frame are initialized, but layout is
+        deferred until methods are called to transition between states.
+
+        """
+        self.__log.call(*args, **options)
+
+        super().__init__(*args, **options)
+
+        # all editor widgets and vars are referenced through this mapping;
+        # these are never destroyed, only updated
+        self.__metadata_editors = dict()
+
+        self.__init_album_editors()
+        self.__init_track_editors()
+
+    def __init_album_editors(self):
+        album_editor_frame = LabelFrame(
+            self, name="album_editor_frame", text="Album")
+
+        create_album_choices_editor = partial(
+            self._create_choices_editor, album_editor_frame, "album")
+
+        self.__row = 0  # relative to album_editor_frame
+
+        create_album_choices_editor("title")
+        self._create_album_disc_editor(album_editor_frame)
+        self._create_album_compilation_editor(album_editor_frame)
+        create_album_choices_editor("artist")
+        create_album_choices_editor("recordlabel", tracks_apply=False)
+        create_album_choices_editor("genre")
+        create_album_choices_editor("year")
+        self._create_album_cover_editor(album_editor_frame)
+        self._create_album_custom_metadata_editor(album_editor_frame)
+
+        for r in range(self.__row):
+            album_editor_frame.grid_rowconfigure(r, weight=1)
+        for c in range(3):
+            album_editor_frame.grid_columnconfigure(c, weight=1)
+
+        album_editor_frame.pack(anchor=N, fill=X)
+
+    def __init_track_editors(self):
+        track_editor_frame = LabelFrame(
+            self, name="track_editor_frame", text="Tracks")
+
+        create_track_choices_editor = partial(
+            self._create_choices_editor, track_editor_frame, "track",
+            tracks_apply=False)
+
+        self.__row = 0  # relative to track_editor_frame
+
+        self._create_track_control_editors(track_editor_frame)
+        create_track_choices_editor("title")
+        create_track_choices_editor("artist")
+        create_track_choices_editor("genre")
+        create_track_choices_editor("year")
+        self._create_track_custom_metadata_editor(track_editor_frame)
+
+        for r in range(self.__row):
+            track_editor_frame.grid_rowconfigure(r, weight=1)
+        for c in range(2):
+            track_editor_frame.grid_columnconfigure(c, weight=1)
+
+        track_editor_frame.pack(anchor=N, fill=X)
+
+    def _create_choices_editor(
+            self, parent, editor_name, field_name,
+            tracks_apply=True, VarType=StringVar):
+        self.__log.call(
+            parent, editor_name, field_name,
+            tracks_apply=tracks_apply, VarType=VarType)
+
+        Label(parent, text=field_name.capitalize()).grid(
+            row=self.__row, column=0, padx=5, pady=5, sticky=E)
+
+        name = "%s_%s" % (editor_name, field_name)
+
+        var = VarType(name="%s_var" % name)
+        combobox = Combobox(
+            parent, name="%s_combobox" % name, textvariable=var
+        )
+        # attach the variable to the Combobox for easy access
+        combobox.var = var
+        combobox.grid(row=self.__row, column=1, padx=5, pady=5, sticky=W)
+
+        self.__metadata_editors[name] = combobox
+
+        if tracks_apply:
+            Button(
+                parent, name="%s_apply_button" % name,
+                text="Apply to all tracks",
+                command=
+                    lambda self=self, field_name=field_name, var=var:
+                        self.__apply_to_all_tracks(field_name, var.get())
+            ).grid(row=self.__row, column=2, padx=5, pady=5, sticky=W)
+
+        self.__row += 1
+
+        return combobox
+
+    def __apply_to_all_tracks(field_name, value):
+        self.__log.call(field_name, value)
+
+        for track_vars in self.__track_vars[1:]:
+            track_vars[field_name].set(value)
+
+    def _create_album_disc_editor(self, parent):
+        self.__log.call(parent)
+
+        Label(parent, text="Disc").grid(
+            row=self.__row, column=0, padx=5, pady=5, sticky=E)
+
+        frame = Frame(parent)
+
+        number_var = IntVar(name="album_discnumber_var")
+        album_discnumber = Entry(
+            frame, name="album_discnumber_entry", exportselection=NO, width=3,
+            textvariable=number_var)
+        album_discnumber.var = number_var
+        album_discnumber.pack(side=LEFT)
+
+        self.__metadata_editors["album_discnumber"] = album_discnumber
+
+        Label(frame, text="of").pack(side=LEFT, padx=5)
+
+        total_var = IntVar(name="album_disctotal_var")
+        album_disctotal = Entry(
+            frame, name="album_disctotal_entry", exportselection=NO, width=3,
+            textvariable=total_var)
+        album_disctotal.var = total_var
+        album_disctotal.pack(side=LEFT)
+
+        self.__metadata_editors["album_disctotal"] = album_disctotal
+
+        frame.grid(
+            row=self.__row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+
+        self.__row += 1
+
+    def _create_album_compilation_editor(self, parent):
+        self.__log.call(parent)
+
+        Label(parent, text="Compilation").grid(
+            row=self.__row, column=0, padx=5, pady=5, sticky=E)
+
+        var = BooleanVar()
+        album_compilation = Checkbutton(
+            parent, name="album_compilation_checkbutton", variable=var,
+            onvalue=True, offvalue=False)
+        album_compilation.var = var
+        album_compilation.grid(
+            row=self.__row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+
+        self.__metadata_editors["album_compilation"] = album_compilation
+
+        self.__row += 1
+
+    def _create_album_cover_editor(self, parent):
+        self.__log.call(parent)
+
+        Label(parent, text="Cover").grid(
+            row=self.__row, column=0, padx=5, pady=5, sticky=E)
+
+        frame = Frame(parent)
+
+        var = StringVar(name="album_cover_var", value="--none--")
+        album_cover = OptionMenu(frame, var, command=self.choose_album_cover)
+        album_cover.var = var
+        album_cover.config(state=DISABLED)
+        album_cover.pack(side=LEFT)
+
+        self.__metadata_editors["album_cover"] = album_cover
+
+        Button(
+            frame, name="album_cover_add_url_button", text="Add URL",
+            command=self._add_album_cover_from_url
+        ).pack(side=LEFT, padx=5)
+
+        Button(
+            frame, name="album_cover_add_file_button", text="Add file",
+            command=self._add_album_cover_from_file
+        ).pack(side=LEFT, padx=5)
+
+        frame.grid(
+            row=self.__row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+
+        self.__row += 1
+
+    def choose_album_cover(self, filename):
+        """Select and preview a cover image.
+
+        :arg str filename: the cover image file name
+
+        """
+        self.__log.call(filename)
+
+        status = subprocess.call(["open", "-a", "Preview", filename])
+        if status == 0:
+            self.__metadata_editors["album_cover"].set(filename)
+        else:
+            self.__log.warning(
+                "exit status %d attempting to preview %s", status, filename)
+
+    def _add_album_cover_from_url(self):
+        """Download a cover image from a user-provided URL and open in
+        Mac OS X Preview.
+
+        The downloaded cover image is made available in the cover image
+        dropdown.
+
+        """
+        self.__log.call()
+
+        album_cover = self.__metadata_editors["album_cover"]
+
+        album_cover.config(state=DISABLED)
+
+        # leave initialvalue empty (paste-over doesn't work in XQuartz)
+        url = simpledialog.askstring(
+            "Add a cover image from a URL", "Enter the image URL:",
+            initialvalue="")
+        if not url:
+            album_cover.config(state=NORMAL)
+            self.__log.return_()
+            return
+
+        self.__log.debug("url = %r", url)
+        filename = None
+        try:
+            response = urlopen(
+                url, timeout=get_config().getfloat("HTTP", "timeout"))
+            image_data = response.read()
+            response.close()
+
+            if response.status != 200:
+                raise RuntimeError(
+                    "HTTP %d %s" % (response.status, response.reason))
+
+            image_type = imghdr.what("_ignored_", h=image_data)
+            if image_type is None:
+                raise MetadataError(
+                    "Unrecognized image type.",
+                    context_hint="Add cover image from URL")
+
+            filename = make_tempfile(suffix='.' + image_type)
+            with open(filename, "wb") as f:
+                f.write(image_data)
+            self.__log.debug("wrote %s", filename)
+        except Exception as e:
+            self.__log.exception("failed to obtain image from %r", url)
+            messagebox.showerror(
+                "Image download failure",
+                "An unexpected error occurred while "
+                    "downloading the image from %s." % url)
+        else:
+            self.__add_album_cover_option(filename)
+        finally:
+            album_cover.config(state=NORMAL)
+
+        if filename is not None:
+            self.choose_album_cover(filename)
+
+    def _add_album_cover_from_file(self):
+        """Open a user-defined cover image in Mac OS X Preview.
+
+        The cover image is made available in the cover image dropdown.
+
+        """
+        self.__log.call()
+
+        album_cover = self.__metadata_editors["album_cover"]
+
+        album_cover.config(state=DISABLED)
+
+        filename = filedialog.askopenfilename(
+            defaultextension=".jpg",
+            filetypes=[
+                ("JPEG", "*.jpg"),
+                ("JPEG", "*.jpeg"),
+                ("PNG", "*.png"),
+            ],
+            initialdir=os.path.expanduser("~/Pictures"),
+            title="Choose a JPEG or PNG file")
+
+        if not filename:
+            album_cover.config(state=NORMAL)
+            self.__log.return_()
+            return
+        elif not os.path.isfile(filename):
+            self.__log.error("file not found: %s", filename)
+            messagebox.showerror(
+                "File not found", "File not found: %s" % filename)
+            self.__log.return_()
+            return
+
+        self.__log.debug("filename = %r", filename)
+        try:
+            with open(filename, "rb") as f:
+                image_data = f.read()
+
+            image_type = imghdr.what("_ignored_", h=image_data)
+            if image_type is None:
+                raise MetadataError(
+                    "Unrecognized image type.",
+                    context_hint="Add cover image from file")
+        except Exception as e:
+            self.__log.exception("failed to identify image from %r", filename)
+            messagebox.showerror(
+                "Image add failure",
+                "An unexpected error occurred while "
+                    "processing the image from %s." % filename)
+        else:
+            self.__add_album_cover_option(filename)
+        finally:
+            album_cover.config(state=NORMAL)
+
+        if filename is not None:
+            self.choose_album_cover(filename)
+
+    def __add_album_cover_option(self, filename, showinfo=True):
+        self.__metadata_editors["album_cover"]["menu"].add_command(
+            label=filename,
+            command=
+                lambda self=self, filename=filename:
+                    self.choose_album_cover(filename))
+
+        if showinfo:
+            messagebox.showinfo(
+                "Cover image added",
+                "%s\nhas been added to the list of available covers." %
+                    filename)
+
+    def _create_album_custom_metadata_editor(self, parent):
+        """Create the UI editing controls for editing custom metadata
+        for *all* tracks.
+
+        :arg parent: parent object of the editor
+
+        """
+        self.__log.call(parent)
+
+        album_custom_tagging_button = Button(
+            parent, name="album_custom_tagging_button",
+            text="Edit custom Vorbis/ID3v2 tagging for ALL tracks",
+            command=
+                lambda self=self:
+                    EditAlbumCustomMetadataTaggingDialog(
+                        parent, self.__aggregated_metadata,
+                        self.__aggregated_metadata["__tracks"],
+                        title=self.__metadata_editors["album_title"].var.get())
+        )
+        album_custom_tagging_button.grid(
+            row=self.__row, column=0, columnspan=3, padx=5, pady=5, sticky=W+E)
+
+        self.__metadata_editors["album_custom"] = album_custom_tagging_button
+
+        self.__row += 1
+
+    def _create_track_control_editors(self, parent):
+        self.__log.call(parent)
+
+        nav_frame = Frame(parent, name="track_nav_frame")
+
+        Label(nav_frame, text="Track").pack(side=LEFT)
+
+        number_var = IntVar(name="track_number_var")
+        track_number = Spinbox(
+            nav_frame, name="track_number_spinbox",
+            from_=0, to=0, textvariable=number_var, width=3, wrap=True,
+            command=self._refresh_track_editors
+        )
+        track_number.var = number_var
+        track_number.pack(side=LEFT, padx=5)
+
+        self.__metadata_editors["track_number"] = track_number
+
+        of_label = Label(nav_frame, name="album_tracktotal_label", text="of")
+        of_label.pack(side=LEFT)
+
+        nav_frame.grid(row=self.__row, column=0, sticky=E)
+
+        include_frame = Frame(parent, name="track_include_frame")
+
+        include_var = BooleanVar(name="track_include_var", value=True)
+        track_include = Checkbutton(
+            include_frame, name="track_include_checkbutton",
+            text="Include this track", variable=include_var,
+            onvalue=True, offvalue=False,
+            command=self._toggle_track_inclusion_state)
+        track_include.var = include_var
+        track_include.pack(side=LEFT)
+
+        apply_include_button = _styled(
+            Button(
+                include_frame, name="track_include_apply_button",
+                text="Include all tracks",
+                command=lambda self=self:
+                    self.__apply_to_all_tracks(
+                        "track_include",
+                        self.__metadata_editors["track_include"].var.get())),
+            foreground="Blue")
+        apply_include_button.pack(side=LEFT, padx=5)
+        track_include.apply_button = apply_include_button
+
+        self.__metadata_editors["track_include"] = track_include
+
+        include_frame.grid(row=self.__row, column=1, sticky=W)
+
+    def _create_track_custom_metadata_editor(self, parent):
+        """Create the UI editing controls for editing custom metadata
+        for a single track.
+
+        :arg parent: parent object of the editor
+
+        """
+        self.__log.call(parent)
+
+        track_custom_tagging_button = Button(
+            parent, name="track_custom_tagging_button",
+            text="Edit custom Vorbis/ID3v2 tagging for this track",
+            command=
+                lambda self=self:
+                    EditCustomMetadataTaggingDialog(
+                        parent,
+                        self.__aggregated_metadata["__tracks"][
+                            self.current_track_number],
+                        title="%d. %s" % (
+                            self.current_track_number,
+                            self.__track_vars[self.current_track_number][
+                                "track_title"].var.get()))
+        )
+        track_custom_tagging_button.grid(
+            row=self.__row, column=0, columnspan=2, padx=5, pady=5, sticky=W+E)
+
+        self.__metadata_editors["track_custom"] = track_custom_tagging_button
+
+        self.__row += 1
+
+    @property
+    def current_track_number(self):
+        return self.__metadata_editors["track_number"].var.get()
+
+    def metadata_ready_for_editing(self, aggregated_metadata):
+        self.__log.call(aggregated_metadata)
+
+        self.reset()
+
+        for album_field_name in [
+                "album_title",
+                "album_artist",
+                "album_recordlabel",
+                "album_genre",
+                "album_year",
+                ]:
+            widget = self.__metadata_editors[album_field_name]
+            widget.configure(values=aggregated_metadata[album_field_name])
+            if aggregated_metadata[album_field_name]:
+                widget.current(0)
+
+        self.__metadata_editors["album_discnumber"].var.set(
+            aggregated_metadata["album_discnumber"])
+        self.__metadata_editors["album_disctotal"].var.set(
+            aggregated_metadata["album_disctotal"])
+
+        self.__metadata_editors["album_compilation"].var.set(
+            aggregated_metadata["album_compilation"])
+
+        album_cover_editor = self.__metadata_editors["album_cover"]
+        album_cover_editor.config(state=DISABLED)
+        self.__album_covers = aggregated_metadata["album_cover"].copy()
+        if self.__album_covers:
+            for cover_filename in self.__album_covers:
+                self.__add_album_cover_option(cover_filename, showinfo=False)
+            album_cover_editor.config(state=NORMAL)
+
+        self.__aggregated_metadata = deepcopy(aggregated_metadata)
+
+        self._initialize_track_vars()
+
+        '''
+        self._status_frame.pack_forget()
+        metadata_editor.pack(expand=YES, fill=BOTH)
+
+        self._disc_frame.rip_and_tag_ready()
+
+        # if persisted data was restored, manually select the cover image so
+        # that it opens in Preview automatically
+        if self._persistence.restored and len(self._album_covers) > 1:
+            # first cover is always "--none--"
+            preferred_album_cover = list(self._album_covers.keys())[1]
+            self.choose_cover_image(preferred_album_cover)
+
+        for r in range(7):
+            album_editor.grid_rowconfigure(r, weight=1)
+        for c in range(2):
+            album_editor.grid_columnconfigure(c, weight=1)
+
+        return combobox
+        '''
+
+    @property
+    def metadata_snapshot(self):
+        self.__log.call()
+
+        metadata_editors = self.__metadata_editors
+
+        snapshot = OrderedDict()
+        for album_field_name in [
+                "album_title",
+                "album_discnumber",
+                "album_disctotal",
+                "album_compilation",
+                "album_artist",
+                "album_recordlabel",
+                "album_genre",
+                "album_year",
+                "album_cover",
+                ]:
+            snapshot[album_field_name] = \
+                metadata_editors[album_field_name].var.get()
+
+        track_vars = self.__track_vars
+        snapshot["album_tracktotal"] = len(track_vars) - 1
+
+        # for the metadata snapshot, the custom fields must be preserved at
+        # both the album and track level so that a disc whose persisted
+        # metadata is re-read will still have its custom metadata editable as
+        # expected
+        aggregated_metadata = self.__aggregated_metadata
+        snapshot["__custom"] = aggregated_metadata["__custom"].copy()
+
+        snapshot["__tracks"] = [None]
+        for t in range(1, len(track_vars)):
+            track_metadata = OrderedDict()
+
+            track_metadata["track_number"] = t
+            for track_field_name in [
+                    "track_include",
+                    "track_title",
+                    "track_artist",
+                    "track_genre",
+                    "track_year",
+                    ]:
+                track_metadata[track_field_name] = \
+                    track_vars[t][track_field_name].var.get()
+
+            track_metadata["__custom"] = \
+                aggregated_metadata["__tracks"][t]["__custom"].copy()
+
+            snapshot["__tracks"].append(track_metadata)
+
+        self.__log.return_(snapshot)
+        return snapshot
+
+    @property
+    def flattened_metadata(self):
+        self.__log.call()
+
+        snapshot = self.metadata_snapshot
+        snapshot.pop("__custom") # already incorporated into each track
+
+        # to "flatten" the metadata, just add the album metadata to each track
+        flattened = snapshot.pop("__tracks")[1:]    # zero-based indexing here
+        for i in range(len(flattened)):
+            flattened[i].update(snapshot)
+
+        self.__log.return_(flattened)
+        return flattened
+
+    def _initialize_track_vars(self):
+        self.__log.call()
+
+        track_vars = self.__track_vars = [
+            None,   # track vars use 1-based indexing
+        ]
+
+        last_track = len(self.__aggregated_metadata["__tracks"]) - 1
+        # from_ will still be 0 here, and that's intended - it means that when
+        # we invoke "buttonup" for the first time, it will increment the track
+        # spinbox to 1, triggering a refresh of track 1's metadata
+        track_number_editor = self.__metadata_editors["track_number"]
+        track_number_editor.config(to=last_track)
+
+        # tracks metadata also uses 1-based indexing
+        aggregated_tracks_metadata = self.__aggregated_metadata["__tracks"]
+        for t in range(1, len(aggregated_tracks_metadata)):
+            aggregated_track_metadata = aggregated_tracks_metadata[t]
+
+            # first create the vars for this track...
+            varmap = {
+                "track_include":
+                    # tracks are always included by default
+                    BooleanVar(name="track_%d_include" % t, value=True),
+                "track_title": StringVar(name="track_%d_title" % t),
+                "track_artist": StringVar(name="track_%d_artist" % t),
+                "track_genre": StringVar(name="track_%d_genre" % t),
+                "track_year": IntVar(name="track_%d_year" % t),
+            }
+
+            # ...then initialize them with non-default values...
+            varmap["track_include"].set(
+                aggregated_track_metadata["track_include"])
+            for track_field_name in [
+                    "track_title",
+                    "track_artist",
+                    "track_genre",
+                    "track_year",
+                    ]:
+                if aggregated_track_metadata[track_field_name]:
+                    # first aggregated value is given preference
+                    varmap[track_field_name].set(
+                        aggregated_track_metadata[track_field_name][0])
+
+            track_vars.append(varmap)
+
+            # ...then finally initialize the editors and editor vars by using
+            # the track spinbox to trigger refreshes (but make sure this method
+            # is called BEFORE the metadata editor is packed, otherwise the
+            # user will be very disoriented and confused)
+            track_number_editor.invoke("buttonup")
+
+        # now update the from_ to 1 and initialize the spinner to track #1 by
+        # "wrapping around"
+        track_number_editor.config(from_=1)
+        track_number_editor.invoke("buttonup")
+
+    def _refresh_track_editors(self):
+        """Populate track editors with metadata for the current track.
+
+        This method is called when navigating to another track. If
+        navigation is at either end of the track list already (i.e.
+        navigating down from track 1 or up from the last track), then
+        the spinner "wraps around."
+
+        """
+        self.__log.call()
+
+        # First make sure the editors are enabled/disabled based on whether or
+        # not the track is included
+        self._toggle_track_inclusion_state()
+
+        track_number = self.current_track_number
+        current_track_vars = self.__track_vars[track_number]
+        aggregated_track_metadata = \
+            self.__aggregated_metadata["__tracks"][track_number]
+
+        for track_field_name in [
+                "track_title",
+                "track_artist",
+                "track_genre",
+                "track_year",
+                ]:
+            widget = self.__metadata_editors[track_field_name]
+            widget.config(values=aggregated_track_metadata[track_field_name])
+            widget.var.set(current_track_vars[track_field_name].get())
+
+    def _toggle_track_inclusion_state(self):
+        self.__log.call()
+
+        track_number = self.current_track_number
+        track_included = self.__track_vars[track_number]["track_include"].get()
+
+        self.__update_track_inclusion_state(track_number, track_included)
+
+    def __update_track_inclusion_state(self, track_number, track_included):
+        self.__log.call(track_number, track_included)
+
+        self.__track_vars[track_number]["track_include"].set(track_included)
+
+        metadata_editors = self.__metadata_editors
+
+        track_include_editor = metadata_editors["track_include"]
+        track_include_editor.var.set(track_included)
+        if track_included:
+            track_include_editor.apply_button.config(text="Include all tracks")
+            _styled(track_include_editor.apply_button, foreground="Blue")
+        else:
+            track_include_editor.apply_button.config(text="Exclude all tracks")
+            _styled(track_include_editor.apply_button, foreground="Red")
+
+        # allow editing even when track is disabled
+        '''
+        for track_field_name in [
+                "track_title",
+                "track_artist",
+                "track_genre",
+                "track_year",
+                "track_custom",
+                ]:
+            metadata_editors[track_field_name].config(
+                state=NORMAL if track_included else DISABLED)
+        '''
+
+    def reset(self):
+        """Populate widgets in their default/initial states."""
+        self.__log.call()
+
+        self._remove()
+
+        metadata_editors = self.__metadata_editors
+
+        metadata_editors["album_discnumber"].var.set(0)
+        metadata_editors["album_disctotal"].var.set(0)
+
+        metadata_editors["album_compilation"].var.set(False)
+
+        for field_name in [
+                "album_title",
+                "album_artist",
+                "album_recordlabel",
+                "album_genre",
+                "album_year",
+                "track_title",
+                "track_artist",
+                "track_genre",
+                "track_year",
+                ]:
+            widget = metadata_editors[field_name]
+            widget.configure(values=[])
+            widget.var.set("")
+
+        album_cover_editor = metadata_editors["album_cover"]
+        album_cover_editor.var.set("--none--")
+        album_cover_editor["menu"].delete(1, END)
+        album_cover_editor.config(state=DISABLED)
+
+        track_number_editor = metadata_editors["track_number"]
+        track_number_editor.config(from_=0, to=0)
+        track_number_editor.var.set(0)
+
+        track_include_editor = metadata_editors["track_include"]
+        # tracks are always included by default
+        track_include_editor.var.set(True)
+        track_include_editor.apply_button.config(text="Include all tracks")
+        _styled(track_include_editor.apply_button, foreground="Blue")
+
+        # finally clear all cached data
+        self.__aggregated_metadata = None
+        self.__track_vars = None
+
+    def _remove(self):
+        """Remove widgets from the current layout."""
+        self.__log.call()
+
+        # entry widgets are NOT removed - just the editor frame itself
+        self.pack_forget()
+
+
 @total_ordering
 class TrackState:
     """Represents the state of a single track at any given time during
@@ -2755,9 +2355,9 @@ class TrackState:
 
     def __init__(self, ordinal, key, text):
         """
-        :param int ordinal: this state's relative value
-        :param str key: uniquely identifies this state
-        :param str text: a short description of this state
+        :arg int ordinal: this state's relative value
+        :arg str key: uniquely identifies this state
+        :arg str text: a short description of this state
 
         """
         self._ordinal = ordinal
@@ -2791,7 +2391,7 @@ class TrackState:
         """Return ``True`` if this state's ordinal value is less than
         *other* state's ordinal value, otherwise ``False``.
 
-        :param flacmanager.TrackState other: the state being compared
+        :arg flacmanager.TrackState other: the state being compared
 
         """
         return int(self) < int(other)
@@ -2801,7 +2401,7 @@ class TrackState:
         equal to *other* state's ordinal value and key, otherwise
         ``False``.
 
-        :param flacmanager.TrackState other: the state being compared
+        :arg flacmanager.TrackState other: the state being compared
 
         """
         return (
@@ -2851,8 +2451,8 @@ class TrackEncodingStatus:
 
     def __init__(self, track_label, pending=True):
         """
-        :param str track_label: the track's display label
-        :keyword bool pending:
+        :arg str track_label: the track's display label
+        :key bool pending:
            the default ``True`` initializes status as
            :data:`TRACK_PENDING`; set to ``False`` to initialize status
            as :data:`TRACK_EXCLUDED`
@@ -2872,7 +2472,7 @@ class TrackEncodingStatus:
         """Advance this track's encoding state from its current state to
         *to_state*, if permitted.
 
-        :param to_state:
+        :arg to_state:
            the target encoding state, or any :class:`Exception` to
            transition to :data:`TRACK_FAILED`
         :return:
@@ -2901,7 +2501,7 @@ class TrackEncodingStatus:
         """Return a short display string for this track and its current
         status.
 
-        :param str message:
+        :arg str message:
            short piece of text to use with the track label (instead of
            the default message for the current state)
 
@@ -2914,8 +2514,8 @@ class TrackEncodingStatus:
 def generate_flac_dirname(library_root, metadata):
     """Build the directory for a track's FLAC file.
 
-    :param str library_root: the FLAC library directory
-    :param dict metadata: the finalized metadata for a single track
+    :arg str library_root: the FLAC library directory
+    :arg dict metadata: the finalized metadata for a single track
     :return: an absolute directory path
     :rtype: :obj:`str`
 
@@ -2927,7 +2527,7 @@ def generate_flac_dirname(library_root, metadata):
 def generate_flac_basename(metadata):
     """Build the filename for a track's FLAC file.
 
-    :param dict metadata: the finalized metadata for a single track
+    :arg dict metadata: the finalized metadata for a single track
     :return: a relative file name
     :rtype: :obj:`str`
 
@@ -2939,8 +2539,8 @@ def generate_flac_basename(metadata):
 def generate_mp3_dirname(library_root, metadata):
     """Build the directory for a track's MP3 file.
 
-    :param str library_root: the MP3 library directory
-    :param dict metadata: the finalized metadata for a single track
+    :arg str library_root: the MP3 library directory
+    :arg dict metadata: the finalized metadata for a single track
     :return: an absolute directory path
     :rtype: :obj:`str`
 
@@ -2952,7 +2552,7 @@ def generate_mp3_dirname(library_root, metadata):
 def generate_mp3_basename(metadata):
     """Build the filename for a track's MP3 file.
 
-    :param dict metadata: the finalized metadata for a single track
+    :arg dict metadata: the finalized metadata for a single track
     :return: a relative file name
     :rtype: :obj:`str`
 
@@ -2964,9 +2564,9 @@ def generate_mp3_basename(metadata):
 def _generate_dirname(section, library_root, metadata):
     """Build the directory for a track's FLAC or MP3 file.
 
-    :param str section: "FLAC" or "MP3"
-    :param str library_root: the MP3 library directory
-    :param dict metadata: the finalized metadata for a single track
+    :arg str section: "FLAC" or "MP3"
+    :arg str library_root: the MP3 library directory
+    :arg dict metadata: the finalized metadata for a single track
     :return: an absolute directory path
     :rtype: :obj:`str`
 
@@ -2975,8 +2575,8 @@ def _generate_dirname(section, library_root, metadata):
 
     config = get_config()
 
-    ndisc = "ndisc_" if metadata["disc_total"] > 1 else ""
-    is_compilation = metadata["is_compilation"]
+    ndisc = "ndisc_" if metadata["album_disctotal"] > 1 else ""
+    is_compilation = metadata["album_compilation"]
     folder_format_spec = (
         config[section][ndisc + "album_folder"] if not is_compilation
         else config[section][ndisc + "compilation_album_folder"])
@@ -3010,8 +2610,8 @@ def _generate_dirname(section, library_root, metadata):
 def _generate_basename(section, metadata):
     """Build the filename for a track's FLAC or MP3 file.
 
-    :param str section: "FLAC" or "MP3"
-    :param dict metadata: the finalized metadata for a single track
+    :arg str section: "FLAC" or "MP3"
+    :arg dict metadata: the finalized metadata for a single track
     :return: a relative file name
     :rtype: :obj:`str`
 
@@ -3020,8 +2620,8 @@ def _generate_basename(section, metadata):
 
     config = get_config()
 
-    ndisc = "ndisc_" if metadata["disc_total"] > 1 else ""
-    is_compilation = metadata["is_compilation"]
+    ndisc = "ndisc_" if metadata["album_disctotal"] > 1 else ""
+    is_compilation = metadata["album_compilation"]
     track_format_spec = (
         config[section][ndisc + "track_filename"] if not is_compilation
         else config[section][ndisc + "compilation_track_filename"])
@@ -3048,9 +2648,9 @@ def _generate_basename(section, metadata):
 def _xplatform_safe(path, fileext=""):
     """Transform *path* so that it is safe to use across platforms.
 
-    :param path:
+    :arg path:
        a :obj:`list` of folder names, or a file basename
-    :keyword str fileext:
+    :key str fileext:
        if *path* is a file basename, this is the file extension that
        will be appended to form the complete file name
     :return: the transformed *path*
@@ -3085,8 +2685,8 @@ def _subroot_trie(section, metadata):
     """Build zero or more subdirectories below the library root to form
     an easily navigable "trie" structure for audio files.
 
-    :param str section: "FLAC" or "MP3"
-    :param dict metadata: the finalized metadata for a single track
+    :arg str section: "FLAC" or "MP3"
+    :arg dict metadata: the finalized metadata for a single track
     :return:
        a list (possibly empty) of directory names that form a trie
        structure for organizing audio files
@@ -3098,7 +2698,7 @@ def _subroot_trie(section, metadata):
 
     key = (
         config[section]["library_subroot_trie_key"]
-        if not metadata["is_compilation"] else
+        if not metadata["album_compilation"] else
         config[section]["library_subroot_compilation_trie_key"])
     level = config[section].getint("library_subroot_trie_level")
 
@@ -3124,8 +2724,8 @@ def _styled(widget, **options):
     <https://docs.python.org/3/library/tkinter.ttk.html#ttkstyling>`_ to
     *widget*.
 
-    :param widget: any Ttk widget
-    :param dict options: the styling options for *widget*
+    :arg widget: any Ttk widget
+    :arg dict options: the styling options for *widget*
     :return: *widget* with styling applied
 
     """
@@ -3204,7 +2804,7 @@ class _EditConfigurationDialog(simpledialog.Dialog):
     def body(self, frame):
         """Create the content of the dialog.
 
-        :param Frame frame: the frame that contains the body content
+        :arg Frame frame: the frame that contains the body content
 
         """
         self._row = 0
@@ -3215,8 +2815,8 @@ class _EditConfigurationDialog(simpledialog.Dialog):
     def section(self, parent, section_name):
         """Add a section header to the body of the dialog.
 
-        :param parent: the parent object of the section header
-        :param str section_name: the name of the configuration section
+        :arg parent: the parent object of the section header
+        :arg str section_name: the name of the configuration section
 
         """
         section_label = _styled(
@@ -3229,11 +2829,11 @@ class _EditConfigurationDialog(simpledialog.Dialog):
             self, parent, section_name, option_name, value, width=67):
         """Add an editable option to the body of the dialog.
 
-        :param parent: the parent object of the section header
-        :param str section_name: the name of the configuration section
-        :param str option_name: the name of the configuration option
-        :param value: the default/initial value of the option
-        :keyword int width:
+        :arg parent: the parent object of the section header
+        :arg str section_name: the name of the configuration section
+        :arg str option_name: the name of the configuration option
+        :arg value: the default/initial value of the option
+        :key int width:
            the display width of the entry box for this option's value
 
         """
@@ -3804,9 +3404,9 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
     def __init__(self, master, metadata, **keywords):
         """Initialize the dialog.
 
-        :param master: the parent object of this dialog
-        :param metadata: the album or track metadata
-        :param dict keywords:
+        :arg master: the parent object of this dialog
+        :arg metadata: the album or track metadata
+        :arg dict keywords:
            *name=value* keywords used to configure this dialog
 
         """
@@ -3821,7 +3421,7 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
     def body(self, frame):
         """Create the content of the dialog.
 
-        :param Frame frame: the frame that contains the body content
+        :arg Frame frame: the frame that contains the body content
 
         """
         self.__log.call(frame)
@@ -3899,10 +3499,10 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
     def _add_field(self, parent, vorbis_comment="", id3v2_tag="", values=None):
         """Render a custom field in the dialog body.
 
-        :param parent: the object that contains the field controls
-        :keyword str vorbis_comment: the custom Vorbis comment
-        :keyword str id3v2_tag: the custom ID3v2 tag
-        :keyword list values: the value(s) for the custom comment/tag
+        :arg parent: the object that contains the field controls
+        :key str vorbis_comment: the custom Vorbis comment
+        :key str id3v2_tag: the custom ID3v2 tag
+        :key list values: the value(s) for the custom comment/tag
 
         """
         self.__log.call(
@@ -3945,7 +3545,7 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
     def _clear_field(self, index):
         """Clear (effectively removing) the *index* -th field.
 
-        :param int index: index into the *fields* list of variables
+        :arg int index: index into the *fields* list of variables
 
         """
         self.__log.call(index)
@@ -4007,10 +3607,10 @@ class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
     def __init__(self, master, album_metadata, tracks_metadata, **keywords):
         """Initialize the dialog.
 
-        :param master: the parent object of this dialog
-        :param album_metadata: the album metadata
-        :param tracks_metadata: the track metadata
-        :param dict keywords:
+        :arg master: the parent object of this dialog
+        :arg album_metadata: the album metadata
+        :arg tracks_metadata: the track metadata
+        :arg dict keywords:
            *name=value* keywords used to configure this dialog
 
         """
@@ -4033,10 +3633,10 @@ class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
     def _add_field(self, parent, vorbis_comment="", id3v2_tag="", values=None):
         """Render a custom field in the dialog body.
 
-        :param parent: the object that contains the field controls
-        :keyword str vorbis_comment: the custom Vorbis comment
-        :keyword str id3v2_tag: the custom ID3v2 tag
-        :keyword list values: the value(s) for the custom comment/tag
+        :arg parent: the object that contains the field controls
+        :key str vorbis_comment: the custom Vorbis comment
+        :key str id3v2_tag: the custom ID3v2 tag
+        :key list values: the value(s) for the custom comment/tag
 
         If adding an already-populated field, the entry widgets will be
         disabled. This is a bit ugly, but it greatly simplifies change
@@ -4060,7 +3660,7 @@ class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
     def _clear_field(self, index):
         """Clear (effectively removing) the *index* -th field.
 
-        :param int index: index into the *fields* list of variables
+        :arg int index: index into the *fields* list of variables
 
         This method keeps track of which fields have been cleared so
         that the changes can be "replayed" for each track.
@@ -4104,9 +3704,9 @@ class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
         """Clear the same fields in each track that were cleared in the
         album.
 
-        :param dict track_custom:
+        :arg dict track_custom:
            the custom metadata tagging fields for track *i*
-        :param int i:
+        :arg int i:
            the track number
 
         """
@@ -4130,7 +3730,7 @@ class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
 def resolve_path(spec):
     """Evaluate all variables in *spec* and make sure it's absolute.
 
-    :param str spec: a directory or file path template
+    :arg str spec: a directory or file path template
     :return: a valid, absolute file system path
     :rtype: :obj:`str`
 
@@ -4153,10 +3753,10 @@ def encode_flac(
         cdda_filename, flac_filename, track_metadata, stdout_filename=None):
     """Rip a CDDA file to a tagged FLAC file.
 
-    :param str cdda_filename: absolute CD-DA file name
-    :param str flac_filename: absolute *.flac* file name
-    :param dict track_metadata: tagging fields for this track
-    :keyword str stdout_filename:
+    :arg str cdda_filename: absolute CD-DA file name
+    :arg str flac_filename: absolute *.flac* file name
+    :arg dict track_metadata: tagging fields for this track
+    :key str stdout_filename:
        absolute file name for redirected stdout
 
     """
@@ -4194,9 +3794,9 @@ def encode_flac(
 def decode_wav(flac_filename, wav_filename, stdout_filename=None):
     """Convert a FLAC file to a WAV file.
 
-    :param str flac_filename: absolute *.flac* file name
-    :param str wav_filename: absolute *.wav* file name
-    :keyword str stdout_filename:
+    :arg str flac_filename: absolute *.flac* file name
+    :arg str wav_filename: absolute *.wav* file name
+    :key str stdout_filename:
        absolute file name for redirected stdout
 
     """
@@ -4224,12 +3824,12 @@ def encode_mp3(
         stdout_filename=None):
     """Convert a WAV file to an MP3 file.
 
-    :param str wav_filename: absolute *.wav* file name
-    :param str mp3_filename: absolute *.mp3* file name
-    :param dict track_metadata: tagging fields for this track
-    :keyword float scale:
+    :arg str wav_filename: absolute *.wav* file name
+    :arg str mp3_filename: absolute *.mp3* file name
+    :arg dict track_metadata: tagging fields for this track
+    :key float scale:
       multiply PCM data by this factor
-    :keyword str stdout_filename:
+    :key str stdout_filename:
        absolute file name for redirected stdout
 
     """
@@ -4286,7 +3886,7 @@ def encode_mp3(
 def make_vorbis_comments(metadata):
     """Create Vorbis comments for tagging from *metadata*.
 
-    :param dict metadata: the metadata for a single track
+    :arg dict metadata: the metadata for a single track
     :return: Vorbis comment name/value pairs
     :rtype: :obj:`dict`
 
@@ -4324,7 +3924,7 @@ def make_vorbis_comments(metadata):
 def make_id3v2_tags(metadata):
     """Create ID3v2 frames for tagging from *metadata*.
 
-    :param dict metadata: the metadata for a single track
+    :arg dict metadata: the metadata for a single track
     :return: ID3v2 frame name/value pairs
     :rtype: :obj:`dict`
 
@@ -4360,10 +3960,10 @@ def _make_tagging_map(type_, metadata):
     """Create Vorbis comments or ID3v2 frames for tagging from
     *metadata*.
 
-    :param str type_:
+    :arg str type_:
        "Vorbis" or "ID3v2" (corresponds to a tagging section in the
        flacmanager.ini configuration file)
-    :param dict metadata: the metadata for a single track
+    :arg dict metadata: the metadata for a single track
     :return: Vorbis commen or ID3v2 frame name/value pairs
     :rtype: :obj:`dict`
 
@@ -4392,9 +3992,9 @@ def _update_custom_tagging(tags, type_, metadata):
     """Update *tags* with any custom Vorbis comments or ID3v2 tags from
     *metadata["__custom"]* (if defined).
 
-    :param dict tags: the tagging map for a track
-    :param str type_: "Vorbis" or "ID3v2"
-    :param dict metadata: the metadata for a single track
+    :arg dict tags: the tagging map for a track
+    :arg str type_: "Vorbis" or "ID3v2"
+    :arg dict metadata: the metadata for a single track
 
     *tags* is updated in place.
     
@@ -4465,11 +4065,11 @@ class FLACEncoder(threading.Thread):
                         mp3_filename, track_metadata):
         """Schedule a track for FLAC encoding.
 
-        :param int track_index: index (not ordinal) of the track
-        :param str cdda_filename: absolute CD-DA file name
-        :param str flac_filename: absolute *.flac* file name
-        :param str mp3_filename: absolute *.mp3* file name
-        :param dict track_metadata: tagging fields for this track
+        :arg int track_index: index (not ordinal) of the track
+        :arg str cdda_filename: absolute CD-DA file name
+        :arg str flac_filename: absolute *.flac* file name
+        :arg str mp3_filename: absolute *.mp3* file name
+        :arg dict track_metadata: tagging fields for this track
 
         """
         self.__log.call(
@@ -4542,10 +4142,10 @@ class FLACEncoder(threading.Thread):
             stdout_filename=None):
         """Enqueue a status update notification on an interval.
 
-        :param int track_index: index (**not** ordinal) of the track
-        :param str cdda_filename: absolute CD-DA file name
-        :param str flac_filename: absolute .flac file name
-        :keyword str stdout_filename:
+        :arg int track_index: index (**not** ordinal) of the track
+        :arg str cdda_filename: absolute CD-DA file name
+        :arg str flac_filename: absolute .flac file name
+        :key str stdout_filename:
            absolute file name for redirected stdout
 
         .. note::
@@ -4582,12 +4182,12 @@ class MP3Encoder(threading.Thread):
             self, track_index, cdda_filename, flac_filename, mp3_filename,
             stdout_filename, track_metadata):
         """
-        :param int track_index: index (not ordinal) of the track
-        :param str cdda_filename: absolute CD-DA file name
-        :param str flac_filename: absolute *.flac* file name
-        :param str stdout_filename:
+        :arg int track_index: index (not ordinal) of the track
+        :arg str cdda_filename: absolute CD-DA file name
+        :arg str flac_filename: absolute *.flac* file name
+        :arg str stdout_filename:
            absolute file name for redirected stdout
-        :param dict track_metadata: tagging fields for this track
+        :arg dict track_metadata: tagging fields for this track
 
         """
         self.__log.call(
@@ -4705,7 +4305,7 @@ class MetadataCollector:
 
     def __init__(self, toc):
         """
-        :param flacmanager.TOC toc: a disc's table of contents
+        :arg flacmanager.TOC toc: a disc's table of contents
 
         """
         self.__log.call(toc)
@@ -4717,30 +4317,34 @@ class MetadataCollector:
         self.__log.call()
 
         number_of_tracks = len(self.toc.track_offsets)
-        self.album = {
-            "title": [],
-            "artist": [],
-            "record_label": [],
-            "year": [],
-            "genre": [],
-            "cover": [],
-            "number_of_tracks": number_of_tracks,
-            "is_compilation": False,
-            "disc_number": 1,
-            "disc_total": 1,
+
+        metadata = {
+            "album_title": [],
+            "album_discnumber": 1,
+            "album_disctotal": 1,
+            "album_compilation": False,
+            "album_artist": [],
+            "album_recordlabel": [],
+            "album_genre": [],
+            "album_year": [],
+            "album_cover": [],
+            "album_tracktotal": number_of_tracks,
+            "__tracks": [None],  # 1-based indexing
+            "__custom": OrderedDict(),
         }
-       
-        tracks = [None] # 1-based indexing
+
         for i in range(number_of_tracks):
-            tracks.append({
-                "include": True,
-                "number": i + 1,
-                "title": [],
-                "artist": [],
-                "year": [],
-                "genre": [],
+            metadata["__tracks"].append({
+                "track_number": i + 1,
+                "track_include": True,
+                "track_title": [],
+                "track_artist": [],
+                "track_genre": [],
+                "track_year": [],
+                "__custom": OrderedDict(),
             })
-        self.tracks = tracks
+
+        self.metadata = metadata
 
     def collect(self):
         """Fetch metadata from a service."""
@@ -4748,7 +4352,155 @@ class MetadataCollector:
 
 
 @logged
-class GracenoteCDDBMetadataCollector(MetadataCollector):
+class _HTTPMetadataCollector(MetadataCollector):
+    """Base class for HTTP/S metadata API clients."""
+
+    def __init__(self, toc, api_host, use_ssl=True):
+        """
+        :arg flacmanager.TOC toc: a disc's table of contents
+        :arg str api_host: the API host name
+        :key bool use_ssl: whether or not to use an SSL connection
+
+        """
+        self.__log.call(toc, api_host, use_ssl=use_ssl)
+        super().__init__(toc)
+
+        # provide reasonable defaults (also see the `_ssl_context' property)
+        self.user_agent = FLACManager.USER_AGENT
+        self.timeout = get_config().getfloat("HTTP", "timeout")
+
+        self.api_host = api_host
+        self.use_ssl = use_ssl
+        self._prepare_connection()
+
+    def _prepare_connection(self):
+        self.__log.call()
+
+        if self.use_ssl:
+            self._api_conx = HTTPSConnection(
+                self.api_host, context=self._ssl_context, timeout=self.timeout)
+        else:
+            self._api_conx = HTTPConnection(
+                self.api_host, timeout=self.timeout)
+
+    @property
+    @lru_cache(maxsize=1)
+    def _ssl_context(self):
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+        context.verify_mode = ssl.CERT_NONE
+        context.set_default_verify_paths()
+
+    def _api_request(self, path, body=None, additional_headers=None):
+        """Make an HTTP GET or POST API request.
+
+        :arg str path: the request path and optional query string
+        :key body: the HTTP request body
+        :type body: :obj:`str` or :obj:`bytes`
+        :key additional_headers:
+           additional request headers (User-Agent is default)
+        :type additional_headers:
+           :obj:`dict` or :class:`http.client.HTTPMessage`
+        :return:
+           a 2-tuple containing the **closed**
+           :class:`http.client.HTTPResponse` object and the response
+           :obj:`bytes` (body)
+
+        If *body* is not ``None``, the request will be an HTTP POST;
+        otherwise the request will be an HTTP GET.
+
+        This method handles redirects (301, 302, 303, 307 and 308)
+        automatically.
+
+        """
+        self.__log.call(path, body=body, additional_headers=additional_headers)
+
+        conx = self._api_conx
+
+        headers = HTTPMessage()
+        if additional_headers is not None:
+            for (name, value) in additional_headers.items():
+                headers[name] = value
+        if "User-Agent" not in headers:
+            headers["User-Agent"] = self.user_agent
+
+        method = "POST" if body is not None else "GET"
+        conx.request(method, path, body=body, headers=headers)
+        response = conx.getresponse()
+        while response.status in [301, 302, 303, 307, 308]:
+            response.close()
+            self.__log.info(
+                "%s %s %s is being %d-redirected to %s",
+                conx.host, method, path,
+                response.status, response.msg["Location"])
+
+            url = urlparse(response.msg["Location"])
+            if (url.netloc != conx.host
+                    or url.scheme !=
+                        ("https" if type(conx) is HTTPSConnection else "http")
+                    or response.msg["Connection"] == "close"):
+                conx.close()
+
+                if url.scheme == "https":
+                    conx = HTTPSConnection(
+                        url.netloc, context=self._ssl_context,
+                        timeout=self.timeout)
+                else:
+                    conx = HTTPConnection(url.netloc, timeout=self.timeout)
+
+            path = \
+                url.path if not url.query else "%s?%s" % (url.path, url.query)
+
+            if response.status == 303:
+                method = "GET"
+                body = None
+
+            conx.request(method, path, body=body, headers=headers)
+            response = conx.getresponse()
+
+        data = response.read()
+        response.close()
+
+        if "close" in [headers["Connection"], response.msg["Connection"]]:
+            conx.close()
+
+        if conx is not self._api_conx:
+            conx.close()
+            self._prepare_connection()
+
+        rv = (response, data)
+        self.__log.return_(rv)
+        return rv
+
+    def _get_album_art_image_data(self, url):
+        """GET an album art image over HTTP/S.
+
+        :arg str url: the full URL for an album art image
+        :return: the raw image :obj:`bytes` data
+
+        """
+        self.__log.call(url)
+
+        request = Request(url, headers={"User-Agent": self.user_agent})
+        response = urlopen(
+            request, timeout=self.timeout,
+            context=self._ssl_context if url.startswith("https:") else None)
+        data = response.read()
+        response.close()
+
+        if response.status != 200:
+            if response.geturl() != url:
+                url = "%s (%s)" % (url, response.geturl())
+            self.__log.warning(
+                "GET %s -> %d %s %r",
+                url, response.status, response.reason, response.getheaders())
+            data = None
+
+        self.__log.return_(data)
+        return data
+
+
+@logged
+class GracenoteCDDBMetadataCollector(_HTTPMetadataCollector):
     """A Gracenote CDDB client that populates album and track metadata
     choices for a disc identified by its offsets.
 
@@ -4815,30 +4567,24 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
 
     def __init__(self, toc):
         """
-        :param flacmanager.TOC toc: a disc's table of contents
+        :arg flacmanager.TOC toc: a disc's table of contents
 
         """
         self.__log.call(toc)
-        super().__init__(toc)
 
         config = get_config()
         self.__log.debug("Gracenote config = %r", dict(config["Gracenote"]))
 
-        self._client_id = config.get("Gracenote", "client_id")
-        if not self._client_id:
+        client_id = config.get("Gracenote", "client_id")
+        if not client_id:
             raise MetadataError(
                     "Gracenote client_id must be defined in flacmanager.ini!",
                     context_hint="Gracenote configuration")
+        api_host = self.API_HOST_TEMPLATE % client_id.split('-', 1)[0]
+        super().__init__(toc, api_host)
 
+        self._client_id = client_id
         self._user_id = config.get("Gracenote", "user_id")
-
-        api_host = self.API_HOST_TEMPLATE % self._client_id.split('-', 1)[0]
-        self.timeout = config.getfloat("HTTP", "timeout")
-        self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-        self._ssl_context.verify_mode = ssl.CERT_NONE
-        self._ssl_context.set_default_verify_paths()
-        self._conx = HTTPSConnection(
-            api_host, context=self._ssl_context, timeout=self.timeout)
 
     def _register(self):
         """Register this client with the Gracenote Web API."""
@@ -4850,7 +4596,7 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
         gn_responses = self._get_response(gn_queries)
         user = gn_responses.find("RESPONSE/USER")
         self._user_id = user.text
-        self.__log.debug("user_id = %r", self._user_id)
+        self.__log.debug("registered user_id = %r", self._user_id)
 
         get_config().set("Gracenote", "user_id", self._user_id)
         save_config()
@@ -4883,69 +4629,80 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
         # when this equals last_album_ord, we'll send "Connection: close" in
         # the HTTP headers
         album_ord = 1
-        album_metadata = self.album
-        tracks_metadata = self.tracks
         for gn_album_summary in gn_responses.findall("RESPONSE/ALBUM"):
             gn_id = gn_album_summary.find("GN_ID").text
             gn_album_detail = self._fetch_album(
                 gn_id, album_ord == last_album_ord)
 
+            metadata = self.metadata
+
             num_tracks = int(gn_album_detail.find("TRACK_COUNT").text)
-            if num_tracks != album_metadata["number_of_tracks"]:
+            if num_tracks != metadata["album_tracktotal"]:
                 self.__log.warning(
                     "discarding %r; expected %d tracks but found %d",
-                    gn_id, album_metadata["number_of_tracks"], num_tracks)
+                    gn_id, metadata["album_tracktotal"], num_tracks)
                 continue
 
             title = gn_album_detail.find("TITLE").text
-            if title not in album_metadata["title"]:
-                album_metadata["title"].append(title)
+            if title not in metadata["album_title"]:
+                metadata["album_title"].append(title)
 
             artist = gn_album_detail.find("ARTIST").text
-            if artist not in album_metadata["artist"]:
-                album_metadata["artist"].append(artist)
+            if artist not in metadata["album_artist"]:
+                metadata["album_artist"].append(artist)
 
             gn_date = gn_album_detail.find("DATE")
             if (gn_date is not None and
-                    gn_date.text not in album_metadata["year"]):
-                album_metadata["year"].append(gn_date.text)
+                    gn_date.text not in metadata["album_year"]):
+                metadata["album_year"].append(gn_date.text)
 
             for gn_genre in gn_album_detail.findall("GENRE"):
                 genre = gn_genre.text
-                if genre not in album_metadata["genre"]:
-                    album_metadata["genre"].append(genre)
+                if genre not in metadata["album_genre"]:
+                    metadata["album_genre"].append(genre)
 
             for gn_url_coverart in gn_album_detail.findall(
                     "URL[@TYPE='COVERART']"):
-                cover_art = self._get_cover_image(gn_url_coverart.text)
-                if cover_art and cover_art not in album_metadata["cover"]:
-                    album_metadata["cover"].append(cover_art)
+                cover_art = self._get_album_art_image_data(
+                    gn_url_coverart.text)
+                if cover_art and cover_art not in metadata["album_cover"]:
+                    metadata["album_cover"].append(cover_art)
 
             for gn_track in gn_album_detail.findall("TRACK"):
                 track_number = int(gn_track.find("TRACK_NUM").text)
-                track_metadata = tracks_metadata[track_number]
+
+                track_metadata = metadata["__tracks"][track_number]
+
+                # sanity check:
+                # there are cases where the ordinality of hidden tracks
+                # preceded or interspersed by empty tracks are misnumbered as
+                # though the empty tracks did not exist
+                # (e.g. on the single-disc re-release of Nine Inch Nails' 1992
+                # EP "Broken," the hidden tracks "Physical" and "Suck" SHOULD
+                # be numbered 98/99, respectively, NOT 7/8 or 8/9!!!)
+                assert track_metadata["track_number"] == track_number
 
                 title = gn_track.find("TITLE").text
-                if title not in track_metadata["title"]:
-                    track_metadata["title"].append(title)
+                if title not in track_metadata["track_title"]:
+                    track_metadata["track_title"].append(title)
 
                 gn_artist = gn_track.find("ARTIST")
                 if (gn_artist is not None and
-                        gn_artist.text not in track_metadata["artist"]):
-                    track_metadata["artist"].append(gn_artist.text)
+                        gn_artist.text not in track_metadata["track_artist"]):
+                    track_metadata["track_artist"].append(gn_artist.text)
 
                 for gn_genre in gn_track.findall("GENRE"):
                     genre = gn_genre.text
-                    if genre not in track_metadata["genre"]:
-                        track_metadata["genre"].append(genre)
+                    if genre not in track_metadata["track_genre"]:
+                        track_metadata["track_genre"].append(genre)
 
             album_ord += 1
 
     def _fetch_album(self, gn_id, is_last_album=True):
         """Make a Gracenote 'ALBUM_FETCH' request.
 
-        :param str gn_id: the Gracenote ID of an album
-        :keyword bool is_last_album:
+        :arg str gn_id: the Gracenote ID of an album
+        :key bool is_last_album:
            whether or not this is the last album to fetch
         :return: a Gracenote <ALBUM>
         :rtype: :class:`xml.etree.ElementTree.Element`
@@ -4963,74 +4720,10 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
         self.__log.return_(gn_album)
         return gn_album
 
-    def _get_cover_image(self, url):
-        """Fetch a Gracenote album cover image over HTTP.
-
-        :param str url: the URL for a Gracenote album cover
-        :return: the raw image :obj:`bytes` data
-
-        """
-        self.__log.call(url)
-
-        parse_result = urlparse(url)
-        host = parse_result.netloc
-
-        if parse_result.scheme == "https":
-            conx = HTTPSConnection(
-                host, context=self._ssl_context, timeout=self.timeout)
-        elif parse_result.scheme == "http":
-            conx = HTTPConnection(host, timeout=self.timeout)
-        else:
-            self.__log.warning(
-                "don't know how to request an image over %s",
-                parse_result.scheme)
-            return None
-
-        conx.request("GET", "%s?%s" % (parse_result.path, parse_result.query))
-        response = conx.getresponse()
-        while response.status in [301, 302, 307]:
-            response.close()
-
-            url = urlparse(response.headers["Location"])
-            if url.netloc != host:
-                conx.close()
-                if url.scheme == "https":
-                    conx = HTTPSConnection(
-                        url.netloc, context=self._ssl_context,
-                        timeout=self.timeout)
-                else:
-                    conx = HTTPConnection(
-                        parse_result.netloc, timeout=self.timeout)
-
-            path = \
-                url.path if not url.query else "%s?%s" % (url.path, url.query)
-            conx.request("GET", path)
-
-            response = conx.getresponse()
-
-        data = response.read()
-        response.close()
-        conx.close()
-
-        if response.status != 200:
-            if "Content-Type" in response.headers:
-                (_, params) = cgi.parse_header(
-                    response.headers["Content-Type"])
-                encoding = params.get("charset", "UTF-8")
-            else:
-                encoding = "UTF-8"
-            self.__log.warning(
-                "unable to get cover art from %r (HTTP %d %s: %s)",
-                url, response.status, response.reason, data.decode(encoding))
-            return None
-
-        self.__log.return_(data)
-        return data
-
     def _prepare_gn_queries(self, xml):
         """Create a request object with authentication.
 
-        :param str xml:
+        :arg str xml:
            an XML template string for a Gracenote <QUERIES> document
         :return: the prepared Gracenote <QUERIES> document
         :rtype: :class:`xml.etree.ElementTree.Element`
@@ -5048,9 +4741,9 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
     def _get_response(self, gn_queries, http_keep_alive=True):
         """POST a Gracenote request and return the response.
 
-        :param xml.etree.ElementTree.Element gn_queries:
+        :arg xml.etree.ElementTree.Element gn_queries:
            a Gracenote <QUERIES> document
-        :keyword bool http_keep_alive:
+        :key bool http_keep_alive:
            whether or not to keep the Gracenote HTTP connection alive
         :return: a Gracenote <RESPONSES> document
         :rtype: :class:`xml.etree.ElementTree.Element`
@@ -5067,20 +4760,11 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
         buf.close()
         self.__log.debug("gn_queries_bytes = %r", gn_queries_bytes)
 
-        headers = {
-            "Connection": "keep-alive" if http_keep_alive else "close",
-        }
-        self._conx.request(
-            "POST", self.API_PATH, body=gn_queries_bytes, headers=headers)
-        response = self._conx.getresponse()
-        response_bytes = response.read()
-        response.close()
-        self.__log.debug(
-            "%d %s\n%s\nresponse_bytes = %r", response.status, response.reason,
-            response.headers, response_bytes)
-
+        headers = {"Content-Type": "text/xml; charset=UTF-8"}
         if not http_keep_alive:
-            self._conx.close()
+            headers["Connection"] = "close"
+        (response, response_body) = self._api_request(
+            self.API_PATH, body=gn_queries_bytes, additional_headers=headers)
 
         if response.status != 200:
             cmd = gn_queries.find("QUERY").get("CMD")
@@ -5088,7 +4772,7 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
                 "HTTP %d %s" % (response.status, response.reason),
                 context_hint="Gracenote %s" % cmd)
 
-        gn_responses = ET.fromstring(response_bytes.decode("UTF-8"))
+        gn_responses = ET.fromstring(response_body.decode("UTF-8"))
         status = gn_responses.find("RESPONSE").get("STATUS")
         if status != "OK":
             cmd = gn_queries.find("QUERY").get("CMD")
@@ -5104,7 +4788,7 @@ class GracenoteCDDBMetadataCollector(MetadataCollector):
 
 
 @logged
-class MusicBrainzMetadataCollector(MetadataCollector):
+class MusicBrainzMetadataCollector(_HTTPMetadataCollector):
     """A MusicBrainz client that populates album and track metadata
     choices for a disc identified by its MusicBrainz ID.
 
@@ -5175,7 +4859,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
     def calculate_disc_id(cls, toc):
         """Return the MusicBrainz Disc ID for the disc *toc*.
 
-        :param flacmanager.TOC toc: a disc's table of contents
+        :arg flacmanager.TOC toc: a disc's table of contents
         :return: a MusicBrainz Disc ID for *toc*
         :rtype: :obj:`str`
 
@@ -5221,11 +4905,11 @@ class MusicBrainzMetadataCollector(MetadataCollector):
 
     def __init__(self, toc):
         """
-        :param flacmanager.TOC toc: a disc's table of contents
+        :arg flacmanager.TOC toc: a disc's table of contents
 
         """
         self.__log.call(toc)
-        super().__init__(toc)
+        super().__init__(toc, self.API_HOST)
 
         config = get_config()
         self.__log.debug(
@@ -5239,9 +4923,6 @@ class MusicBrainzMetadataCollector(MetadataCollector):
                     "flacmanager.ini!",
                 context_hint="MusicBrainz configuration")
         self.user_agent = self.USER_AGENT_TEMPLATE % contact_url_or_email
-
-        self.timeout = config.getfloat("HTTP", "timeout")
-        self._conx = HTTPConnection(self.API_HOST, timeout=self.timeout)
 
     def collect(self):
         """Populate all MusicBrainz album metadata choices."""
@@ -5273,8 +4954,7 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         else:
             self.__log.info("exact match for disc_id %r", disc_id)
 
-        album_metadata = self.album
-        tracks_metadata = self.tracks
+        metadata = self.metadata
         for mb_release in mb_release_list.findall(
                 "mb:release", namespaces=nsmap):
             # ElementTree does not use QNames for attributes in the default
@@ -5285,33 +4965,34 @@ class MusicBrainzMetadataCollector(MetadataCollector):
             self.__log.info("processing release %r", release_mbid)
 
             title = mb_release.find("mb:title", namespaces=nsmap).text
-            if title not in album_metadata["title"]:
-                album_metadata["title"].append(title)
+            if title not in metadata["album_title"]:
+                metadata["album_title"].append(title)
 
             mb_name = mb_release.find(
                 "mb:artist-credit/mb:name-credit/mb:artist/mb:name",
                  namespaces=nsmap)
             if (mb_name is not None and
-                    mb_name.text not in album_metadata["artist"]):
+                    mb_name.text not in metadata["album_artist"]):
                 album_artist = mb_name.text
-                album_metadata["artist"].append(album_artist)
+                metadata["album_artist"].append(album_artist)
             else:
                 album_artist = None
 
             mb_date = mb_release.find("mb:date", namespaces=nsmap)
             if mb_date is not None:
                 year = mb_date.text.split('-', 1)[0]
-                if len(year) == 4 and year not in album_metadata["year"]:
-                    album_metadata["year"].append(year)
+                if len(year) == 4 and year not in metadata["album_year"]:
+                    metadata["album_year"].append(year)
 
-            #NOTE: MusicBrainz does not support genre information.
+            # NOTE: MusicBrainz does not support genre information.
 
             cover_art_front = mb_release.find(
                 "mb:cover-art-archive/mb:front", namespaces=nsmap).text
             if cover_art_front == "true":
-                cover_art = self._get_cover_image(release_mbid)
-                if cover_art and cover_art not in album_metadata["cover"]:
-                    album_metadata["cover"].append(cover_art)
+                cover_art = self._get_album_art_image_data(
+                    self.COVERART_URL_TEMPLATE % release_mbid)
+                if cover_art and cover_art not in metadata["album_cover"]:
+                    metadata["album_cover"].append(cover_art)
 
             # For a multi-CD release (e.g. any Global Underground), MusicBrainz
             # returns both discs (and track lists) in <metadata>. So when we
@@ -5330,14 +5011,14 @@ class MusicBrainzMetadataCollector(MetadataCollector):
                 mb_track_list = mb_medium_list.find(
                     "mb:medium/mb:track-list", namespaces=nsmap)
             else:
-                album_metadata["disc_total"] = medium_count
+                metadata["album_disctotal"] = medium_count
                 disc_path = \
                     "mb:medium/mb:disc-list/mb:disc[@id='%s']" % disc_id
                 mb_disc = mb_medium_list.find(disc_path, namespaces=nsmap)
                 if mb_disc is not None:
                     mb_position = mb_medium_list.find(
                         disc_path + "/../../mb:position", namespaces=nsmap)
-                    album_metadata["disc_number"] = int(mb_position.text)
+                    metadata["album_discnumber"] = int(mb_position.text)
                     mb_track_list = mb_medium_list.find(
                             disc_path + "/../../mb:track-list",
                             namespaces=nsmap)
@@ -5349,21 +5030,31 @@ class MusicBrainzMetadataCollector(MetadataCollector):
                 continue
 
             track_count = int(mb_track_list.get("count"))
-            if track_count != len(self.toc.track_offsets):
+            if track_count != metadata["album_tracktotal"]:
                 self.__log.warning(
                     "skipping track list (expected %d tracks, found %d)",
-                    len(self.toc.track_offsets), track_count)
+                    metadata["album_tracktotal"], track_count)
 
             for mb_track in mb_track_list.findall(
                     "mb:track", namespaces=nsmap):
                 track_number = int(
                     mb_track.find("mb:number", namespaces=nsmap).text)
-                track_metadata = tracks_metadata[track_number]
+
+                track_metadata = metadata["__tracks"][track_number]
+
+                # sanity check:
+                # there are cases where the ordinality of hidden tracks
+                # preceded or interspersed by empty tracks are misnumbered as
+                # though the empty tracks did not exist
+                # (e.g. on the single-disc re-release of Nine Inch Nails' 1992
+                # EP "Broken," the hidden tracks "Physical" and "Suck" SHOULD
+                # be numbered 98/99, respectively, NOT 7/8 or 8/9!!!)
+                assert track_metadata["track_number"] == track_number
 
                 title = mb_track.find(
                     "mb:recording/mb:title", namespaces=nsmap).text
-                if title not in track_metadata["title"]:
-                    track_metadata["title"].append(title)
+                if title not in track_metadata["track_title"]:
+                    track_metadata["track_title"].append(title)
 
                 mb_name = mb_track.find(
                     "mb:recording/mb:artist-credit/mb:name-credit/mb:artist/"
@@ -5373,15 +5064,15 @@ class MusicBrainzMetadataCollector(MetadataCollector):
                 # same as the release's artist name
                 if (mb_name is not None and
                         mb_name.text != album_artist and
-                        mb_name.text not in track_metadata["artist"]):
-                    track_metadata["artist"].append(mb_name.text)
+                        mb_name.text not in track_metadata["track_artist"]):
+                    track_metadata["track_artist"].append(mb_name.text)
 
                 #NOTE: MusicBrainz does not support genre information.
 
     def _prepare_discid_request(self, disc_id):
         """Build a full MusicBrainz '/discid' request path.
 
-        :param str disc_id: a MusicBrainz Disc ID
+        :arg str disc_id: a MusicBrainz Disc ID
         :return: the full MusicBrainz request path
         :rtype: :obj:`str`
 
@@ -5406,9 +5097,9 @@ class MusicBrainzMetadataCollector(MetadataCollector):
     def _get_response(self, request_path, nsmap, http_keep_alive=True):
         """GET the *request_path* and return the response.
 
-        :param str request_path: a MusicBrainz HTTP request path
-        :param dict nsmap: namespace prefixes to URIs
-        :keyword bool http_keep_alive:
+        :arg str request_path: a MusicBrainz HTTP request path
+        :arg dict nsmap: namespace prefixes to URIs
+        :key bool http_keep_alive:
            whether or not to keep the MusicBrainz HTTP connection alive
         :return: the MusicBrainz <metadata> response document
         :rtype: :class:`xml.etree.ElementTree.Element`
@@ -5420,20 +5111,12 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         """
         self.__log.call(request_path, nsmap, http_keep_alive=http_keep_alive)
 
-        headers = {
-            "User-Agent": self.user_agent,
-            "Connection": "keep-alive" if http_keep_alive else "close",
-        }
-        self._conx.request("GET", request_path, headers=headers)
-        response = self._conx.getresponse()
-        response_bytes = response.read()
-        response.close()
-        self.__log.debug(
-            "%d %s\n%s\nresponse_bytes = %r", response.status, response.reason,
-            response.headers, response_bytes)
-
+        headers = {"User-Agent": self.user_agent}
         if not http_keep_alive:
-            self._conx.close()
+            headers["Connection"] = "close"
+
+        (response, response_body) = self._api_request(
+            request_path, additional_headers=headers)
 
         if response.status != 200:
             raise MetadataError(
@@ -5442,11 +5125,11 @@ class MusicBrainzMetadataCollector(MetadataCollector):
 
         if "Content-Type" in response.headers:
             (_, params) = cgi.parse_header(response.headers["Content-Type"])
-            encoding = params.get("charset", "UTF-8")
+            encoding = params.get("charset", "ISO-8859-1")
         else:
-            encoding = "UTF-8"
+            encoding = "ISO-8859-1"
 
-        mb_response = ET.fromstring(response_bytes.decode(encoding))
+        mb_response = ET.fromstring(response_body.decode(encoding))
         if (mb_response.tag == "error" or
                 mb_response.tag != "{%s}metadata" % nsmap["mb"]):
             mb_text = mb_response.find("text")
@@ -5460,54 +5143,6 @@ class MusicBrainzMetadataCollector(MetadataCollector):
         self.__log.return_(mb_response)
         return mb_response
 
-    def _get_cover_image(self, release_mbid):
-        """Download a cover image.
-
-        :param str release_mbid: a MusicBrainz release ID
-        :return: raw image :obj:`bytes` data
-
-        """
-        self.__log.call(release_mbid)
-
-        url = urlparse(self.COVERART_URL_TEMPLATE % release_mbid)
-        host = url.netloc
-        path = url.path if not url.query else "%s?%s" % (url.path, url.query)
-        headers={"User-Agent": self.user_agent}
-
-        conx = HTTPConnection(host, timeout=self.timeout)
-        conx.request("GET", path, headers=headers)
-        response = conx.getresponse()
-        while response.status in [301, 302, 307]:
-            response.close()
-            url = urlparse(response.headers["Location"])
-            if url.netloc != host:
-                conx.close()
-                conx = HTTPConnection(url.netloc, timeout=self.timeout)
-            path = (url.path if not url.query
-                else "%s?%s" % (url.path, url.query))
-            conx.request("GET", path, headers=headers)
-            response = conx.getresponse()
-
-        data = response.read()
-        response.close()
-        conx.close()
-
-        if response.status != 200:
-            if "Content-Type" in response.headers:
-                (_, params) = cgi.parse_header(
-                    response.headers["Content-Type"])
-                encoding = params.get("charset", "UTF-8")
-            else:
-                encoding = "UTF-8"
-            self.__log.warning(
-                "unable to get cover art for mbid %r (HTTP %d %s: %s)",
-                release_mbid, response.status, response.reason,
-                data.decode(encoding))
-            return None
-
-        self.__log.return_(data)
-        return data
-
 
 @logged
 class MetadataPersistence(MetadataCollector):
@@ -5518,7 +5153,7 @@ class MetadataPersistence(MetadataCollector):
 
     def __init__(self, toc):
         """
-        :param flacmanager.TOC toc: a disc's table of contents
+        :arg flacmanager.TOC toc: a disc's table of contents
 
         """
         self.__log.call(toc)
@@ -5545,7 +5180,7 @@ class MetadataPersistence(MetadataCollector):
         self.__log.call()
 
         super().reset()
-        self.restored = False
+        self.restored = None # handled differently as of 0.8.0
 
     def collect(self):
         """Populate metadata choices from persisted data."""
@@ -5560,41 +5195,155 @@ class MetadataPersistence(MetadataCollector):
 
             self._postprocess(disc_metadata)
 
-            self.album = disc_metadata["album"]
-            self.tracks = disc_metadata["tracks"]
-            self.restored = True
+            self.metadata = disc_metadata
 
-            self.__log.info(
-                "restored metadata for DiscId %s from %s",
-                self.disc_id, disc_metadata["timestamp"])
+            self.__log.info("restored metadata %r", self.restored)
         else:
             self.__log.info("did not find %r", self.metadata_path)
 
     def _postprocess(self, disc_metadata):
         """Modify *metadata* in place after deserializing from JSON.
 
-        :param dict disc_metadata: the metadata for a disc
+        :arg dict disc_metadata: the metadata for a disc
+
+        .. note::
+           Part of post-processing is converting the deserialized JSON
+           object from a mapping of *key* -> *value* into a mapping of
+           *key* -> *list-of-values*, even though each such list will
+           be of length one (at most). This is to maintain consistency
+           with the regular (API client) collectors, which commonly find
+           multiple values for each metadata field.
 
         """
+        if "__persisted" in disc_metadata:
+            self.restored = disc_metadata.pop("__persisted")
+        else:
+            self.restored = dict([
+                # not present in persisted metadata in versions <= 0.7.2
+                ("__version__", disc_metadata.pop("__version__", None)),
+                ("timestamp", disc_metadata.pop("timestamp")),
+                ("TOC", disc_metadata.pop("TOC")),
+                # not present in persisted metadata in versions < 0.8.0
+                ("disc_id", self.disc_id),
+            ])
+
+        # the format of the persisted metadata is different as of 0.8.0
+        self.__convert_restored_metadata(disc_metadata)
+
         # convert album cover to byte string (raw image data) by encoding
         # the string to "Latin-1"
-        # (see comment in the _convert_to_json_serializable(obj) method)
-        for i in range(len(disc_metadata["album"]["cover"])):
-            disc_metadata["album"]["cover"][i] = \
-                disc_metadata["album"]["cover"][i].encode("Latin-1")
+        # (see the `_convert_to_json_serializable(obj)' method)
+        if disc_metadata["album_cover"] is not None:
+            disc_metadata["album_cover"] = \
+                disc_metadata["album_cover"].encode("Latin-1")
 
-        if "record_label" not in disc_metadata["album"]: # new in 0.8.0
-            disc_metadata["album"]["record_label"] = ""
+        for field in [
+                "album_title",
+                "album_artist",
+                "album_recordlabel",
+                "album_genre",
+                "album_year",
+                ]:
+            disc_metadata[field] = \
+                [disc_metadata[field]] if disc_metadata[field] else []
 
-        self._xform_custom_keys(literal_eval, disc_metadata["album"])
+        # sanity check
+        assert (
+            disc_metadata["album_tracktotal"] ==
+            len(self.toc.track_offsets) ==
+            len(disc_metadata["__tracks"]) - 1)
 
-        for i in range(1, len(disc_metadata["tracks"])):
-            self._xform_custom_keys(literal_eval, disc_metadata["tracks"][i])
+        t = 1
+        for track_metadata in disc_metadata["__tracks"][t:]:
+            # sanity check
+            assert track_metadata["track_number"] == t
+
+            for field in [
+                    "track_title",
+                    "track_artist",
+                    "track_genre",
+                    "track_year",
+                    ]:
+                track_metadata[field] = \
+                    [track_metadata[field]] if track_metadata[field] else []
+
+            t += 1
+
+        self._xform_custom_keys(literal_eval, disc_metadata)
+
+        for track_metadata in disc_metadata["__tracks"][1:]:
+            self._xform_custom_keys(literal_eval, track_metadata)
+
+    def __convert_restored_metadata(self, disc_metadata):
+        self.__log.call(disc_metadata)
+
+        # if data is in pre-0.8.0 structure, convert it
+        tracks_metadata = disc_metadata.pop("tracks", None)
+        if tracks_metadata is not None:
+            self.__log.info(
+                "converting pre-0.8.0 persisted metadata for %s",
+                self.metadata_path)
+            album_metadata = disc_metadata.pop("album")
+            disc_metadata.clear()
+            disc_metadata.update(album_metadata)
+            del album_metadata
+            disc_metadata["__tracks"] = tracks_metadata
+
+            for (old_key, new_key) in [
+                    ("title", "album_title"),
+                    ("disc_number", "album_discnumber"),
+                    ("disc_total", "album_disctotal"),
+                    ("is_compilation", "album_compilation"),
+                    ("artist", "album_artist"),
+                    ("record_label", "album_recordlabel"),
+                    ("genre", "album_genre"),
+                    ("year", "album_year"),
+                    ("cover", "album_cover"),
+                    ("number_of_tracks", "album_tracktotal"),
+                    ]:
+                value = disc_metadata.pop(old_key, None)
+                disc_metadata[new_key] = \
+                    value[0] if type(value) is list else value
+
+            t = 1
+            for track_metadata in disc_metadata["__tracks"][t:]:
+                # sanity check
+                assert track_metadata["number"] == t
+
+                for (old_key, new_key) in [
+                        ("number", "track_number"),
+                        ("include", "track_include"),
+                        ("title", "track_title"),
+                        ("artist", "track_artist"),
+                        ("genre", "track_genre"),
+                        ("year", "track_year"),
+                        ]:
+                    value = track_metadata.pop(old_key, None)
+                    track_metadata[new_key] = \
+                        value[0] if type(value) is list else value
+
+                t += 1
+
+            # persist the converted data
+            self.store(disc_metadata)
+            self.restored = dict([
+                ("__version__", __version__),
+                ("timestamp", datetime.datetime.now().isoformat()),
+                ("TOC", self.toc),
+                ("disc_id", self.disc_id),
+            ])
+
+            self.__log.info(
+                "converted pre-0.8.0 persisted metadata for %s to %s structure"
+                    " and format",
+                self.metadata_path, __version__)
+
+        del tracks_metadata
 
     def store(self, metadata):
         """Persist a disc's metadata field values.
 
-        :param dict metadata: the finalized metadata for a disc
+        :arg dict metadata: the finalized metadata for a disc
 
         Persisting the metadata field values allows for easy error
         recovery in the event that ripping/encoding fails (i.e. the user
@@ -5622,11 +5371,13 @@ class MetadataPersistence(MetadataCollector):
             self.__log.debug("created %s", self.metadata_persistence_root)
 
         ordered_metadata = OrderedDict()
-        ordered_metadata["timestamp"] = datetime.datetime.now().isoformat()
-        ordered_metadata["__version__"] = __version__
-        ordered_metadata["TOC"] = self.toc
-        ordered_metadata["album"] = metadata["album"]
-        ordered_metadata["tracks"] = metadata["tracks"]
+        ordered_metadata["__persisted"] = OrderedDict([
+            ("__version__", __version__),
+            ("timestamp", datetime.datetime.now().isoformat()),
+            ("TOC", self.toc),
+            ("disc_id", self.disc_id),
+        ])
+        ordered_metadata.update(metadata)
 
         self._preprocess(ordered_metadata)
 
@@ -5640,20 +5391,25 @@ class MetadataPersistence(MetadataCollector):
     def _preprocess(self, disc_metadata):
         """Modify *metadata* in place before serializing as JSON.
 
-        :param dict disc_metadata: the metadata for a disc
+        :arg dict disc_metadata: the metadata for a disc
 
         """
-        self._xform_custom_keys(repr, disc_metadata["album"])
+        # replace temporary cover filename with raw image data (bytes)
+        if disc_metadata["album_cover"]:
+            with open(disc_metadata["album_cover"], "rb") as fp:
+                disc_metadata["album_cover"] = fp.read()
 
-        for i in range(1, len(disc_metadata["tracks"])):
-            self._xform_custom_keys(repr, disc_metadata["tracks"][i])
+        self._xform_custom_keys(repr, disc_metadata)
+
+        for track_metadata in disc_metadata["__tracks"][1:]:
+            self._xform_custom_keys(repr, track_metadata)
 
     def _xform_custom_keys(self, func, metadata):
         """Convert ``key`` to ``func(key)`` for each key in
         *metadata["__custom"]*.
 
-        :param func: the key conversion function
-        :param dict metadata: an album or track metadata mapping
+        :arg func: the key conversion function
+        :arg dict metadata: an album or track metadata mapping
 
         Conversion is necessary because keys in JSON objects *must* be
         strings, but FLACManager prefers to work with 2-tuple
@@ -5671,7 +5427,7 @@ class MetadataPersistence(MetadataCollector):
     def _convert_to_json_serializable(self, obj):
         """Return a JSON-serializable representation of `obj`.
 
-        :param obj:
+        :arg obj:
            an object to be converted into a serializable JSON value
         :return: a JSON-serializable representation of *obj*
         :rtype: :obj:`str`
@@ -5682,7 +5438,7 @@ class MetadataPersistence(MetadataCollector):
             # Latin-1-decoded value, which will be properly converted to use
             # Unicode escape sequences by the json library.
             # (Unicode code points 0-255 are identical to the Latin-1 values.)
-            return obj.decode("latin-1")
+            return obj.decode("Latin-1")
         else:
             raise TypeError("%r is not JSON serializable" % obj)
 
@@ -5698,7 +5454,7 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
 
     def __init__(self, toc):
         """
-        :param flacmanager.TOC toc: a disc's table of contents
+        :arg flacmanager.TOC toc: a disc's table of contents
 
         """
         self.__log.call(toc)
@@ -5708,78 +5464,105 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
 
         self.persistence = MetadataPersistence(toc)
         self._collectors = [
-            self.persistence, # must be first
+            self.persistence, # should be first
             GracenoteCDDBMetadataCollector(toc),
             MusicBrainzMetadataCollector(toc),
         ]
-        self.exception = None
+        self.exceptions = []
 
     def run(self):
         """Run the :meth:`collect` method in another thread."""
         self.__log.call()
 
-        try:
-            self.collect()
-        except Exception as e:
-            self.__log.error("aggregation error: %r", e)
-            self.exception = e
+        self.collect()
+        self.aggregate()
+
         self.__log.info("enqueueing %r", self)
         _AGGREGATOR_QUEUE.put(self)
 
     def collect(self):
-        """Populate metadata from all music databases."""
+        """Collect metadata from all music databases."""
+        self.__log.call()
+        super().collect()
+
+        for collector in self._collectors:
+            try:
+                collector.collect()
+            except Exception as e:
+                self.__log.error("metadata collection error", exc_info=e)
+                self.exceptions.append(e)
+
+    def aggregate(self):
         self.__log.call()
 
-        MetadataCollector.collect(self)
+        for collector in self._collectors:
+            self._merge_metadata(
+                [
+                    "album_title",
+                    "album_artist",
+                    "album_recordlabel",
+                    "album_genre",
+                    "album_year",
+                    "album_cover",
+                ],
+                collector.metadata, self.metadata)
 
-        try:
-            for collector in self._collectors:
-                collector.collect()
+            # not terribly useful, but not sure what else could possibly be
+            # done here if there are discrepancies; best to just leave it up to
+            # the user to edit these fields appropriately
+            for field in ["album_discnumber", "album_disctotal"]:
+                if collector.metadata[field] > self.metadata[field]:
+                    self.metadata[field] = collector.metadata[field]
 
+            t = 1
+            for track_metadata in collector.metadata["__tracks"][1:]:
                 self._merge_metadata(
-                    ["title", "artist", "record_label", "year", "genre",
-                        "cover"],
-                    collector.album, self.album)
+                    [
+                        "track_title",
+                        "track_artist",
+                        "track_genre",
+                        "track_year",
+                    ],
+                    track_metadata, self.metadata["__tracks"][t])
+                t += 1
 
-                for field in ["disc_number", "disc_total"]:
-                    if collector.album[field] > self.album[field]:
-                        self.album[field] = collector.album[field]
+        # persisted metadata takes precedence and provides some values not
+        # collected by regular collectors
+        if self.persistence.restored:
+            # I trust myself more than the music databases :)
+            self.metadata["album_discnumber"] = \
+                self.persistence.metadata["album_discnumber"]
+            self.metadata["album_disctotal"] = \
+                self.persistence.metadata["album_disctotal"]
 
-                track_ordinal = 1
-                for track_metadata in collector.tracks[1:]:
-                    self._merge_metadata(
-                        ["title", "artist", "year", "genre"],
-                        track_metadata, self.tracks[track_ordinal])
-                    track_ordinal += 1
-        finally:
-            # persisted metadata takes precedence
-            if self.persistence.restored:
-                self.album["disc_number"] = \
-                    self.persistence.album["disc_number"]
-                self.album["disc_total"] = self.persistence.album["disc_total"]
-                # persisted data stores the "is_compilation" flag for albums
-                self.album["is_compilation"] = \
-                    self.persistence.album["is_compilation"]
-                # custom tagging data for the album
-                if "__custom" in self.persistence.album:
-                    self.album["__custom"] = self.persistence.album["__custom"]
-                # persisted data stores the "include" flag and "__custom"
-                # tagging data for tracks (regular collectors do not)
-                track_ordinal = 1
-                for track_metadata in self.persistence.tracks[1:]:
-                    self.tracks[track_ordinal]["include"] = \
-                        self.persistence.tracks[track_ordinal]["include"]
-                    if "__custom" in self.persistence.tracks[track_ordinal]:
-                        self.tracks[track_ordinal]["__custom"] = \
-                            self.persistence.tracks[track_ordinal]["__custom"]
-                    track_ordinal += 1
+            # persisted data stores the "album_compilation" flag and album
+            # "__custom" tagging data (regular collectors do not)
+            self.metadata["album_compilation"] = \
+                self.persistence.metadata["album_compilation"]
+            self.metadata["__custom"] = \
+                self.persistence.metadata["__custom"]
+
+            # persisted data stores the "track_include" flag and track
+            # "__custom" tagging data (regular collectors do not)
+            t = 1
+            for track_metadata in self.persistence.metadata["__tracks"][t:]:
+                # sanity check
+                assert (
+                    track_metadata["track_number"] ==
+                    self.metadata["__tracks"][t]["track_number"] ==
+                    t)
+                self.metadata["__tracks"][t]["track_include"] = \
+                    track_metadata["track_include"]
+                self.metadata["__tracks"][t]["__custom"] = \
+                    track_metadata["__custom"]
+                t += 1
 
     def _merge_metadata(self, fields, source, target):
         """Merge *source[field]* values into *target[field]*.
 
-        :param list fields: metadata field names
-        :param dict source: metadata being merged from
-        :param dict target: metadata being merged into
+        :arg list fields: metadata field names
+        :arg dict source: metadata being merged from
+        :arg dict target: metadata being merged into
 
         """
         self.__log.call(fields, source, target)
@@ -5790,33 +5573,29 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                     target[field].append(value)
 
 
+@lru_cache(maxsize=1)
 def get_lame_genres():
     """Return the list of genres recognized by LAME."""
     _log.call()
 
-    # simple memo
-    genres = getattr(get_lame_genres, "_fm_cached_genres", None)
-    if genres is None:
-        genres = []
-        # why does lame write the genre list to stderr!? That's lame (LOL)
-        output = subprocess.check_output(
-            ["lame", "--genre-list"], stderr=subprocess.STDOUT)
-        for genre in StringIO(output.decode(sys.getfilesystemencoding())):
-            (genre_number, genre_label) = genre.strip().split(None, 1)
-            genres.append(genre_label)
-        get_lame_genres._fm_cached_genres = sorted(genres)
+    genres = []
+    # why does lame write the genre list to stderr!? That's lame (LOL)
+    output = subprocess.check_output(
+        ["lame", "--genre-list"], stderr=subprocess.STDOUT)
+    for genre in StringIO(output.decode(sys.getfilesystemencoding())):
+        (genre_number, genre_label) = genre.strip().split(None, 1)
+        genres.append(genre_label)
 
-    # always return a copy so that the list can be modified without changing
-    # the cached value
+    genres = tuple(genres)
     _log.return_(genres)
-    return list(genres)
+    return genres
 
 
 def show_exception_dialog(e, aborting=False):
     """Open a dialog to display exception information.
 
-    :param Exception e: a caught exception
-    :keyword bool aborting: ``True`` if the application will terminate
+    :arg Exception e: a caught exception
+    :key bool aborting: ``True`` if the application will terminate
 
     """
     title = e.__class__.__name__
