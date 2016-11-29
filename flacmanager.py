@@ -1622,7 +1622,7 @@ class _FMEditorFrame(Frame):
 
         self.__row = 0  # relative to album_editor_frame
 
-        create_album_choices_editor("title")
+        create_album_choices_editor("title", tracks_apply=False)
         self._create_album_disc_editor(album_editor_frame)
         self._create_album_compilation_editor(album_editor_frame)
         create_album_choices_editor("artist")
@@ -1632,12 +1632,11 @@ class _FMEditorFrame(Frame):
         self._create_album_cover_editor(album_editor_frame)
         self._create_album_custom_metadata_editor(album_editor_frame)
 
-        for r in range(self.__row):
-            album_editor_frame.grid_rowconfigure(r, weight=1)
-        for c in range(3):
-            album_editor_frame.grid_columnconfigure(c, weight=1)
+        album_editor_frame.grid_columnconfigure(0, weight=0)
+        album_editor_frame.grid_columnconfigure(1, weight=1)
+        album_editor_frame.grid_columnconfigure(2, weight=0)
 
-        album_editor_frame.pack(anchor=N, fill=X)
+        album_editor_frame.pack(anchor=N, fill=BOTH)
 
     def __init_track_editors(self):
         track_editor_frame = LabelFrame(
@@ -1656,12 +1655,10 @@ class _FMEditorFrame(Frame):
         create_track_choices_editor("year")
         self._create_track_custom_metadata_editor(track_editor_frame)
 
-        for r in range(self.__row):
-            track_editor_frame.grid_rowconfigure(r, weight=1)
-        for c in range(2):
-            track_editor_frame.grid_columnconfigure(c, weight=1)
+        track_editor_frame.grid_columnconfigure(0, weight=0)
+        track_editor_frame.grid_columnconfigure(1, weight=1)
 
-        track_editor_frame.pack(anchor=N, fill=X)
+        track_editor_frame.pack(anchor=N, fill=BOTH)
 
     def _create_choices_editor(
             self, parent, editor_name, field_name,
@@ -1688,7 +1685,7 @@ class _FMEditorFrame(Frame):
         if tracks_apply:
             Button(
                 parent, name="%s_apply_button" % name,
-                text="Apply to all tracks",
+                text="Apply %s to all tracks" % field_name,
                 command=
                     lambda self=self, field_name=field_name, var=var:
                         self.__apply_to_all_tracks(field_name, var.get())
@@ -1959,52 +1956,56 @@ class _FMEditorFrame(Frame):
     def _create_track_control_editors(self, parent):
         self.__log.call(parent)
 
-        nav_frame = Frame(parent, name="track_nav_frame")
+        Label(parent, text="Track").grid(
+            row=self.__row, column=0, padx=5, pady=5, sticky=E)
 
-        Label(nav_frame, text="Track").pack(side=LEFT)
+        nav_frame = Frame(parent, name="track_nav_frame")
 
         number_var = IntVar(name="track_number_var")
         track_number = Spinbox(
             nav_frame, name="track_number_spinbox",
             from_=0, to=0, textvariable=number_var, width=3, wrap=True,
-            command=self._refresh_track_editors
+            state="readonly", command=self._refresh_track_editors
         )
         track_number.var = number_var
         track_number.pack(side=LEFT, padx=5)
 
+        of_label = Label(nav_frame, name="of_label", text="of")
+        of_label.pack(side=LEFT)
+        track_number.of_label = of_label
+
         self.__metadata_editors["track_number"] = track_number
 
-        of_label = Label(nav_frame, name="album_tracktotal_label", text="of")
-        of_label.pack(side=LEFT)
+        nav_frame.grid(row=self.__row, column=1, sticky=W)
 
-        nav_frame.grid(row=self.__row, column=0, sticky=E)
+        self.__row += 1
 
-        include_frame = Frame(parent, name="track_include_frame")
+        include_label = Label(parent, text="Include").grid(
+            row=self.__row, column=0, padx=5, pady=5, sticky=E)
 
         include_var = BooleanVar(name="track_include_var", value=True)
         track_include = Checkbutton(
-            include_frame, name="track_include_checkbutton",
-            text="Include this track", variable=include_var,
-            onvalue=True, offvalue=False,
+            parent, name="track_include_checkbutton",
+            variable=include_var, onvalue=True, offvalue=False,
             command=self._toggle_track_inclusion_state)
         track_include.var = include_var
-        track_include.pack(side=LEFT)
+        track_include.grid(row=self.__row, column=1, padx=5, sticky=W)
 
         apply_include_button = _styled(
             Button(
-                include_frame, name="track_include_apply_button",
+                parent, name="track_include_apply_button",
                 text="Include all tracks",
                 command=lambda self=self:
                     self.__apply_to_all_tracks(
                         "track_include",
                         self.__metadata_editors["track_include"].var.get())),
             foreground="Blue")
-        apply_include_button.pack(side=LEFT, padx=5)
+        apply_include_button.grid(row=self.__row, column=2, padx=5, sticky=W)
         track_include.apply_button = apply_include_button
 
         self.__metadata_editors["track_include"] = track_include
 
-        include_frame.grid(row=self.__row, column=1, sticky=W)
+        self.__row += 1
 
     def _create_track_custom_metadata_editor(self, parent):
         """Create the UI editing controls for editing custom metadata
@@ -2055,6 +2056,10 @@ class _FMEditorFrame(Frame):
             widget = self.__metadata_editors[album_field_name]
             widget.configure(values=aggregated_metadata[album_field_name])
             if aggregated_metadata[album_field_name]:
+                widget.configure(
+                    width=max(
+                        len(value)
+                        for value in aggregated_metadata[album_field_name]))
                 widget.current(0)
 
         self.__metadata_editors["album_discnumber"].var.set(
@@ -2180,6 +2185,7 @@ class _FMEditorFrame(Frame):
         # spinbox to 1, triggering a refresh of track 1's metadata
         track_number_editor = self.__metadata_editors["track_number"]
         track_number_editor.config(to=last_track)
+        track_number_editor.of_label.config(text="of %d" % last_track)
 
         # tracks metadata also uses 1-based indexing
         aggregated_tracks_metadata = self.__aggregated_metadata["__tracks"]
