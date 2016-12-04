@@ -2031,7 +2031,7 @@ class _FMEditorFrame(Frame):
                                 "track_title"].var.get()))
         )
         track_custom_tagging_button.grid(
-            row=self.__row, column=0, columnspan=2, padx=5, pady=5, sticky=W+E)
+            row=self.__row, column=0, columnspan=3, padx=5, pady=5, sticky=W+E)
 
         self.__metadata_editors["track_custom"] = track_custom_tagging_button
 
@@ -2046,6 +2046,16 @@ class _FMEditorFrame(Frame):
 
         self.reset()
 
+        # album combobox widgets will be updated to display at least this many
+        # characters
+        display_chars = {
+            "album_title": 79,
+            "album_artist": 59,
+            "album_recordlabel": 37,
+            "album_genre": 37,
+            "album_year": 7,
+        }
+
         for album_field_name in [
                 "album_title",
                 "album_artist",
@@ -2056,11 +2066,17 @@ class _FMEditorFrame(Frame):
             widget = self.__metadata_editors[album_field_name]
             widget.configure(values=aggregated_metadata[album_field_name])
             if aggregated_metadata[album_field_name]:
-                widget.configure(
-                    width=max(
-                        len(value)
-                        for value in aggregated_metadata[album_field_name]))
                 widget.current(0)
+
+                a_max_len = max(
+                    len(value)
+                    for value in aggregated_metadata[album_field_name])
+                if display_chars[album_field_name] < a_max_len:
+                    display_chars[album_field_name] = a_max_len
+
+        # resize the combobox widgets so that they can display each field
+        for (field_name, length) in display_chars.items():
+            self.__metadata_editors[field_name].configure(width=length)
 
         self.__metadata_editors["album_discnumber"].var.set(
             aggregated_metadata["album_discnumber"])
@@ -2187,6 +2203,15 @@ class _FMEditorFrame(Frame):
         track_number_editor.config(to=last_track)
         track_number_editor.of_label.config(text="of %d" % last_track)
 
+        # track combobox widgets will be updated to display at least this many
+        # characters
+        display_chars = {
+            "track_title": 79,
+            "track_artist": 59,
+            "track_genre": 37,
+            "track_year": 7,
+        }
+
         # tracks metadata also uses 1-based indexing
         aggregated_tracks_metadata = self.__aggregated_metadata["__tracks"]
         for t in range(1, len(aggregated_tracks_metadata)):
@@ -2206,16 +2231,23 @@ class _FMEditorFrame(Frame):
             # ...then initialize them with non-default values...
             varmap["track_include"].set(
                 aggregated_track_metadata["track_include"])
-            for track_field_name in [
+            for field_name in [
                     "track_title",
                     "track_artist",
                     "track_genre",
                     "track_year",
                     ]:
-                if aggregated_track_metadata[track_field_name]:
+                if aggregated_track_metadata[field_name]:
                     # first aggregated value is given preference
-                    varmap[track_field_name].set(
-                        aggregated_track_metadata[track_field_name][0])
+                    varmap[field_name].set(
+                        aggregated_track_metadata[field_name][0])
+
+                    # make sure widget is sized to display values
+                    t_max_len = max(
+                        len(value)
+                        for value in aggregated_track_metadata[field_name])
+                    if display_chars[field_name] < t_max_len:
+                        display_chars[field_name] = t_max_len
 
             track_vars.append(varmap)
 
@@ -2224,6 +2256,11 @@ class _FMEditorFrame(Frame):
             # is called BEFORE the metadata editor is packed, otherwise the
             # user will be very disoriented and confused)
             track_number_editor.invoke("buttonup")
+
+        # resize the combobox widgets so that they can display each field for
+        # each track
+        for (field_name, length) in display_chars.items():
+            self.__metadata_editors[field_name].configure(width=length)
 
         # now update the from_ to 1 and initialize the spinner to track #1 by
         # "wrapping around"
