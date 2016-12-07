@@ -1672,6 +1672,9 @@ class _FMEditorFrame(Frame):
 
         name = "%s_%s" % (editor_name, field_name)
 
+        # NOTE: for track editors, the variable will be re-*configured* on a
+        # per-track basis as the tracks spinbox is manipulated; however, the
+        # var *property* of a track editor is never re-assigned
         var = VarType(name="%s_var" % name)
         combobox = Combobox(
             parent, name="%s_combobox" % name, textvariable=var
@@ -1690,16 +1693,17 @@ class _FMEditorFrame(Frame):
             Button(
                 parent, name="%s_apply_button" % name,
                 text="Apply %s to all tracks" % field_name,
-                command=
-                    lambda self=self, field_name=field_name, var=var:
-                        self.__apply_to_all_tracks(field_name, var.get())
+                command=lambda
+                        self=self, metadata_name="track_%s" % field_name,
+                        var=var:
+                    self.__apply_to_all_tracks(metadata_name, var.get())
             ).grid(row=self.__row, column=2, padx=5, pady=5, sticky=W+E)
 
         self.__row += 1
 
         return combobox
 
-    def __apply_to_all_tracks(field_name, value):
+    def __apply_to_all_tracks(self, field_name, value):
         self.__log.call(field_name, value)
 
         for track_vars in self.__track_vars[1:]:
@@ -1991,7 +1995,7 @@ class _FMEditorFrame(Frame):
         track_include = Checkbutton(
             parent, name="track_include_checkbutton",
             variable=include_var, onvalue=True, offvalue=False,
-            command=self._toggle_track_inclusion_state)
+            command=self.__update_track_include_state)
         track_include.var = include_var
         track_include.grid(row=self.__row, column=1, padx=5, sticky=W)
 
@@ -2190,39 +2194,32 @@ class _FMEditorFrame(Frame):
         # tracks metadata also uses 1-based indexing
         aggregated_tracks_metadata = self.__aggregated_metadata["__tracks"]
         for t in range(1, len(aggregated_tracks_metadata)):
-            aggregated_track_metadata = aggregated_tracks_metadata[t]
+            track_metadata = aggregated_tracks_metadata[t]
 
-            # first create the vars for this track...
+            # first initialize the individual track vars...
             varmap = {
-                "track_include":
-                    # tracks are always included by default
-                    BooleanVar(name="track_%d_include" % t, value=True),
-                "track_title": StringVar(name="track_%d_title" % t),
-                "track_artist": StringVar(name="track_%d_artist" % t),
-                "track_genre": StringVar(name="track_%d_genre" % t),
-                "track_year": StringVar(name="track_%d_year" % t),
+                "track_include": BooleanVar(
+                    name="track_%d_include" % t,
+                    value=track_metadata["track_include"]),
             }
-
-            # ...then initialize them with non-default values...
-            varmap["track_include"].set(
-                aggregated_track_metadata["track_include"])
-            for track_field_name in [
-                    "track_title",
-                    "track_artist",
-                    "track_genre",
-                    "track_year",
+            for field in [
+                    "title",
+                    "artist",
+                    "genre",
+                    "year",
                     ]:
-                if aggregated_track_metadata[track_field_name]:
-                    # first aggregated value is given preference
-                    varmap[track_field_name].set(
-                        aggregated_track_metadata[track_field_name][0])
+                metadata_name = "track_%s" % field
+                varmap[metadata_name] = StringVar(
+                    name="track_%d_%s" % (t, field),
+                    value=track_metadata[metadata_name][0]
+                        if track_metadata[metadata_name] else "")
 
             track_vars.append(varmap)
 
-            # ...then finally initialize the editors and editor vars by using
-            # the track spinbox to trigger refreshes (but make sure this method
-            # is called BEFORE the metadata editor is packed, otherwise the
-            # user will be very disoriented and confused)
+            # ...then initialize the editors and editor vars by using the track
+            # spinbox to trigger refreshes (but make sure this method is called
+            # BEFORE the metadata editor is packed, otherwise the user will be
+            # very disoriented and confused)
             track_number_editor.invoke("buttonup")
 
         # now update the from_ to 1 and initialize the spinner to track #1 by
@@ -2241,48 +2238,34 @@ class _FMEditorFrame(Frame):
         """
         self.__log.call()
 
-        # First make sure the editors are enabled/disabled based on whether or
-        # not the track is included
-        self._toggle_track_inclusion_state()
-
         track_number = self.current_track_number
-        current_track_vars = self.__track_vars[track_number]
-        aggregated_track_metadata = \
-            self.__aggregated_metadata["__tracks"][track_number]
+        track_vars = self.__track_vars[track_number]
+        track_metadata = self.__aggregated_metadata["__tracks"][track_number]
 
+        metadata_editors = self.__metadata_editors
+        metadata_editors["track_include"].var.set(
+            track_vars["track_include"].get())
+        self.__update_track_include_state()
         for track_field_name in [
                 "track_title",
                 "track_artist",
                 "track_genre",
                 "track_year",
                 ]:
-            widget = self.__metadata_editors[track_field_name]
-            widget.config(values=aggregated_track_metadata[track_field_name])
+            widget = metadata_editors[track_field_name]
+            widget.configure(
+                values=track_metadata[track_field_name],
+                textvariable=track_vars[track_field_name])
 
-            if current_track_vars[track_field_name].get():
-                widget.var.set(current_track_vars[track_field_name].get())
-            elif aggregated_track_metadata[track_field_name]:
-                widget.current(0)
-                current_track_vars[track_field_name].set(
-                    aggregated_track_metadata[track_field_name][0])
-
-    def _toggle_track_inclusion_state(self):
+    def __update_track_include_state(self):
         self.__log.call()
 
         track_number = self.current_track_number
-        track_included = self.__track_vars[track_number]["track_include"].get()
+        track_include_editor = self.__metadata_editors["track_include"]
 
-        self.__update_track_inclusion_state(track_number, track_included)
-
-    def __update_track_inclusion_state(self, track_number, track_included):
-        self.__log.call(track_number, track_included)
-
+        track_included = track_include_editor.var.get()
         self.__track_vars[track_number]["track_include"].set(track_included)
 
-        metadata_editors = self.__metadata_editors
-
-        track_include_editor = metadata_editors["track_include"]
-        track_include_editor.var.set(track_included)
         if track_included:
             track_include_editor.apply_button.config(text="Include all tracks")
             _styled(track_include_editor.apply_button, foreground="Blue")
@@ -2310,6 +2293,18 @@ class _FMEditorFrame(Frame):
         self._remove()
 
         metadata_editors = self.__metadata_editors
+
+        # reset all track editor vars to default
+        # (the .var property of track editors serves as the default)
+        metadata_editors["track_include"].var.set(True)
+        for track_field_name in [
+                "track_title",
+                "track_artist",
+                "track_genre",
+                "track_year",
+                ]:
+            metadata_editors[track_field_name].configure(
+                textvariable=metadata_editors[track_field_name].var)
 
         metadata_editors["album_discnumber"].var.set(0)
         metadata_editors["album_disctotal"].var.set(0)
