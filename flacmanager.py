@@ -1658,7 +1658,7 @@ class _FMEditorFrame(Frame):
         track_editor_frame.grid_columnconfigure(0, weight=0)
         track_editor_frame.grid_columnconfigure(1, weight=1)
 
-        track_editor_frame.pack(anchor=N, fill=BOTH)
+        track_editor_frame.pack(anchor=N, pady=11, fill=BOTH)
 
     def _create_choices_editor(
             self, parent, editor_name, field_name, tracks_apply=True,
@@ -2183,7 +2183,8 @@ class _FMEditorFrame(Frame):
             None,   # track vars use 1-based indexing
         ]
 
-        last_track = len(self.__aggregated_metadata["__tracks"]) - 1
+        aggregated_tracks_metadata = self.__aggregated_metadata["__tracks"]
+        last_track = len(aggregated_tracks_metadata) - 1
         # from_ will still be 0 here, and that's intended - it means that when
         # we invoke "buttonup" for the first time, it will increment the track
         # spinbox to 1, triggering a refresh of track 1's metadata
@@ -2192,7 +2193,6 @@ class _FMEditorFrame(Frame):
         track_number_editor.of_label.config(text="of %d" % last_track)
 
         # tracks metadata also uses 1-based indexing
-        aggregated_tracks_metadata = self.__aggregated_metadata["__tracks"]
         for t in range(1, len(aggregated_tracks_metadata)):
             track_metadata = aggregated_tracks_metadata[t]
 
@@ -5532,6 +5532,15 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                     ],
                     track_metadata, self.metadata["__tracks"][t])
                 t += 1
+
+        # currently, neither Gracenote nor MusicBrainz provide "year" metadata
+        # on a per-track basis; so if "track_year" is empty after aggregation,
+        # default it to the same options as "album_year"
+        t = 1
+        album_year = self.metadata["album_year"]
+        for track_metadata in self.metadata["__tracks"][t:]:
+            if not track_metadata["track_year"]:
+                track_metadata["track_year"] = list(album_year) # use a copy
 
         # persisted metadata takes precedence and provides some values not
         # collected by regular collectors
