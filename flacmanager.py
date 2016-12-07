@@ -608,6 +608,7 @@ def make_tempfile(suffix=".tmp", prefix="fm"):
     (fd, filename) = mkstemp(suffix=suffix, prefix=prefix)
     # close the file descriptor; it isn't inherited by child processes
     os.close(fd)
+    # clean up the temp file when FLACManager exits
     atexit.register(os.unlink, filename)
     _log.debug("created temp file %s", filename)
     return filename
@@ -1769,7 +1770,7 @@ class _FMEditorFrame(Frame):
         frame = Frame(parent)
 
         var = StringVar(name="album_cover_var", value="--none--")
-        album_cover = OptionMenu(frame, var, command=self.choose_album_cover)
+        album_cover = OptionMenu(frame, var)
         album_cover.var = var
         album_cover.config(state=DISABLED)
         album_cover.pack(side=LEFT)
@@ -1791,20 +1792,29 @@ class _FMEditorFrame(Frame):
 
         self.__row += 1
 
-    def choose_album_cover(self, filename):
+    def choose_album_cover(self, label):
         """Select and preview a cover image.
 
-        :arg str filename: the cover image file name
+        :arg str label: the cover image display label
 
         """
-        self.__log.call(filename)
+        self.__log.call(label)
+
+        filename = self.__album_covers.get(label)
+        if filename is None:
+            self.__log.error("%r not found in album covers", label)
+            messagebox.showerror(
+                "Album cover preview failure",
+                "Album cover %r was not found!" % label)
+            return
 
         status = subprocess.call(["open", "-a", "Preview", filename])
         if status == 0:
-            self.__metadata_editors["album_cover"].set(filename)
+            self.__metadata_editors["album_cover"].var.set(label)
         else:
             self.__log.warning(
-                "exit status %d attempting to preview %s", status, filename)
+                "exit status %d attempting to preview %s (%s)",
+                status, label, filename)
 
     def _add_album_cover_from_url(self):
         """Download a cover image from a user-provided URL and open in
@@ -1830,7 +1840,7 @@ class _FMEditorFrame(Frame):
             return
 
         self.__log.debug("url = %r", url)
-        filename = None
+        label = None
         try:
             response = urlopen(
                 url, timeout=get_config().getfloat("HTTP", "timeout"))
@@ -1858,12 +1868,12 @@ class _FMEditorFrame(Frame):
                 "An unexpected error occurred while "
                     "downloading the image from %s." % url)
         else:
-            self.__add_album_cover_option(filename)
+            label = self.__add_album_cover_option(filename)
         finally:
             album_cover.config(state=NORMAL)
 
-        if filename is not None:
-            self.choose_album_cover(filename)
+        if label is not None:
+            self.choose_album_cover(label)
 
     def _add_album_cover_from_file(self):
         """Open a user-defined cover image in Mac OS X Preview.
@@ -1877,6 +1887,7 @@ class _FMEditorFrame(Frame):
 
         album_cover.config(state=DISABLED)
 
+        label = None
         filename = filedialog.askopenfilename(
             defaultextension=".jpg",
             filetypes=[
@@ -1915,25 +1926,34 @@ class _FMEditorFrame(Frame):
                 "An unexpected error occurred while "
                     "processing the image from %s." % filename)
         else:
-            self.__add_album_cover_option(filename)
+            label = self.__add_album_cover_option(filename)
         finally:
             album_cover.config(state=NORMAL)
 
-        if filename is not None:
-            self.choose_album_cover(filename)
+        if label is not None:
+            self.choose_album_cover(label)
 
     def __add_album_cover_option(self, filename, showinfo=True):
+        self.__log.call(filename, showinfo=showinfo)
+
+        label = "%02d (%s)" % (
+            len(self.__album_covers) + 1, os.path.basename(filename))
+        self.__album_covers[label] = filename
+
         self.__metadata_editors["album_cover"]["menu"].add_command(
-            label=filename,
+            label=label,
             command=
-                lambda self=self, filename=filename:
-                    self.choose_album_cover(filename))
+                lambda self=self, label=label:
+                    self.choose_album_cover(label))
 
         if showinfo:
             messagebox.showinfo(
                 "Cover image added",
-                "%s\nhas been added to the list of available covers." %
-                    filename)
+                "%s\n(%s)\nhas been added to the list of available covers." %
+                    label, filename)
+
+        self.__log.return_(label)
+        return label
 
     def _create_album_custom_metadata_editor(self, parent):
         """Create the UI editing controls for editing custom metadata
@@ -2076,11 +2096,9 @@ class _FMEditorFrame(Frame):
 
         album_cover_editor = self.__metadata_editors["album_cover"]
         album_cover_editor.config(state=DISABLED)
-        self.__album_covers = aggregated_metadata["album_cover"].copy()
-        if self.__album_covers:
-            for cover_filename in self.__album_covers:
-                self.__add_album_cover_option(cover_filename, showinfo=False)
-            album_cover_editor.config(state=NORMAL)
+        for filepath in aggregated_metadata["album_cover"]:
+            self.__add_album_cover_option(filepath, showinfo=False)
+        album_cover_editor.config(state=NORMAL)
 
         self.__aggregated_metadata = deepcopy(aggregated_metadata)
 
@@ -2123,10 +2141,13 @@ class _FMEditorFrame(Frame):
                 "album_recordlabel",
                 "album_genre",
                 "album_year",
-                "album_cover",
                 ]:
             snapshot[album_field_name] = \
                 metadata_editors[album_field_name].var.get()
+
+        # use the actual temp filename for the snapshot
+        snapshot["album_cover"] = \
+            self.__album_covers.get(metadata_editors["album_cover"].var.get())
 
         track_vars = self.__track_vars
         snapshot["album_tracktotal"] = len(track_vars) - 1
@@ -2343,6 +2364,7 @@ class _FMEditorFrame(Frame):
 
         # finally clear all cached data
         self.__aggregated_metadata = None
+        self.__album_covers = OrderedDict()
         self.__track_vars = None
 
     def _remove(self):
@@ -4478,7 +4500,7 @@ class _HTTPMetadataCollector(MetadataCollector):
         self.__log.return_(rv)
         return rv
 
-    def _get_album_art_image_data(self, url):
+    def _download_album_art_image(self, url):
         """GET an album art image over HTTP/S.
 
         :arg str url: the full URL for an album art image
@@ -4670,7 +4692,7 @@ class GracenoteCDDBMetadataCollector(_HTTPMetadataCollector):
 
             for gn_url_coverart in gn_album_detail.findall(
                     "URL[@TYPE='COVERART']"):
-                cover_art = self._get_album_art_image_data(
+                cover_art = self._download_album_art_image(
                     gn_url_coverart.text)
                 if cover_art and cover_art not in metadata["album_cover"]:
                     metadata["album_cover"].append(cover_art)
@@ -4996,7 +5018,7 @@ class MusicBrainzMetadataCollector(_HTTPMetadataCollector):
             cover_art_front = mb_release.find(
                 "mb:cover-art-archive/mb:front", namespaces=nsmap).text
             if cover_art_front == "true":
-                cover_art = self._get_album_art_image_data(
+                cover_art = self._download_album_art_image(
                     self.COVERART_URL_TEMPLATE % release_mbid)
                 if cover_art and cover_art not in metadata["album_cover"]:
                     metadata["album_cover"].append(cover_art)
@@ -5237,10 +5259,10 @@ class MetadataPersistence(MetadataCollector):
         # the format of the persisted metadata is different as of 0.8.0
         self.__convert_restored_metadata(disc_metadata)
 
-        # convert album cover to byte string (raw image data) by encoding
-        # the string to "Latin-1"
-        # (see the `_convert_to_json_serializable(obj)' method)
         if disc_metadata["album_cover"] is not None:
+            # convert album cover to byte string (raw image data) by encoding
+            # the string to "Latin-1"
+            # (see the `_convert_to_json_serializable(obj)' method)
             disc_metadata["album_cover"] = \
                 disc_metadata["album_cover"].encode("Latin-1")
 
@@ -5542,6 +5564,9 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
             if not track_metadata["track_year"]:
                 track_metadata["track_year"] = list(album_year) # use a copy
 
+        # write album cover image data to temporary files
+        self.__save_album_covers()
+
         # persisted metadata takes precedence and provides some values not
         # collected by regular collectors
         if self.persistence.restored:
@@ -5587,6 +5612,26 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
             for value in source[field]:
                 if value not in target[field]:
                     target[field].append(value)
+
+    def __save_album_covers(self):
+        self.__log.call()
+
+        album_covers = self.metadata["album_cover"].copy()
+        self.metadata["album_cover"] = []
+        for (i, image_data) in enumerate(album_covers):
+            image_type = imghdr.what("_ignored_", h=image_data)
+            if image_type is None:
+                self.__log.error(
+                    "ignoring unrecognized image data [%d]: %r...",
+                    i, image_data[:8])
+                continue
+
+            filepath = make_tempfile(suffix='.' + image_type)
+            with open(filepath, "wb") as f:
+                f.write(image_data)
+            self.__log.debug("wrote %s", filepath)
+
+            self.metadata["album_cover"].append(filepath)
 
 
 @lru_cache(maxsize=1)
