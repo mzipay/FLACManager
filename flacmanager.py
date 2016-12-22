@@ -2056,7 +2056,7 @@ class _FMEditorFrame(Frame):
                         title="%d. %s" % (
                             self.current_track_number,
                             self.__track_vars[self.current_track_number][
-                                "track_title"].var.get()))
+                                "track_title"].get()))
         )
         track_custom_tagging_button.grid(
             row=self.__row, column=0, columnspan=3, padx=5, pady=5, sticky=W+E)
