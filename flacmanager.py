@@ -177,13 +177,11 @@ class _TracingLogger(logging.getLoggerClass()):
         :meth:`logging.Logger.log`.
 
         """
-        if self.isEnabledFor(TRACE):
-            self._log(TRACE, msg, *args, **kwargs)
+        self.log(TRACE, msg, *args, **kwargs)
 
     def mark(self, marker="MARK"):
         """Log *marker* with severity :attr:`TRACE`."""
-        if self.isEnabledFor(TRACE):
-            self._log(TRACE, marker)
+        self.log(TRACE, marker)
 
     def return_(self, value=None):
         """Log return from a callable with severity :attr:`TRACE`.
@@ -395,18 +393,34 @@ def get_config():
                     "FLACManager" not in _config or
                     _config["FLACManager"].get("__version__") != __version__):
                 _log.warning(
-                    "flacmanager.ini is outdated; updating to version %s",
+                    "flacmanager.ini is missing or outdated; "
+                        "updating to version %s",
                     __version__)
+
+                fm = dict(_config.pop("FLACManager", {}))
 
                 # always make sure this is accurate
                 _config["FLACManager"] = OrderedDict(__version__=__version__)
 
                 for (key, default_value) in [
                         ("title", "FLACManager ${__version__}"),
-                        ("minwidth", "1024"),
-                        ("minheight", "768"),
                         ]:
                     _config["FLACManager"].setdefault(key, default_value)
+
+                if "UI" not in _config:
+                    _config["UI"] = OrderedDict()
+                if "minwidth" in fm:
+                    _config["UI"].setdefault("minwidth", fm.pop("minwidth"))
+                if "minheight" in fm:
+                    _config["UI"].setdefault("minheight", fm.pop("minheight"))
+                for (key, default_value) in [
+                        ("minwidth", "1024"),
+                        ("minheight", "768"),
+                        ("padx", "7"),
+                        ("pady", "7"),
+                        ("encoding_max_visible_tracks", "29"),
+                        ]:
+                    _config["UI"].setdefault(key, default_value)
 
                 if "Logging" not in _config:
                     _config["Logging"] = OrderedDict()
@@ -445,7 +459,7 @@ def get_config():
                         ]:
                     _config["MusicBrainz"].setdefault(key, default_value)
 
-                #TODO: add Discogs for metadata aggregation
+                # TODO: add Discogs for metadata aggregation
                 '''
                 if "Discogs" not in _config:
                     _config["Discogs"] = OrderedDict()
@@ -516,7 +530,7 @@ def get_config():
                 for (key, default_value) in [
                         ("ALBUM", "album_title"),
                         ("ALBUMARTIST", "album_artist"),
-                        ("ORGANIZATION", "album_recordlabel"),
+                        ("ORGANIZATION", "album_label"),
                         ("LABEL", "${ORGANIZATION}"),
                         ("DISCNUMBER", "{album_discnumber:d}"),
                         ("DISCTOTAL", "{album_disctotal:d}"),
@@ -567,7 +581,7 @@ def get_config():
                 for (key, default_value) in [
                         ("TALB", "album_title"),
                         ("TPE2", "album_artist"),
-                        ("TPUB", "album_recordlabel"),
+                        ("TPUB", "album_label"),
                         ("TPOS", "{album_discnumber:d}/{album_disctotal:d}"),
                         ("TRCK", "{track_number:d}/{album_tracktotal:d}"),
                         ("TIT2", "track_title"),
@@ -655,30 +669,48 @@ class FLACManager(Tk):
         config = get_config()
         self.title(config["FLACManager"]["title"])
         self.minsize(
-            config["FLACManager"].getint("minwidth"),
-            config["FLACManager"].getint("minheight"))
+            config["UI"].getint("minwidth"), config["UI"].getint("minheight"))
 
         self.config(menu=_FMMenu(self))
 
         self._disc_frame = _FMDiscFrame(self, name="disc_frame", text="Disc")
         self._status_frame = _FMStatusFrame(self, name="status_frame")
         self._editor_frame = _FMEditorFrame(self, name="editor_frame")
+        self._encoding_status_frame = _FMEncodingStatusFrame(
+            self, name="encoding_status_frame", text="Encoding status")
 
         self.reset()
+
+    @property
+    def disk(self):
+        return self.__disk
+
+    @property
+    def mountpoint(self):
+        return self.__mountpoint
+
+    @property
+    def toc(self):
+        return self.__toc
 
     def reset(self):
         self._remove()
 
+        ui = get_config()["UI"]
+        padx = ui.getint("padx")
+        pady = ui.getint("pady")
+
         self._disc_frame.reset()
-        self._disc_frame.pack(anchor=N, fill=X, padx=7, pady=7)
+        self._disc_frame.pack(anchor=N, fill=X, padx=padx, pady=pady)
 
         self._status_frame.reset()
-        self._status_frame.pack(anchor=N, fill=X, padx=7, pady=7)
+        self._status_frame.pack(anchor=N, fill=X, padx=padx, pady=pady)
 
         # not repacked until metadata for an inserted disc has been aggregated
         self._editor_frame.reset()
 
-        self._encoding_status_frame = None
+        # not repacked until user initiates rip+tag
+        self._encoding_status_frame.reset()
 
         if self.has_required_config:
             self.check_for_disc()
@@ -757,10 +789,10 @@ class FLACManager(Tk):
                 return
 
             self.__log.debug("dequeued %r", disc_info)
-            (self._disk, self._mountpoint) = disc_info
-            self._disc_frame.disc_mounted(self._mountpoint)
+            (self.__disk, self.__mountpoint) = disc_info
+            self._disc_frame.disc_mounted(self.mountpoint)
 
-            self.toc = read_disc_toc(self._mountpoint)
+            self.__toc = read_disc_toc(self.mountpoint)
 
             self.aggregate_metadata()
 
@@ -818,66 +850,6 @@ class FLACManager(Tk):
         self._editor_frame.pack(anchor=N, fill=BOTH, padx=7, pady=7)
         self._disc_frame.rip_and_tag_ready()
 
-    # TODO: still needed?
-    '''
-    def _combine_genres(self, choices):
-        """Create a custom genre list from a list of aggregated genres.
-
-        :arg list choices: aggregated values for the album genre
-        :return: customized :obj:`list` of values for the album genre
-
-        If a genre choice has been restored from persisted data, it will
-        always remain in place as the *first* choice.
-
-        If *choices* is empty, add "Other" to the list.
-
-        """
-        self.__log.call(choices)
-
-        genres = []
-        for choice in choices:
-            for single_genre in [genre.strip() for genre in choice.split(',')]:
-                if single_genre not in genres:
-                    genres.append(single_genre)
-
-        if len(genres) > 1:
-            combined = ", ".join(genres)
-            genres.insert(0, combined)
-        elif len(genres) == 0:
-            genres.append("Other")
-
-        if self._persistence.restored and choices and genres[0] != choices[0]:
-            if choices[0] in genres:
-                genres.remove(choices[0])
-            genres.insert(0, choices[0])
-
-        self.__log.return_(genres)
-        return genres
-    '''
-
-    # TODO: still needed?
-    '''
-    def _add_lame_genres_menu(self, optionmenu, var, excludes):
-        """Add a submenu to *optionmenu* that contains the LAME genres.
-
-        :arg tkinter.OptionMenu optionmenu:
-           a drop-down menu of LAME genre choices
-        :arg tkinter.StringVar var:
-           a variable to hold the selected genre
-        :arg list excludes: LAME genres to exclude from the submenu
-
-        """
-        self.__log.call(optionmenu, var, excludes)
-
-        optionmenu["menu"].add_separator()
-        menu = Menu(optionmenu["menu"])
-        for genre in get_lame_genres():
-            if genre not in excludes:
-                menu.add_command(
-                    label=genre, command=lambda v=var, g=genre: v.set(g))
-        optionmenu["menu"].add_cascade(label="LAME", menu=menu)
-    '''
-
     def _create_encoder_status(self, master, max_visible_tracks=29):
         """Create UI widgets that communicate encoding status to the
         user.
@@ -894,123 +866,71 @@ class FLACManager(Tk):
 
         encoding_status_frame = LabelFrame(master, text="Encoding status")
 
-        track_titles = [var.get() for var in self._track_vars["title"][1:]]
-        self.track_labels = [
-            "%02d %s" % (i + 1, v) for (i, v) in enumerate(track_titles)]
-
-        track_include_flags = [
-            var.get() for var in self._track_vars["include"][1:]]
-        self._initialize_track_encoding_statuses(track_include_flags)
-
-        track_total = len(self.toc.track_offsets)
-
-        list_frame = Frame(encoding_status_frame)
-        if track_total > max_visible_tracks:
-            visible_tracks = max_visible_tracks
-            vscrollbar = Scrollbar(list_frame, orient=VERTICAL)
-            vscrollbar.pack(side=RIGHT, fill=Y)
-            cfg = {"yscrollcommand": vscrollbar.set}
-        else:
-            visible_tracks = track_total
-            vscrollbar = None
-            cfg = {}
-
-        self._encoding_status_list = Listbox(
-            list_frame, exportselection=NO, activestyle=NONE,
-            selectmode=SINGLE, bd=1, height=visible_tracks,
-            listvariable=StringVar(
-                value=' '.join(
-                    "{%s}" % track_encoding_status.describe()
-                    for track_encoding_status in
-                        self._track_encoding_statuses)),
-            **cfg)
-
-        if vscrollbar is not None:
-            vscrollbar.config(command=self._encoding_status_list.yview)
-
-        list_frame.pack(fill=BOTH, padx=17, pady=17)
-
-        for i in range(track_total):
-            if not track_include_flags[i]:
-                self._encoding_status_list.itemconfig(i, {"fg": "gray79"})
-
-        self._encoding_status_list.pack(fill=BOTH, padx=0, pady=0)
-
-        self.__log.return_(encoding_status_frame)
-        return encoding_status_frame
-
-    def _initialize_track_encoding_statuses(self, track_include_flags):
-        """Create the state machines for each track's encoding status.
-
-        :arg list track_include_flags:
-           ``True`` or ``False`` values for each track indicating
-           whether or not it is included for the encoding process
-
-        """
-        self.__log.call(track_include_flags)
-
-        self._track_encoding_statuses = []
-        for (i, label) in enumerate(self.track_labels):
-            self._track_encoding_statuses.append(
-                TrackEncodingStatus(label, pending=track_include_flags[i]))
-
     def rip_and_tag(self):
         """Create tagged FLAC and MP3 files of all included tracks."""
         self.__log.call()
-
-        if self._encoding_status_frame is not None:
-            self._encoding_status_frame.destroy()
-            self._encoding_status_frame = None
 
         self._disc_frame.ripping_and_tagging()
 
         # issues/1
         self._persistence.store(self._editor_frame.metadata_snapshot)
 
+        per_track_metadata = self._editor_frame.flattened_metadata
         try:
-            encoder = self._prepare_encoder()
+            encoder = self._prepare_encoder(per_track_metadata)
         except Exception as e:
             self.__log.exception("failed to initialize the encoder")
             show_exception_dialog(e)
             self._disc_frame.rip_and_tag_failed()
         else:
+            self._encoding_status_frame.ready_to_encode(per_track_metadata)
+
+            # at this point, the encoder is ready and the status frame has been
+            # initialized for display
+            self._editor_frame.pack_forget()
+            ui = get_config()["UI"]
+            self._encoding_status_frame.pack(
+                anchor=N, fill=X, expand=YES,
+                padx=ui.getint("padx"), pady=ui.getint("pady"))
+
+            # rock and roll
             encoder.start()
+
             self.__log.info("encoding has started; monitoring progress...")
-            self._monitor_encoding_progress()
+            self._encoding_status_frame.encoding_in_progress()
 
-    def _prepare_encoder(self):
-        """Create and initialize the object that will encode the album
-        tracks.
-
-        :return:
-           a :class:`FLACEncoder` populated with encoding instructions
-           for each track
-
-        """
-        self.__log.call()
+    def _prepare_encoder(self, per_track_metadata):
+        self.__log.call(per_track_metadata)
 
         disc_filenames = [
-            name for name in os.listdir(self._mountpoint)
+            name for name in os.listdir(self.mountpoint)
             if not name.startswith('.') and
                 os.path.splitext(name)[1] in
                     [".aiff", ".aif", ".aifc", ".cdda", ".cda"]]
         if len(disc_filenames) != len(self.toc.track_offsets):
             raise FLACManagerError(
-                "Disc TOC reported %d tracks, but %d files were found at "
-                        "mount point %s" % (
-                    len(self.toc.track_offsets), len(trackfiles),
-                    self._mountpoint),
-                context_hint="FLAC ripping")
+                ("Disc TOC contains %d tracks, but %d CD-DA files were found "
+                        "under %s") % (
+                    len(self.toc.track_offsets), len(disc_filenames),
+                    self.mountpoint),
+                context_hint="FLAC+MP3 encoding")
+        elif len(disc_filenames) != len(per_track_metadata):
+            raise FLACManagerError(
+                ("Found %d CD-DA files to encode, but there are %d metadata "
+                    "mappings") % (len(disc_filenames), len(per_track_metadata)),
+                context_hint="FLAC+MP3 encoding")
 
-        flac_library_root = get_config().get("FLAC", "library_root")
+        config = get_config()
+
+        flac_library_root = config["FLAC"]["library_root"]
         try:
             flac_library_root = resolve_path(flac_library_root)
         except Exception as e:
             raise FLACManagerError(
                 "Cannot use FLAC library root %s: %s" % (flac_library_root, e),
-                context_hint="FLAC ripping", cause=e)
+                context_hint="FLAC encoding", cause=e)
 
-        mp3_library_root = get_config().get("MP3", "library_root")
+        mp3_library_root = config["MP3"]["library_root"]
         try:
             mp3_library_root = resolve_path(mp3_library_root)
         except Exception as e:
@@ -1018,171 +938,70 @@ class FLACManager(Tk):
                 "Cannot use MP3 library root %s: %s" % (mp3_library_root, e),
                 context_hint="MP3 encoding", cause=e)
 
-        self._encoding_status_frame = self._create_encoder_status(self)
-        self.metadata_editor.pack_forget()
-        self._encoding_status_frame.pack(
-            fill=BOTH, padx=17, pady=17, expand=YES)
-
         encoder = FLACEncoder()
-        for (i, metadata) in enumerate(self._editor_frame.flattened_metadata):
-            if not metadata["track_include"]:
+        for (i, track_metadata) in enumerate(per_track_metadata):
+            if not track_metadata["track_include"]:
                 continue
 
-            cdda_filename = os.path.join(self._mountpoint, disc_filenames[i])
+            cdda_filename = os.path.join(self.mountpoint, disc_filenames[i])
 
-            flac_dirname = generate_flac_dirname(flac_library_root, metadata)
-            flac_basename = generate_flac_basename(metadata)
+            flac_dirname = generate_flac_dirname(
+                flac_library_root, track_metadata)
+            flac_basename = generate_flac_basename(track_metadata)
             flac_filename = os.path.join(flac_dirname, flac_basename)
-            self.__log.info("%s -> %s", cdda_filename, flac_filename)
 
-            mp3_dirname = generate_mp3_dirname(mp3_library_root, metadata)
-            mp3_basename = generate_mp3_basename(metadata)
+            mp3_dirname = generate_mp3_dirname(
+                mp3_library_root, track_metadata)
+            mp3_basename = generate_mp3_basename(track_metadata)
             mp3_filename = os.path.join(mp3_dirname, mp3_basename)
-            self.__log.info("%s -> %s", flac_filename, mp3_filename)
 
             encoder.add_instruction(
-                i, cdda_filename, flac_filename, mp3_filename, metadata)
+                i, cdda_filename, flac_filename, mp3_filename, track_metadata)
+
+            self.__log.info(
+                "prepared encoding instruction:\n%s\n-> %s\n-> %s",
+                cdda_filename, flac_filename, mp3_filename)
 
         self.__log.return_(encoder)
         return encoder
-
-    def _monitor_encoding_progress(self):
-        """Update the UI as tracks are ripped."""
-        # don't log entry into this method - it is called repeatedly until all
-        # tracks are ripped
-        try:
-            (priority, status) = _ENCODING_QUEUE.get_nowait()
-        except queue.Empty:
-            self.after(QUEUE_GET_NOWAIT_AFTER, self._monitor_encoding_progress)
-        else:
-            _ENCODING_QUEUE.task_done()
-            self.__log.debug("dequeued %r", status)
-
-            (track_index, cdda_fn, flac_fn, stdout_fn, target_state) = status
-            if target_state == "FINISHED":
-                # all tracks have been processed
-                while _ENCODING_QUEUE.qsize() > 0:
-                    try:
-                        self.__log.debug(
-                            "finished; discarding %r",
-                            _ENCODING_QUEUE.get_nowait())
-                    except queue.Empty:
-                        break
-                    else:
-                        _ENCODING_QUEUE.task_done()
-
-                self._disc_frame.rip_and_tag_finished()
-
-                self.bell()
-                self.__log.trace("break out of the monitoring loop")
-                return
-
-            track_label = self.track_labels[track_index]
-            track_encoding_status = self._track_encoding_statuses[track_index]
-
-            # only process "expected" state transitions
-            if track_encoding_status.transition_to(target_state):
-                if track_encoding_status.state == TRACK_FAILED:
-                    status_message = track_encoding_status.describe(
-                        message="%s: %s" %
-                            (target_state.__class__.__name__, target_state)
-                        if isinstance(target_state, Exception) else None)
-                    item_config = {"fg": "red"}
-                elif track_encoding_status.state == TRACK_ENCODING_FLAC:
-                    # ensure that the currently-ripping track is always visible
-                    self._encoding_status_list.see(track_index)
-                    # read encoding interval status from flac's stdout
-                    cdda_basename = os.path.basename(cdda_fn)
-                    stdout_message = self._read_current_status(
-                        cdda_basename, stdout_fn)
-                    status_message = track_encoding_status.describe(
-                        message=stdout_message if stdout_message else None)
-                    item_config = {"fg": "blue"}
-                elif (track_encoding_status.state in [
-                            TRACK_DECODING_WAV, TRACK_ENCODING_MP3] or
-                        track_encoding_status.state.key == "REENCODING_MP3"):
-                    status_message = track_encoding_status.describe()
-                    item_config = {"fg": "dark violet"}
-                elif track_encoding_status.state == TRACK_COMPLETE:
-                    status_message = flac_fn
-                    item_config = {"fg": "dark green"}
-                else:   # unexpected state
-                    status_message = "%s (unexpected target state %s)" % (
-                        track_encoding_status.describe(), target_state)
-                    item_config = {"fg": "red"}
-
-                self._encoding_status_list.delete(track_index)
-                self._encoding_status_list.insert(track_index, status_message)
-                self._encoding_status_list.itemconfig(track_index, item_config)
-
-                # ensure that last track is always visible after delete/insert
-                if (track_index ==
-                        self._encoding_status_list.index(END) - 1):
-                    self._encoding_status_list.see(track_index)
-
-            self.after(QUEUE_GET_NOWAIT_AFTER, self._monitor_encoding_progress)
-
-    def _read_current_status(self, cdda_basename, stdout_fn):
-        """Extract the most recent FLAC encoding update from
-        *stdout_fn*.
-
-        :arg str cdda_basename: a grep pattern for *stdout_fn*
-        :arg str stdout_fn:
-           filename to which stdout has been redirected
-        :return: a line of update text from *stdout_fn*
-        :rtype: :obj:`str`
-
-        """
-        # do not trace; called from a recursive method
-        status_line = None
-        prefix = "%s: " % cdda_basename
-        with open(stdout_fn, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith(prefix):
-                    # remove the prefix, then split on ASCII BS (Backspace) and
-                    # take the last component
-                    #
-                    # output line looks like this:
-                    #   ${prefix}${status1}(BS)+${status2}(BS)+..${statusN}
-                    status_line = line.replace(prefix, "").split('\x08')[-1]
-        return status_line
 
     def eject_disc(self):
         """Eject the current CD-DA disc and update the UI."""
         self.__log.call()
 
         status = subprocess.call(
-            ["diskutil", "eject", self._disk],
+            ["diskutil", "eject", self.disk],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if status == 0:
             self.__log.info(
-                "ejected %s mounted at %s", self._disk, self._mountpoint)
+                "ejected %s mounted at %s", self.disk, self.mountpoint)
 
-            self._destroy_metadata_editor()
+            self.__disk = None
+            self.__mountpoint = None
+            self.__toc = None
 
-            if self._encoding_status_frame is not None:
-                self._encoding_status_frame.destroy()
-                self._encoding_status_frame = None
-                self._encoding_status_list.destroy()
-                self._encoding_status_list = None
+            for frame in [
+                    self._encoding_status_frame,
+                    self._editor_frame,
+                    self._disc_frame,
+                    self._status_frame,
+                    ]:
+                frame.reset()
 
-            self._disk = self._mountpoint = None
+            ui = get_config()["UI"]
+            self._status_frame.pack(
+                anchor=N, fill=X,
+                padx=ui.getint("padx"), pady=ui.getint("pady"))
 
-            self._status_frame.pack_forget()
-
-            self.toc = None
-            self._disc_frame.reset()
-
+            # begin polling for a newly inserted disc
             DiscCheck().start()
             self._update_disc_info()
         else:
             self.__log.error(
-                "unable to eject %s mounted at %s",
-                self._disk, self._mountpoint)
+                "unable to eject %s mounted at %s", self.disk, self.mountpoint)
             messagebox.showerror(
                 title="Disk eject failure",
-                message="Unable to eject %s" % self._mountpoint)
+                message="Unable to eject %s" % self.mountpoint)
 
     def edit_aggregation_config(self):
         """Open the configuration editor dialog."""
@@ -1231,6 +1050,12 @@ class FLACManager(Tk):
         self.__log.call()
         EditMP3OrganizationConfigurationDialog(
             self, title="Edit flacmanager.ini (MP3 folder and file names)")
+
+    def edit_ui_config(self):
+        """Open the configuration editor dialog."""
+        self.__log.call()
+        EditUserInterfaceConfigurationDialog(
+            self, title="Edit flacmanager.ini (UI)")
 
     def edit_logging_config(self):
         """Open the configuration editor dialog."""
@@ -1316,6 +1141,10 @@ class _FMMenu(Menu):
         edit_menu.add_cascade(label="Configure MP3", menu=mp3_menu)
 
         edit_menu.add_separator()
+
+        edit_menu.add_command(
+            label="Configure UI", command=fm.edit_ui_config)
+        self.add_cascade(label="Edit", menu=edit_menu)
 
         edit_menu.add_command(
             label="Configure logging", command=fm.edit_logging_config)
@@ -1627,7 +1456,7 @@ class _FMEditorFrame(Frame):
         self._create_album_disc_editor(album_editor_frame)
         self._create_album_compilation_editor(album_editor_frame)
         create_album_choices_editor("artist")
-        create_album_choices_editor("recordlabel", tracks_apply=False)
+        create_album_choices_editor("label", tracks_apply=False)
         create_album_choices_editor("genre")
         create_album_choices_editor("year")
         self._create_album_cover_editor(album_editor_frame)
@@ -2077,7 +1906,7 @@ class _FMEditorFrame(Frame):
         for album_field_name in [
                 "album_title",
                 "album_artist",
-                "album_recordlabel",
+                "album_label",
                 "album_genre",
                 "album_year",
                 ]:
@@ -2104,26 +1933,13 @@ class _FMEditorFrame(Frame):
 
         self._initialize_track_vars()
 
-        '''
-        self._status_frame.pack_forget()
-        metadata_editor.pack(expand=YES, fill=BOTH)
-
-        self._disc_frame.rip_and_tag_ready()
-
         # if persisted data was restored, manually select the cover image so
         # that it opens in Preview automatically
-        if self._persistence.restored and len(self._album_covers) > 1:
+        # TODO: ideally, the frames should not be coupled this way
+        fm = self.master
+        if fm._persistence.restored and self.__album_covers:
             # first cover is always "--none--"
-            preferred_album_cover = list(self._album_covers.keys())[1]
-            self.choose_cover_image(preferred_album_cover)
-
-        for r in range(7):
-            album_editor.grid_rowconfigure(r, weight=1)
-        for c in range(2):
-            album_editor.grid_columnconfigure(c, weight=1)
-
-        return combobox
-        '''
+            self.choose_album_cover(list(self.__album_covers.keys())[0])
 
     @property
     def metadata_snapshot(self):
@@ -2138,7 +1954,7 @@ class _FMEditorFrame(Frame):
                 "album_disctotal",
                 "album_compilation",
                 "album_artist",
-                "album_recordlabel",
+                "album_label",
                 "album_genre",
                 "album_year",
                 ]:
@@ -2172,7 +1988,7 @@ class _FMEditorFrame(Frame):
                     "track_year",
                     ]:
                 track_metadata[track_field_name] = \
-                    track_vars[t][track_field_name].var.get()
+                    track_vars[t][track_field_name].get()
 
             track_metadata["__custom"] = \
                 aggregated_metadata["__tracks"][t]["__custom"].copy()
@@ -2335,7 +2151,7 @@ class _FMEditorFrame(Frame):
         for field_name in [
                 "album_title",
                 "album_artist",
-                "album_recordlabel",
+                "album_label",
                 "album_genre",
                 "album_year",
                 "track_title",
@@ -2372,6 +2188,187 @@ class _FMEditorFrame(Frame):
         self.__log.call()
 
         # entry widgets are NOT removed - just the editor frame itself
+        self.pack_forget()
+
+
+@logged
+class _FMEncodingStatusFrame(LabelFrame):
+
+    def __init__(self, *args, **options):
+        """
+        :arg tuple args: positional arguments to initialize the frame
+        :arg dict options: ``config`` options to initialize the frame
+
+        """
+        self.__log.call(*args, **options)
+
+        super().__init__(*args, **options)
+
+        list_frame = Frame(self)
+
+        vscrollbar = Scrollbar(list_frame, orient=VERTICAL)
+        vscrollbar.pack(side=RIGHT, fill=Y)
+
+        self._track_encoding_status_list = Listbox(
+            list_frame, name="track_encoding_status_listbox",
+            exportselection=NO, activestyle=NONE, selectmode=SINGLE,
+            borderwidth=0, yscrollcommand=vscrollbar.set)
+        self._track_encoding_status_list.pack(fill=BOTH, padx=0, pady=0)
+
+        vscrollbar.config(command=self._track_encoding_status_list.yview)
+
+        list_frame.pack(fill=BOTH, padx=17, pady=17)
+
+    def ready_to_encode(self, per_track_metadata):
+        track_encoding_statuses = [
+            TrackEncodingStatus(
+                "{track_number:02d} {track_title}".format(**track_metadata),
+                pending=track_metadata["track_include"])
+            for track_metadata in per_track_metadata]
+
+        # determine how many tracks are visible at once
+        number_of_tracks = len(per_track_metadata)
+        max_visible_tracks = get_config()["UI"].getint(
+            "encoding_max_visible_tracks")
+        visible_tracks = (
+            number_of_tracks if number_of_tracks < max_visible_tracks
+            else max_visible_tracks)
+
+        items_spec = StringVar(
+            value=' '.join(
+                "{%s}" % track_encoding_status.describe()
+                for track_encoding_status in track_encoding_statuses))
+        self._track_encoding_status_list.configure(
+            height=visible_tracks, listvariable=items_spec)
+
+        for i in range(number_of_tracks):
+            if not per_track_metadata[i]["track_include"]:
+                self._track_encoding_status_list.itemconfig(i, {"fg": "gray79"})
+
+        self._track_encoding_statuses = track_encoding_statuses
+
+    def encoding_in_progress(self):
+        """Update the UI as tracks are ripped."""
+        # don't log entry into this method - it is called repeatedly until all
+        # tracks are ripped
+        try:
+            (priority, status) = _ENCODING_QUEUE.get_nowait()
+        except queue.Empty:
+            self.after(QUEUE_GET_NOWAIT_AFTER, self.encoding_in_progress)
+        else:
+            _ENCODING_QUEUE.task_done()
+            self.__log.debug("dequeued %r", status)
+
+            (track_index, cdda_fn, flac_fn, stdout_fn, target_state) = status
+            if target_state == "FINISHED":
+                # all tracks have been processed
+                while _ENCODING_QUEUE.qsize() > 0:
+                    try:
+                        self.__log.debug(
+                            "finished; discarding %r",
+                            _ENCODING_QUEUE.get_nowait())
+                    except queue.Empty:
+                        break
+                    else:
+                        _ENCODING_QUEUE.task_done()
+
+                # TODO: ideally, the frames should not be coupled this way
+                fm = self.master
+                fm._disc_frame.rip_and_tag_finished()
+                fm.bell()
+
+                self.__log.trace("exit the monitoring loop")
+                return False
+
+            track_encoding_status = self._track_encoding_statuses[track_index]
+
+            # only process "expected" state transitions
+            if track_encoding_status.transition_to(target_state):
+                if track_encoding_status.state == TRACK_FAILED:
+                    status_message = track_encoding_status.describe(
+                        message="%s: %s" %
+                            (target_state.__class__.__name__, target_state)
+                        if isinstance(target_state, Exception) else None)
+                    item_config = {"fg": "red"}
+                elif track_encoding_status.state == TRACK_ENCODING_FLAC:
+                    # ensure that the currently-ripping track is always visible
+                    self._track_encoding_status_list.see(track_index)
+                    # read encoding interval status from flac's stdout
+                    cdda_basename = os.path.basename(cdda_fn)
+                    stdout_message = self._read_current_status(
+                        cdda_basename, stdout_fn)
+                    status_message = track_encoding_status.describe(
+                        message=stdout_message if stdout_message else None)
+                    item_config = {"fg": "blue"}
+                elif (track_encoding_status.state in [
+                            TRACK_DECODING_WAV, TRACK_ENCODING_MP3] or
+                        track_encoding_status.state.key == "REENCODING_MP3"):
+                    status_message = track_encoding_status.describe()
+                    item_config = {"fg": "dark violet"}
+                elif track_encoding_status.state == TRACK_COMPLETE:
+                    status_message = flac_fn
+                    item_config = {"fg": "dark green"}
+                else:   # unexpected state
+                    status_message = "%s (unexpected target state %s)" % (
+                        track_encoding_status.describe(), target_state)
+                    item_config = {"fg": "red"}
+
+                self._track_encoding_status_list.delete(track_index)
+                self._track_encoding_status_list.insert(
+                    track_index, status_message)
+                self._track_encoding_status_list.itemconfig(
+                    track_index, item_config)
+
+                # ensure that last track is always visible after delete/insert
+                if (track_index ==
+                        self._track_encoding_status_list.index(END) - 1):
+                    self._track_encoding_status_list.see(track_index)
+
+            self.after(QUEUE_GET_NOWAIT_AFTER, self.encoding_in_progress)
+
+            return True
+
+    def _read_current_status(self, cdda_basename, stdout_fn):
+        """Extract the most recent FLAC encoding update from
+        *stdout_fn*.
+
+        :arg str cdda_basename: a grep pattern for *stdout_fn*
+        :arg str stdout_fn:
+           filename to which stdout has been redirected
+        :return: a line of update text from *stdout_fn*
+        :rtype: :obj:`str`
+
+        """
+        # do not trace; called from a recursive method
+        status_line = None
+        prefix = "%s: " % cdda_basename
+        with open(stdout_fn, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith(prefix):
+                    # remove the prefix, then split on ASCII BS (Backspace) and
+                    # take the last component
+                    #
+                    # output line looks like this:
+                    #   ${prefix}${status1}(BS)+${status2}(BS)+..${statusN}
+                    status_line = line.replace(prefix, "").split('\x08')[-1]
+        return status_line
+
+    def reset(self):
+        self.__log.call()
+
+        self._remove()
+
+        self._track_encoding_status_list.delete(0, END)
+        self._track_encoding_status_list.configure(listvariable=None, height=0)
+
+        self._track_encoding_statuses = None
+
+    def _remove(self):
+        """Remove widgets from the current layout."""
+        self.__log.call()
+
+        # widgets are NOT removed - just the frame itself
         self.pack_forget()
 
 
@@ -2841,6 +2838,8 @@ class _EditConfigurationDialog(simpledialog.Dialog):
 
         self._populate(frame, get_config())
 
+        frame.grid_columnconfigure(0, weight=0)
+
     def section(self, parent, section_name):
         """Add a section header to the body of the dialog.
 
@@ -2879,15 +2878,13 @@ class _EditConfigurationDialog(simpledialog.Dialog):
                 self, value=value if type(value) is not list else value[0])
 
         if type(value) is list:
-            OptionMenu(parent, variable, *value[1:]).grid(
-                row=self._row, column=1, sticky=W)
+            widget = OptionMenu(parent, variable, *value[1:])
         elif type(variable) is BooleanVar:
-            Checkbutton(
-                parent, variable=variable, onvalue=True, offvalue=False).grid(
-                    row=self._row, column=1, sticky=W)
+            widget = Checkbutton(
+                parent, variable=variable, onvalue=True, offvalue=False)
         else:
-            Entry(parent, textvariable=variable, width=width).grid(
-                row=self._row, column=1, sticky=W)
+            widget = Entry(parent, textvariable=variable, width=width)
+        widget.grid(row=self._row, column=1, sticky=W, padx=2)
 
         self._row += 1
 
@@ -2916,17 +2913,19 @@ class _EditConfigurationDialog(simpledialog.Dialog):
 
     def apply(self):
         """Save changes to the *flacmanager.ini* file."""
-        config = get_config()
+        with _CONFIG_LOCK:
+            config = get_config()
 
-        for (section, optvar) in self._variables.items():
-            for (option, variable) in optvar.items():
-                # values MUST be strings!
-                if type(variable) is not BooleanVar:
-                    config[section][option] = str(variable.get())
-                else:
-                    config[section][option] = "yes" if variable.get() else "no"
+            for (section, optvar) in self._variables.items():
+                for (option, variable) in optvar.items():
+                    # values MUST be strings!
+                    if type(variable) is not BooleanVar:
+                        config[section][option] = str(variable.get())
+                    else:
+                        config[section][option] = \
+                            "yes" if variable.get() else "no"
 
-        save_config()
+            save_config()
 
 
 class EditRequiredConfigurationDialog(_EditConfigurationDialog):
@@ -3226,6 +3225,29 @@ class EditMP3OrganizationConfigurationDialog(_EditConfigurationDialog):
             frame, text="${Organize:use_xplatform_safe_names}, yes, or no"
             ).grid(row=self._row, column=1, sticky=W)
         self._row += 1
+
+
+class EditUserInterfaceConfigurationDialog(_EditConfigurationDialog):
+    """A dialog that allows the user to edit user interface settings
+    from the *flacmanager.ini* file.
+
+    """
+
+    def _populate(self, frame, config):
+        """Create the content of the dialog."""
+        section = partial(self.section, frame)
+        option = partial(self.option, frame)
+
+        section("UI")
+        option(
+            "UI", "minwidth", config["UI"].getint("minwidth", 1024), width=5)
+        option(
+            "UI", "minheight", config["UI"].getint("minheight", 768), width=5)
+        option("UI", "padx", config["UI"].getint("padx", 7), width=3)
+        option("UI", "pady", config["UI"].getint("pady", 7), width=3)
+        option(
+            "UI", "encoding_max_visible_tracks",
+            config["UI"].getint("encoding_max_visible_tracks", 29), width=3)
 
 
 class EditLoggingConfigurationDialog(_EditConfigurationDialog):
@@ -4353,7 +4375,7 @@ class MetadataCollector:
             "album_disctotal": 1,
             "album_compilation": False,
             "album_artist": [],
-            "album_recordlabel": [],
+            "album_label": [],
             "album_genre": [],
             "album_year": [],
             "album_cover": [],
@@ -5015,6 +5037,8 @@ class MusicBrainzMetadataCollector(_HTTPMetadataCollector):
 
             # NOTE: MusicBrainz does not support genre information.
 
+            # TODO: MusicBrainz includes the bar code in each release
+
             cover_art_front = mb_release.find(
                 "mb:cover-art-archive/mb:front", namespaces=nsmap).text
             if cover_art_front == "true":
@@ -5096,7 +5120,7 @@ class MusicBrainzMetadataCollector(_HTTPMetadataCollector):
                         mb_name.text not in track_metadata["track_artist"]):
                     track_metadata["track_artist"].append(mb_name.text)
 
-                #NOTE: MusicBrainz does not support genre information.
+                # NOTE: MusicBrainz does not support genre information.
 
     def _prepare_discid_request(self, disc_id):
         """Build a full MusicBrainz '/discid' request path.
@@ -5264,12 +5288,12 @@ class MetadataPersistence(MetadataCollector):
             # the string to "Latin-1"
             # (see the `_convert_to_json_serializable(obj)' method)
             disc_metadata["album_cover"] = \
-                disc_metadata["album_cover"].encode("Latin-1")
+                [disc_metadata["album_cover"].encode("Latin-1")]
 
         for field in [
                 "album_title",
                 "album_artist",
-                "album_recordlabel",
+                "album_label",
                 "album_genre",
                 "album_year",
                 ]:
@@ -5324,7 +5348,7 @@ class MetadataPersistence(MetadataCollector):
                     ("disc_total", "album_disctotal"),
                     ("is_compilation", "album_compilation"),
                     ("artist", "album_artist"),
-                    ("record_label", "album_recordlabel"),
+                    ("record_label", "album_label"),
                     ("genre", "album_genre"),
                     ("year", "album_year"),
                     ("cover", "album_cover"),
@@ -5529,7 +5553,7 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                 [
                     "album_title",
                     "album_artist",
-                    "album_recordlabel",
+                    "album_label",
                     "album_genre",
                     "album_year",
                     "album_cover",
@@ -5609,9 +5633,13 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
         self.__log.call(fields, source, target)
 
         for field in fields:
-            for value in source[field]:
-                if value not in target[field]:
-                    target[field].append(value)
+            if type(source[field]) is list:
+                for value in source[field]:
+                    if value not in target[field]:
+                        target[field].append(value)
+            elif (source[field] is not None
+                    and source[field] not in target[field]):
+                target[field].append(source[field])
 
     def __save_album_covers(self):
         self.__log.call()
@@ -5623,7 +5651,7 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
             if image_type is None:
                 self.__log.error(
                     "ignoring unrecognized image data [%d]: %r...",
-                    i, image_data[:8])
+                    i, image_data[:32])
                 continue
 
             filepath = make_tempfile(suffix='.' + image_type)
