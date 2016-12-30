@@ -392,7 +392,7 @@ def get_config():
                         #("minwidth", "1024"),
                         #("minheight", "768"),
                         ("padx", "7"),
-                        ("pady", "7"),
+                        ("pady", "5"),
                         ("encoding_max_visible_tracks", "29"),
                         ]:
                     _config["UI"].setdefault(key, default_value)
@@ -631,6 +631,13 @@ class FLACManagerError(Exception):
         self.cause = cause
 
 
+#: The standard amount of X-axis padding for the FLACManager UI.
+_PADX = 7
+
+#: The standard amount of Y-axis padding for the FLACManager UI.
+_PADY = 5
+
+
 @logged
 class FLACManager(Tk):
     """The FLACManager GUI application."""
@@ -688,15 +695,11 @@ class FLACManager(Tk):
         # not repacked until metadata for an inserted disc has been aggregated
         self._editor_frame.reset()
 
-        ui = get_config()["UI"]
-        padx = ui.getint("padx")
-        pady = ui.getint("pady")
-
         self._disc_frame.reset()
-        self._disc_frame.pack(anchor=N, fill=X, padx=padx, pady=pady)
+        self._disc_frame.pack(anchor=N, fill=X, padx=_PADX, pady=_PADY)
 
         self._status_frame.reset()
-        self._status_frame.pack(anchor=N, fill=X, padx=padx, pady=pady)
+        self._status_frame.pack(anchor=N, fill=X, padx=_PADX, pady=_PADY)
 
         if self.has_required_config:
             self.check_for_disc()
@@ -783,7 +786,7 @@ class FLACManager(Tk):
         self.__log.call()
 
         self._status_frame.aggregating_metadata()
-        self._status_frame.pack(anchor=N, fill=X, padx=7, pady=7)
+        self._status_frame.pack(anchor=N, fill=X, padx=_PADX, pady=_PADY)
 
         try:
             MetadataAggregator(self.toc).start()
@@ -829,7 +832,7 @@ class FLACManager(Tk):
         self.__log.call()
 
         self._status_frame.pack_forget()
-        self._editor_frame.pack(anchor=N, fill=BOTH, padx=7, pady=7)
+        self._editor_frame.pack(anchor=N, fill=BOTH, padx=_PADX, pady=_PADY)
         self._disc_frame.rip_and_tag_ready()
 
     def rip_and_tag(self):
@@ -854,10 +857,8 @@ class FLACManager(Tk):
             # at this point, the encoder is ready and the status frame has been
             # initialized for display
             self._editor_frame.reset()
-            ui = get_config()["UI"]
             self._encoding_status_frame.pack(
-                anchor=N, fill=X, expand=YES,
-                padx=ui.getint("padx"), pady=ui.getint("pady"))
+                anchor=N, fill=X, expand=YES, padx=_PADX, pady=_PADY)
 
             # rock and roll
             encoder.start()
@@ -1173,10 +1174,12 @@ class _FMDiscFrame(LabelFrame):
         self._remove()
 
         self._disc_eject_button.config(state=NORMAL)
-        self._disc_eject_button.grid(row=0, column=0, sticky=W, padx=5, pady=5)
+        self._disc_eject_button.grid(
+            row=0, column=0, sticky=W, padx=_PADX, pady=_PADY)
 
         self._set_status_message(mountpoint)
-        self._disc_status_label.grid(row=0, column=1, sticky=W, padx=5, pady=5)
+        self._disc_status_label.grid(
+            row=0, column=1, sticky=W, padx=_PADX, pady=_PADY)
 
     def disc_check_failed(self):
         """Alert the user that the disc check failed and provide a
@@ -1188,14 +1191,14 @@ class _FMDiscFrame(LabelFrame):
         self.reset()
 
         self._retry_disc_check_button.grid(
-            row=0, column=2, sticky=E, padx=5, pady=5)
+            row=0, column=2, sticky=E, padx=_PADX, pady=_PADY)
 
     def rip_and_tag_ready(self):
         """Provide a button to begin ripping and tagging the tracks."""
         self.__log.call()
 
         self._rip_and_tag_button.grid(
-            row=0, column=2, sticky=E, padx=5, pady=5)
+            row=0, column=2, sticky=E, padx=_PADX, pady=_PADY)
 
     def ripping_and_tagging(self):
         """Change the state of the disc controls while tracks are being
@@ -1239,7 +1242,8 @@ class _FMDiscFrame(LabelFrame):
         self._disc_eject_button.config(state=DISABLED)
 
         self._set_status_message("Waiting for a disc to be inserted\u2026")
-        self._disc_status_label.grid(row=0, column=1, sticky=W, padx=5, pady=5)
+        self._disc_status_label.grid(
+            row=0, column=1, sticky=W, padx=_PADX, pady=_PADY)
 
     def _remove(self):
         """Remove all widgets from the current layout."""
@@ -1305,9 +1309,9 @@ class _FMStatusFrame(Frame):
         self.__log.call()
 
         self._retry_aggregation_button.grid(
-            row=1, column=0, padx=5, pady=5, sticky=NE)
+            row=1, column=0, padx=_PADX, pady=_PADY, sticky=NE)
         self._edit_asis_button.grid(
-            row=1, column=1, padx=5, pady=5, sticky=NW)
+            row=1, column=1, padx=_PADX, pady=_PADY, sticky=NW)
 
     def _hide_metadata_status_buttons(self):
         """Remove the buttons for handling metadata aggregation
@@ -1330,10 +1334,11 @@ class _FMStatusFrame(Frame):
 
         self._set_status_message(
             "Required configuration is missing!", fg="Red")
-        self._status_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+        self._status_label.grid(
+            row=0, column=0, columnspan=2, padx=_PADX, pady=_PADY)
 
         self._open_req_config_editor_button.grid(
-            row=1, column=0, columnspan=2, padx=5, pady=5)
+            row=1, column=0, columnspan=2, padx=_PADX, pady=_PADY)
 
     def aggregating_metadata(self):
         """Change this frame to reflect that metadata is being
@@ -1344,7 +1349,8 @@ class _FMStatusFrame(Frame):
 
         self._remove()
         self._set_status_message("Aggregating metadata\u2026", fg="Grey")
-        self._status_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+        self._status_label.grid(
+            row=0, column=0, columnspan=2, padx=_PADX, pady=_PADY)
 
     def aggregation_failed(self):
         """Message the user that metadata aggregation has failed and
@@ -1368,7 +1374,8 @@ class _FMStatusFrame(Frame):
         self._remove()
 
         self._set_status_message("Please insert a disc.", fg="Grey")
-        self._status_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+        self._status_label.grid(
+            row=0, column=0, columnspan=2, padx=_PADX, pady=_PADY)
 
     def _remove(self):
         """Remove all widgets from the current layout."""
@@ -1479,7 +1486,7 @@ class _FMEditorFrame(Frame):
             VarType=VarType)
 
         Label(parent, text=field_name.capitalize()).grid(
-            row=self.__row, column=0, padx=5, pady=5, sticky=E)
+            row=self.__row, column=0, padx=_PADX, pady=_PADY, sticky=E)
 
         name = "%s_%s" % (editor_name, field_name)
 
@@ -1493,10 +1500,12 @@ class _FMEditorFrame(Frame):
         # attach the variable to the Combobox for easy access
         combobox.var = var
         if field_name != "year":
-            combobox.grid(row=self.__row, column=1, padx=5, pady=5, sticky=W+E)
+            sticky = W + E
         else:
             combobox.configure(width=7)
-            combobox.grid(row=self.__row, column=1, padx=5, pady=5, sticky=W)
+            sticky = W
+        combobox.grid(
+            row=self.__row, column=1, padx=_PADX, pady=_PADY, sticky=sticky)
 
         self.__metadata_editors[name] = combobox
 
@@ -1508,7 +1517,8 @@ class _FMEditorFrame(Frame):
                         self=self, metadata_name="track_%s" % field_name,
                         var=var:
                     self.__apply_to_all_tracks(metadata_name, var.get())
-            ).grid(row=self.__row, column=2, padx=5, pady=5, sticky=W+E)
+            ).grid(
+                row=self.__row, column=2, padx=_PADX, pady=_PADY, sticky=W+E)
 
         self.__row += 1
 
@@ -1536,7 +1546,7 @@ class _FMEditorFrame(Frame):
         self.__log.call(parent)
 
         Label(parent, text="Disc").grid(
-            row=self.__row, column=0, padx=5, pady=5, sticky=E)
+            row=self.__row, column=0, padx=_PADX, pady=_PADY, sticky=E)
 
         frame = Frame(parent)
 
@@ -1549,7 +1559,7 @@ class _FMEditorFrame(Frame):
 
         self.__metadata_editors["album_discnumber"] = album_discnumber
 
-        Label(frame, text="of").pack(side=LEFT, padx=5)
+        Label(frame, text="of").pack(side=LEFT, padx=_PADX)
 
         total_var = IntVar(name="album_disctotal_var")
         album_disctotal = Entry(
@@ -1561,7 +1571,8 @@ class _FMEditorFrame(Frame):
         self.__metadata_editors["album_disctotal"] = album_disctotal
 
         frame.grid(
-            row=self.__row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+            row=self.__row, column=1, columnspan=2, padx=_PADX, pady=_PADY,
+            sticky=W)
 
         self.__row += 1
 
@@ -1574,7 +1585,7 @@ class _FMEditorFrame(Frame):
         self.__log.call(parent)
 
         Label(parent, text="Compilation").grid(
-            row=self.__row, column=0, padx=5, pady=5, sticky=E)
+            row=self.__row, column=0, padx=_PADX, pady=_PADY, sticky=E)
 
         var = BooleanVar()
         album_compilation = Checkbutton(
@@ -1582,7 +1593,8 @@ class _FMEditorFrame(Frame):
             onvalue=True, offvalue=False)
         album_compilation.var = var
         album_compilation.grid(
-            row=self.__row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+            row=self.__row, column=1, columnspan=2, padx=_PADX, pady=_PADY,
+            sticky=W)
 
         self.__metadata_editors["album_compilation"] = album_compilation
 
@@ -1600,7 +1612,7 @@ class _FMEditorFrame(Frame):
         self.__log.call(parent)
 
         Label(parent, text="Cover").grid(
-            row=self.__row, column=0, padx=5, pady=5, sticky=E)
+            row=self.__row, column=0, padx=_PADX, pady=_PADY, sticky=E)
 
         frame = Frame(parent)
 
@@ -1615,15 +1627,16 @@ class _FMEditorFrame(Frame):
         Button(
             frame, name="album_cover_add_url_button", text="Add URL",
             command=self._add_album_cover_from_url
-        ).pack(side=LEFT, padx=5)
+        ).pack(side=LEFT, padx=_PADX)
 
         Button(
             frame, name="album_cover_add_file_button", text="Add file",
             command=self._add_album_cover_from_file
-        ).pack(side=LEFT, padx=5)
+        ).pack(side=LEFT, padx=_PADX)
 
         frame.grid(
-            row=self.__row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+            row=self.__row, column=1, columnspan=2, padx=_PADX, pady=_PADY,
+            sticky=W)
 
         self.__row += 1
 
@@ -1796,8 +1809,8 @@ class _FMEditorFrame(Frame):
         if showinfo:
             messagebox.showinfo(
                 "Cover image added",
-                "%s\n(%s)\nhas been added to the list of available covers." %
-                    label, filename)
+                "%s\n(%s)\nhas been added to the list of available covers." % (
+                    label, filename))
 
         self.__log.return_(label)
         return label
@@ -1822,7 +1835,8 @@ class _FMEditorFrame(Frame):
                         title=self.__metadata_editors["album_title"].var.get())
         )
         album_custom_tagging_button.grid(
-            row=self.__row, column=0, columnspan=3, padx=5, pady=5, sticky=W+E)
+            row=self.__row, column=0, columnspan=3, padx=_PADX, pady=_PADY,
+            sticky=W+E)
 
         self.__metadata_editors["album_custom"] = album_custom_tagging_button
 
@@ -1839,7 +1853,7 @@ class _FMEditorFrame(Frame):
         self.__log.call(parent)
 
         Label(parent, text="Track").grid(
-            row=self.__row, column=0, padx=5, pady=5, sticky=E)
+            row=self.__row, column=0, padx=_PADX, pady=_PADY, sticky=E)
 
         nav_frame = Frame(parent, name="track_nav_frame")
 
@@ -1850,7 +1864,7 @@ class _FMEditorFrame(Frame):
             state="readonly", command=self._refresh_track_editors
         )
         track_number.var = number_var
-        track_number.pack(side=LEFT, padx=5)
+        track_number.pack(side=LEFT, padx=_PADX)
 
         of_label = Label(nav_frame, name="of_label", text="of")
         of_label.pack(side=LEFT)
@@ -1863,7 +1877,7 @@ class _FMEditorFrame(Frame):
         self.__row += 1
 
         include_label = Label(parent, text="Include").grid(
-            row=self.__row, column=0, padx=5, pady=5, sticky=E)
+            row=self.__row, column=0, padx=_PADX, pady=_PADY, sticky=E)
 
         include_var = BooleanVar(name="track_include_var", value=True)
         track_include = Checkbutton(
@@ -1871,7 +1885,7 @@ class _FMEditorFrame(Frame):
             variable=include_var, onvalue=True, offvalue=False,
             command=self.__update_track_include_state)
         track_include.var = include_var
-        track_include.grid(row=self.__row, column=1, padx=5, sticky=W)
+        track_include.grid(row=self.__row, column=1, padx=_PADX, sticky=W)
 
         apply_include_button = _styled(
             Button(
@@ -1882,7 +1896,8 @@ class _FMEditorFrame(Frame):
                         "track_include",
                         self.__metadata_editors["track_include"].var.get())),
             foreground="Blue")
-        apply_include_button.grid(row=self.__row, column=2, padx=5, sticky=W)
+        apply_include_button.grid(
+            row=self.__row, column=2, padx=_PADX, sticky=W)
         track_include.apply_button = apply_include_button
 
         self.__metadata_editors["track_include"] = track_include
@@ -1913,7 +1928,8 @@ class _FMEditorFrame(Frame):
                                 "track_title"].get()))
         )
         track_custom_tagging_button.grid(
-            row=self.__row, column=0, columnspan=3, padx=5, pady=5, sticky=W+E)
+            row=self.__row, column=0, columnspan=3, padx=_PADX, pady=_PADY,
+            sticky=W+E)
 
         self.__metadata_editors["track_custom"] = track_custom_tagging_button
 
@@ -2231,6 +2247,42 @@ class _FMEditorFrame(Frame):
 
         album_cover_editor = metadata_editors["album_cover"]
         album_cover_editor.var.set("--none--")
+        # TODO: why can't the commands be deleted? Need to revisit the reset() logic?
+        '''
+        Exception in Tkinter callback
+        Traceback (most recent call last):
+          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 1550, in __call__
+            return self.func(*args)
+          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 596, in callit
+            func(*args)
+          File "./flacmanager.py", line 822, in _update_aggregated_metadata
+            self._editor_frame.metadata_ready_for_editing(aggregator.metadata)
+          File "./flacmanager.py", line 1957, in metadata_ready_for_editing
+            self.reset()
+          File "./flacmanager.py", line 2250, in reset
+            album_cover_editor["menu"].delete(1, END)
+          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 2772, in delete
+            self.deletecommand(c)
+          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 441, in deletecommand
+            self.tk.deletecommand(name)
+        _tkinter.TclError: can't delete Tcl command
+
+        Exception in Tkinter callback
+        Traceback (most recent call last):
+          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 1550, in __call__
+            return self.func(*args)
+          File "./flacmanager.py", line 962, in eject_disc
+            self.reset()
+          File "./flacmanager.py", line 696, in reset
+            self._editor_frame.reset()
+          File "./flacmanager.py", line 2270, in reset
+            album_cover_editor["menu"].delete(1, END)
+          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 2772, in delete
+            self.deletecommand(c)
+          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 441, in deletecommand
+            self.tk.deletecommand(name)
+        _tkinter.TclError: can't delete Tcl command
+        '''
         album_cover_editor["menu"].delete(1, END)
         album_cover_editor.config(state=DISABLED)
 
@@ -2273,7 +2325,7 @@ class _FMEncodingStatusFrame(LabelFrame):
         list_frame = Frame(self)
 
         vscrollbar = Scrollbar(list_frame, orient=VERTICAL)
-        vscrollbar.pack(side=RIGHT, fill=Y)
+        vscrollbar.pack(side=RIGHT, fill=Y, padx=0, pady=0)
 
         self._track_encoding_status_list = Listbox(
             list_frame, name="track_encoding_status_listbox",
@@ -2283,7 +2335,7 @@ class _FMEncodingStatusFrame(LabelFrame):
 
         vscrollbar.config(command=self._track_encoding_status_list.yview)
 
-        list_frame.pack(fill=BOTH, padx=17, pady=17)
+        list_frame.pack(fill=BOTH, padx=_PADX, pady=_PADY)
 
     def ready_to_encode(self, per_track_metadata):
         """(Re)Initialize the encoding status list to monitor encoding
@@ -2910,7 +2962,7 @@ class _TextDialog(simpledialog.Dialog):
         box = Frame(self)
         Button(
             box, text="OK", width=11, command=self.ok,
-            default=ACTIVE).pack(padx=5, pady=5)
+            default=ACTIVE).pack(padx=_PADX, pady=_PADY)
         self.bind("<Return>", self.ok)
         box.pack()
 
@@ -2978,7 +3030,7 @@ class _EditConfigurationDialog(simpledialog.Dialog):
                 parent, variable=variable, onvalue=True, offvalue=False)
         else:
             widget = Entry(parent, textvariable=variable, width=width)
-        widget.grid(row=self._row, column=1, sticky=W, padx=2)
+        widget.grid(row=self._row, column=1, sticky=W, padx=_PADX)
 
         self._row += 1
 
@@ -2993,12 +3045,12 @@ class _EditConfigurationDialog(simpledialog.Dialog):
 
         Button(
             box, text="Save", width=10, command=self.ok, default=ACTIVE
-            ).pack(side=LEFT, padx=5, pady=5)
+            ).pack(side=LEFT, padx=_PADX, pady=_PADY)
 
         Button(
             box, text="Cancel", width=10,
             command=self.cancel
-            ).pack(side=LEFT, padx=5, pady=5)
+            ).pack(side=LEFT, padx=_PADX, pady=_PADY)
 
         self.bind("<Return>", self.ok)
         self.bind("<Escape>", self.cancel)
@@ -3565,7 +3617,7 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
             help_list.insert(END, self._helptext(self._type))
             help_list.config(state=DISABLED)
             help_list.pack(
-                side=LEFT, fill=BOTH, expand=YES, padx=5, pady=5)
+                side=LEFT, fill=BOTH, expand=YES, padx=_PADX, pady=_PADY)
 
     def __init__(self, master, metadata, **keywords):
         """Initialize the dialog.
@@ -3622,7 +3674,7 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
                     self._TaggingHelp(vorbis_frame, type_="Vorbis comment"))
         vorbis_help_button.pack(side=LEFT)
 
-        vorbis_frame.grid(row=self._row, column=1, pady=5, sticky=W)
+        vorbis_frame.grid(row=self._row, column=1, pady=_PADY, sticky=W)
 
         id3v2_frame = Frame(frame)
 
@@ -3637,10 +3689,10 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
                     self._TaggingHelp(id3v2_frame, type_="ID3v2 tag"))
         id3v2_help_button.pack(side=LEFT)
 
-        id3v2_frame.grid(row=self._row, column=2, pady=5, sticky=W)
+        id3v2_frame.grid(row=self._row, column=2, pady=_PADY, sticky=W)
 
         value_label = _styled(Label(frame, text="Value"), font="-weight bold")
-        value_label.grid(row=self._row, column=3, pady=5, sticky=W)
+        value_label.grid(row=self._row, column=3, pady=_PADY, sticky=W)
 
         self._row += 1
 
@@ -3727,10 +3779,10 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
         box = Frame(self)
 
         Button(box, text="Save", width=10, command=self.ok).pack(
-            side=LEFT, padx=5, pady=5)
+            side=LEFT, padx=_PADX, pady=_PADY)
 
         Button(box, text="Cancel", width=10, command=self.cancel).pack(
-            side=LEFT, padx=5, pady=5)
+            side=LEFT, padx=_PADX, pady=_PADY)
 
         self.bind("<Return>", self.ok)
         self.bind("<Escape>", self.cancel)
@@ -5926,6 +5978,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     initialize_logging()
+
+    ui = get_config()["UI"]
+    _PADX = ui.getint("padx", _PADX)
+    _PADY = ui.getint("pady", _PADY)
 
     try:
         FLACManager().mainloop()
