@@ -652,11 +652,12 @@ class FLACManager(Tk):
         super().__init__()
 
         config = get_config()
+
         self.title(config["FLACManager"]["title"])
         self.minsize(
             config["UI"].getint("minwidth"), config["UI"].getint("minheight"))
 
-        self.config(menu=_FMMenu(self))
+        self.config(menu=_FMMenu(self, name="menubar"))
 
         self._disc_frame = _FMDiscFrame(self, name="disc_frame", text="Disc")
         self._status_frame = _FMStatusFrame(self, name="status_frame")
@@ -842,7 +843,7 @@ class FLACManager(Tk):
         self._disc_frame.ripping_and_tagging()
 
         # issues/1
-        self._persistence.store(self._editor_frame.metadata_snapshot)
+        self.persist_metadata_snapshot()
 
         per_track_metadata = self._editor_frame.flattened_metadata
         try:
@@ -865,6 +866,11 @@ class FLACManager(Tk):
 
             self.__log.info("encoding has started; monitoring progress...")
             self._encoding_status_frame.encoding_in_progress()
+
+    def persist_metadata_snapshot(self):
+        """Serialize the current metadata field values to JSON."""
+        self.__log.call()
+        self._persistence.store(self._editor_frame.metadata_snapshot)
 
     def _prepare_encoder(self, per_track_metadata):
         """Initialize a :class:`FLACEncoder` with instructions to encode
@@ -1066,11 +1072,16 @@ class _FMMenu(Menu):
 
         fm = self.master
 
-        file_menu = Menu(self, tearoff=NO)
+        file_menu = Menu(self, name="file_menu", tearoff=NO)
+        # only enabled while the editor frame is packed
+        file_menu.add_command(
+            label="Save metadata", command=fm.persist_metadata_snapshot,
+            state=DISABLED)
+        file_menu.add_separator()
         file_menu.add_command(label="Exit", command=fm.exit)
         self.add_cascade(label="File", menu=file_menu)
 
-        edit_menu = Menu(self, tearoff=YES)
+        edit_menu = Menu(self, name="edit_menu", tearoff=YES)
         edit_menu.add_command(
             label="Configure metadata aggregation",
             command=fm.edit_aggregation_config)
@@ -1080,7 +1091,7 @@ class _FMMenu(Menu):
 
         edit_menu.add_separator()
 
-        flac_menu = Menu(edit_menu, tearoff=NO)
+        flac_menu = Menu(edit_menu, name="flac_menu", tearoff=NO)
         flac_menu.add_command(
             label="FLAC encoding options",
             command=fm.edit_flac_encoding_config)
@@ -1092,7 +1103,7 @@ class _FMMenu(Menu):
             command=fm.edit_flac_organization_config)
         edit_menu.add_cascade(label="Configure FLAC", menu=flac_menu)
 
-        mp3_menu = Menu(edit_menu, tearoff=NO)
+        mp3_menu = Menu(edit_menu, name="mp3_menu", tearoff=NO)
         mp3_menu.add_command(
             label="MP3 encoding options",
             command=fm.edit_mp3_encoding_config)
@@ -1113,7 +1124,7 @@ class _FMMenu(Menu):
             label="Configure logging", command=fm.edit_logging_config)
         self.add_cascade(label="Edit", menu=edit_menu)
 
-        help_menu = Menu(self, tearoff=NO)
+        help_menu = Menu(self, name="help_menu", tearoff=NO)
         help_menu.add_command(label="About", command=fm.show_about)
         help_menu.add_command(
             label="Prequisites", command=fm.show_prerequisites)
@@ -1616,7 +1627,7 @@ class _FMEditorFrame(Frame):
 
         frame = Frame(parent)
 
-        var = StringVar(name="album_cover_var", value="--none--")
+        var = StringVar(name="album_cover_var")
         album_cover = OptionMenu(frame, var)
         album_cover.var = var
         album_cover.config(state=DISABLED)
@@ -1809,8 +1820,7 @@ class _FMEditorFrame(Frame):
         if showinfo:
             messagebox.showinfo(
                 "Cover image added",
-                "%s\n(%s)\nhas been added to the list of available covers." % (
-                    label, filename))
+                "%r has been added to the list of available covers." % label)
 
         self.__log.return_(label)
         return label
@@ -1980,9 +1990,10 @@ class _FMEditorFrame(Frame):
 
         album_cover_editor = metadata_editors["album_cover"]
         album_cover_editor.config(state=DISABLED)
-        for filepath in aggregated_metadata["album_cover"]:
-            self.__add_album_cover_option(filepath, showinfo=False)
-        album_cover_editor.config(state=NORMAL)
+        if aggregated_metadata["album_cover"]:
+            for filepath in aggregated_metadata["album_cover"]:
+                self.__add_album_cover_option(filepath, showinfo=False)
+            album_cover_editor.config(state=NORMAL)
 
         self.__aggregated_metadata = deepcopy(aggregated_metadata)
 
@@ -1993,8 +2004,52 @@ class _FMEditorFrame(Frame):
         # TODO: ideally, the frames should not be coupled this way
         fm = self.master
         if fm._persistence.restored and self.__album_covers:
-            # first cover is always "--none--"
             self.choose_album_cover(list(self.__album_covers.keys())[0])
+
+    def pack(self, *args, **kwargs):
+        """Display the editor frame.
+
+        :arg tuple args: positional arguments to pack the editor frame
+        :arg dict kwargs: keyword argument to pack the editor frame
+
+        Showing the editor frame *enables* the **File | Save metadata**
+        menu command.
+
+        """
+        self.__log.call(*args, **kwargs)
+        super().pack(*args, **kwargs)
+
+        fm = self.master
+
+        # Enable the "Save metadata" command in the File menu
+        file_menu = fm.nametowidget(".menubar.file_menu")
+        file_menu.entryconfig(0, state=NORMAL)
+
+        if fm._persistence.converted:
+            messagebox.showinfo(
+                "Persisted metadata",
+                ("The format of the persisted metadata snapshot found at\n%s\n"
+                    "has been converted to be compatible with %s.\n\n"
+                    "It is recommended to save this converted format "
+                    "immediately using the [Save metadata] command under the "
+                    "[File] menu.") % (
+                        fm._persistence.metadata_path, fm.title()))
+
+    def pack_forget(self):
+        """Hide the editor frame.
+
+        Hiding the editor frame *disables* the **File | Save metadata**
+        menu command.
+
+        """
+        self.__log.call()
+        super().pack_forget()
+
+        fm = self.master
+
+        # Disable the "Save metadata" command in the File menu
+        file_menu = fm.nametowidget(".menubar.file_menu")
+        file_menu.entryconfig(0, state=DISABLED)
 
     @property
     def metadata_snapshot(self):
@@ -2246,44 +2301,8 @@ class _FMEditorFrame(Frame):
             widget.var.set("")
 
         album_cover_editor = metadata_editors["album_cover"]
-        album_cover_editor.var.set("--none--")
-        # TODO: why can't the commands be deleted? Need to revisit the reset() logic?
-        '''
-        Exception in Tkinter callback
-        Traceback (most recent call last):
-          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 1550, in __call__
-            return self.func(*args)
-          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 596, in callit
-            func(*args)
-          File "./flacmanager.py", line 822, in _update_aggregated_metadata
-            self._editor_frame.metadata_ready_for_editing(aggregator.metadata)
-          File "./flacmanager.py", line 1957, in metadata_ready_for_editing
-            self.reset()
-          File "./flacmanager.py", line 2250, in reset
-            album_cover_editor["menu"].delete(1, END)
-          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 2772, in delete
-            self.deletecommand(c)
-          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 441, in deletecommand
-            self.tk.deletecommand(name)
-        _tkinter.TclError: can't delete Tcl command
-
-        Exception in Tkinter callback
-        Traceback (most recent call last):
-          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 1550, in __call__
-            return self.func(*args)
-          File "./flacmanager.py", line 962, in eject_disc
-            self.reset()
-          File "./flacmanager.py", line 696, in reset
-            self._editor_frame.reset()
-          File "./flacmanager.py", line 2270, in reset
-            album_cover_editor["menu"].delete(1, END)
-          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 2772, in delete
-            self.deletecommand(c)
-          File "/opt/local/Library/Frameworks/Python.framework/Versions/3.5/lib/python3.5/tkinter/__init__.py", line 441, in deletecommand
-            self.tk.deletecommand(name)
-        _tkinter.TclError: can't delete Tcl command
-        '''
-        album_cover_editor["menu"].delete(1, END)
+        album_cover_editor["menu"].delete(0, END)
+        album_cover_editor.var.set("")
         album_cover_editor.config(state=DISABLED)
 
         track_number_editor = metadata_editors["track_number"]
@@ -5429,6 +5448,7 @@ class MetadataPersistence(MetadataCollector):
         self.__log.call()
         super().reset()
         self.restored = None # handled differently as of 0.8.0
+        self.converted = False
 
     def collect(self):
         """Populate metadata choices from persisted data."""
@@ -5475,7 +5495,7 @@ class MetadataPersistence(MetadataCollector):
             ])
 
         # the format of the persisted metadata is different as of 0.8.0
-        self.__convert_restored_metadata(disc_metadata)
+        self.converted = self.__convert_restored_metadata(disc_metadata)
 
         if disc_metadata["album_cover"] is not None:
             # convert album cover to byte string (raw image data) by encoding
@@ -5528,15 +5548,13 @@ class MetadataPersistence(MetadataCollector):
         :arg dict disc_metadata:
            metadata mapping as deserialized from JSON
 
-        *disc_metadata* is modified **in place**.
-
         .. note::
-           If the structure and/or property names of *disc_metadata* are
-           updated, the mapping is **automatically** re-serialized to
-           JSON before this method returns.
+           The *disc_metadata* mapping is modified **in place**.
 
         """
         self.__log.call(disc_metadata)
+
+        converted = False
 
         # if data is in pre-0.8.0 structure, convert it
         tracks_metadata = disc_metadata.pop("tracks", None)
@@ -5585,21 +5603,14 @@ class MetadataPersistence(MetadataCollector):
 
                 t += 1
 
-            # persist the converted data
-            self.store(disc_metadata)
-            self.restored = dict([
-                ("__version__", __version__),
-                ("timestamp", datetime.datetime.now().isoformat()),
-                ("TOC", self.toc),
-                ("disc_id", self.disc_id),
-            ])
-
+            converted = True
             self.__log.info(
                 "converted pre-0.8.0 persisted metadata for %s to %s structure"
                     " and format",
                 self.metadata_path, __version__)
 
-        del tracks_metadata
+        self.__log.return_(converted)
+        return converted
 
     def store(self, metadata):
         """Persist a disc's metadata field values.
