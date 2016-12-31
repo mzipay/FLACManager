@@ -393,6 +393,7 @@ def get_config():
                         #("minheight", "768"),
                         ("padx", "7"),
                         ("pady", "5"),
+                        ("disable_editing_excluded_tracks", "no"),
                         ("encoding_max_visible_tracks", "29"),
                         ]:
                     _config["UI"].setdefault(key, default_value)
@@ -843,7 +844,7 @@ class FLACManager(Tk):
         self._disc_frame.ripping_and_tagging()
 
         # issues/1
-        self.persist_metadata_snapshot()
+        self.persist_metadata_snapshot(showinfo=False)
 
         per_track_metadata = self._editor_frame.flattened_metadata
         try:
@@ -867,10 +868,20 @@ class FLACManager(Tk):
             self.__log.info("encoding has started; monitoring progress...")
             self._encoding_status_frame.encoding_in_progress()
 
-    def persist_metadata_snapshot(self):
-        """Serialize the current metadata field values to JSON."""
+    def persist_metadata_snapshot(self, showinfo=True):
+        """Serialize the current metadata field values to JSON.
+
+        :key bool showinfo:
+           whether or not to display a messagebox with the persisted
+           metadata file path
+
+        """
         self.__log.call()
         self._persistence.store(self._editor_frame.metadata_snapshot)
+
+        if showinfo:
+            messagebox.showinfo(
+                "Metadata snapshot saved", self._persistence.metadata_filename)
 
     def _prepare_encoder(self, per_track_metadata):
         """Initialize a :class:`FLACEncoder` with instructions to encode
@@ -1151,18 +1162,18 @@ class _FMDiscFrame(LabelFrame):
         fm = self.master
 
         self._disc_eject_button = Button(
-            self, name="_disc_eject_button", text="Eject",
+            self, name="disc_eject_button", text="Eject",
             command=fm.eject_disc)
 
-        self._disc_status_label = Label(self, name="_disc_status_label")
+        self._disc_status_label = Label(self, name="disc_status_label")
 
         self._retry_disc_check_button = Button(
-            self, name="_retry_disc_check_button", text="Retry disc check",
+            self, name="retry_disc_check_button", text="Retry disc check",
             command=fm.check_for_disc)
 
         self._rip_and_tag_button = _styled(
             Button(
-                self, name="_rip_and_tag_button", text="Rip and Tag",
+                self, name="rip_and_tag_button", text="Rip and Tag",
                 command=fm.rip_and_tag),
             foreground="Dark Green", font="-weight bold")
 
@@ -1210,6 +1221,7 @@ class _FMDiscFrame(LabelFrame):
 
         self._rip_and_tag_button.grid(
             row=0, column=2, sticky=E, padx=_PADX, pady=_PADY)
+        self._rip_and_tag_button.config(state=NORMAL)
 
     def ripping_and_tagging(self):
         """Change the state of the disc controls while tracks are being
@@ -1285,19 +1297,19 @@ class _FMStatusFrame(Frame):
         fm = self.master
 
         self._status_label = _styled(
-            Label(self, name="_status_label"), font="-weight bold")
+            Label(self, name="status_label"), font="-weight bold")
 
         self._retry_aggregation_button = Button(
-            self, name="_retry_aggregation_button",
+            self, name="retry_aggregation_button",
             text="Retry metadata aggregation",
             command=fm.aggregate_metadata)
 
         self._edit_asis_button = Button(
-            self, name="_edit_asis_button", text="Edit metadata as-is",
+            self, name="edit_asis_button", text="Edit metadata as-is",
             command=fm._edit_metadata)
 
         self._open_req_config_editor_button = Button(
-            self, name="_open_req_config_editor_button",
+            self, name="open_req_config_editor_button",
             text="Edit flacmanager.ini",
             command=fm.edit_required_config)
 
@@ -2001,7 +2013,6 @@ class _FMEditorFrame(Frame):
 
         # if persisted data was restored, manually select the cover image so
         # that it opens in Preview automatically
-        # TODO: ideally, the frames should not be coupled this way
         fm = self.master
         if fm._persistence.restored and self.__album_covers:
             self.choose_album_cover(list(self.__album_covers.keys())[0])
@@ -2024,16 +2035,6 @@ class _FMEditorFrame(Frame):
         # Enable the "Save metadata" command in the File menu
         file_menu = fm.nametowidget(".menubar.file_menu")
         file_menu.entryconfig(0, state=NORMAL)
-
-        if fm._persistence.converted:
-            messagebox.showinfo(
-                "Persisted metadata",
-                ("The format of the persisted metadata snapshot found at\n%s\n"
-                    "has been converted to be compatible with %s.\n\n"
-                    "It is recommended to save this converted format "
-                    "immediately using the [Save metadata] command under the "
-                    "[File] menu.") % (
-                        fm._persistence.metadata_path, fm.title()))
 
     def pack_forget(self):
         """Hide the editor frame.
@@ -2246,19 +2247,16 @@ class _FMEditorFrame(Frame):
             track_include_editor.apply_button.config(text="Exclude all tracks")
             _styled(track_include_editor.apply_button, foreground="Red")
 
-        # uncomment this block to DISABLE editor widgets for an excluded track
-        # TODO: make this configurable
-        '''
-        for track_field_name in [
-                "track_title",
-                "track_artist",
-                "track_genre",
-                "track_year",
-                "track_custom",
-                ]:
-            metadata_editors[track_field_name].config(
-                state=NORMAL if track_included else DISABLED)
-        '''
+        if get_config()["UI"].getboolean("disable_editing_excluded_tracks"):
+            for track_field_name in [
+                    "track_title",
+                    "track_artist",
+                    "track_genre",
+                    "track_year",
+                    "track_custom",
+                    ]:
+                self.__metadata_editors[track_field_name].config(
+                    state=NORMAL if track_included else DISABLED)
 
     def reset(self):
         """Populate widgets in their default/initial states."""
@@ -2416,7 +2414,6 @@ class _FMEncodingStatusFrame(LabelFrame):
                     else:
                         _ENCODING_QUEUE.task_done()
 
-                # TODO: ideally, the frames should not be coupled this way
                 fm = self.master
                 fm._disc_frame.rip_and_tag_finished()
                 fm.bell()
@@ -5251,7 +5248,13 @@ class MusicBrainzMetadataCollector(_HTTPMetadataCollector):
 
             # NOTE: MusicBrainz does not support genre information.
 
-            # TODO: MusicBrainz includes the bar code in each release
+            barcode_node = mb_release.find("mb:barcode", namespaces=nsmap)
+            if barcode_node and barcode_node.text:
+                barcode = barcode_node.text
+                k = ("BARCODE", "")
+                metadata["__custom"].setdefault(k, [])
+                if barcode not in metadata["__custom"][k]:
+                    metadata["__custom"][k].append(barcode)
 
             cover_art_front = mb_release.find(
                 "mb:cover-art-archive/mb:front", namespaces=nsmap).text
@@ -5784,15 +5787,18 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
 
         for collector in self._collectors:
             self._merge_metadata(
-                [
+                collector.metadata, self.metadata,
+                keys=[
                     "album_title",
                     "album_artist",
                     "album_label",
                     "album_genre",
                     "album_year",
                     "album_cover",
-                ],
-                collector.metadata, self.metadata)
+                ])
+
+            self._merge_metadata(
+                collector.metadata["__custom"], self.metadata["__custom"])
 
             # not terribly useful, but not sure what else could possibly be
             # done here if there are discrepancies; best to just leave it up to
@@ -5804,14 +5810,24 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
             t = 1
             for track_metadata in collector.metadata["__tracks"][1:]:
                 self._merge_metadata(
-                    [
+                    track_metadata, self.metadata["__tracks"][t],
+                    keys=[
                         "track_title",
                         "track_artist",
                         "track_genre",
                         "track_year",
-                    ],
-                    track_metadata, self.metadata["__tracks"][t])
+                    ])
+
+                self._merge_metadata(
+                    track_metadata["__custom"],
+                    self.metadata["__tracks"][t]["__custom"])
+
                 t += 1
+
+        for aggregated_track_metadata in self.metadata["__tracks"][1:]:
+            for (key, value) in self.metadata["__custom"].items():
+                if key not in aggregated_track_metadata["__custom"]:
+                    aggregated_track_metadata["__custom"][key] = value
 
         # add LAME genres to album and track metadata
         self.__add_lame_genres(self.metadata["album_genre"])
@@ -5839,15 +5855,10 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
             self.metadata["album_disctotal"] = \
                 self.persistence.metadata["album_disctotal"]
 
-            # persisted data stores the "album_compilation" flag and album
-            # "__custom" tagging data (regular collectors do not)
+            # regular collectors do not store the "album_compilation" flag
             self.metadata["album_compilation"] = \
                 self.persistence.metadata["album_compilation"]
-            self.metadata["__custom"] = \
-                self.persistence.metadata["__custom"]
 
-            # persisted data stores the "track_include" flag and track
-            # "__custom" tagging data (regular collectors do not)
             t = 1
             for track_metadata in self.persistence.metadata["__tracks"][t:]:
                 # sanity check
@@ -5855,30 +5866,40 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                     track_metadata["track_number"] ==
                     self.metadata["__tracks"][t]["track_number"] ==
                     t)
+
+                # regular collectors do not store the "track_include" flag
                 self.metadata["__tracks"][t]["track_include"] = \
                     track_metadata["track_include"]
-                self.metadata["__tracks"][t]["__custom"] = \
-                    track_metadata["__custom"]
+
                 t += 1
 
-    def _merge_metadata(self, fields, source, target):
+    def _merge_metadata(self, source, target, keys=None):
         """Merge *source[field]* values into *target[field]*.
 
-        :arg list fields: metadata field names
         :arg dict source: metadata being merged from
         :arg dict target: metadata being merged into
+        :key list keys:
+           specific keys to merge (if not specified, **all** keys from
+           *source* are merged into *target*)
 
         """
-        self.__log.call(fields, source, target)
+        self.__log.call(source, target, keys=keys)
 
-        for field in fields:
-            if type(source[field]) is list:
-                for value in source[field]:
-                    if value not in target[field]:
-                        target[field].append(value)
-            elif (source[field] is not None
-                    and source[field] not in target[field]):
-                target[field].append(source[field])
+        if keys is None:
+            keys = list(source.keys())
+
+        for key in keys:
+            value = source[key]
+
+            if key not in target:
+                target[key] = value
+            elif type(value) is list:
+                for item in value:
+                    if item not in target[key]:
+                        target[key].append(item)
+            elif (value is not None
+                    and value not in target[key]):
+                target[key].append(value)
 
     def __add_lame_genres(self, genres):
         """Add "official" LAME genres to *genres*.
