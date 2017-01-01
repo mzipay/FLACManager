@@ -38,13 +38,13 @@ http://mzipay.github.io/FLACManager/usage.html
 
 """
 
-__author__ = "Matthew Zipay <mattz@ninthtest.net>"
+__author__ = "Matthew Zipay <mattz@ninthtest.info>"
 __version__ = "0.8.0"
 __license__ = """\
 FLAC Manager -- audio metadata aggregator and FLAC+MP3 encoder
-http://ninthtest.net/flac-mp3-audio-manager/
+http://ninthtest.info/flac-mp3-audio-manager/
 
-Copyright (c) 2013-2016 Matthew Zipay. All rights reserved.
+Copyright (c) 2013-2017 Matthew Zipay. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -4148,7 +4148,7 @@ def make_vorbis_comments(metadata):
 
     # flac automatically includes a vendor string to identify itself
     comments["ENCODER"] = [
-        "http://ninthtest.net/flac-mp3-audio-manager/ %s" % __version__]
+        "http://ninthtest.info/flac-mp3-audio-manager/ %s" % __version__]
 
     _log.return_(comments)
     return comments
@@ -4183,7 +4183,7 @@ def make_id3v2_tags(metadata):
         del tags["TCMP"]
 
     # lame automatically includes TSSE to identify itself
-    tags["TENC"] = ["http://ninthtest.net/flac-mp3-audio-manager/"]
+    tags["TENC"] = ["http://ninthtest.info/flac-mp3-audio-manager/"]
 
     _log.return_(tags)
     return tags

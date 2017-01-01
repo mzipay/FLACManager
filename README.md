@@ -1,6 +1,6 @@
 # FLACManager - audio metadata aggregator and FLAC+MP3 encoder
 
-http://ninthtest.net/flac-mp3-audio-manager/
+http://ninthtest.info/flac-mp3-audio-manager/
 
 FLAC Manager is a plain [Tkinter](http://tkinter.unpythonic.net/wiki/) GUI
 (i.e. no `tkinter.tix` or `tkinter.ttk`) that aggregates metadata for a CD-DA
@@ -23,9 +23,9 @@ oppressive limitations:
 * requires that you register for *your own* authentication keys at
   https://developer.gracenote.com/
 
-Read the warning disclaimer at http://ninthtest.net/flac-mp3-audio-manager/, as
-well as the
-[FLAC Manager prerequisites](http://ninthtest.net/flac-mp3-audio-manager/prerequisites.html)
+Read the warning disclaimer at http://ninthtest.info/flac-mp3-audio-manager/,
+as well as the
+[FLAC Manager prerequisites](http://ninthtest.info/flac-mp3-audio-manager/prerequisites.html)
 to understand why these limitations exist.
 
 ## Download
