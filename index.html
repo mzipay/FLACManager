@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>FLAC Manager — an audio metadata aggregator and FLAC+MP3 encoder &mdash; FLAC Manager 0.7.2 documentation</title>
+  <title>FLACManager — an audio metadata aggregator and FLAC+MP3 encoder &mdash; FLAC Manager 0.8.0 documentation</title>
   
 
   
@@ -19,7 +19,7 @@
   
   
     
-      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.2 documentation" href="_static/opensearch.xml"/>
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.8.0 documentation" href="_static/opensearch.xml"/>
     
 
   
@@ -32,8 +32,11 @@
   
 
   
-    <link rel="top" title="FLAC Manager 0.7.2 documentation" href="#"/>
-        <link rel="next" title="Prerequisites for running FLAC Manager" href="prerequisites.html"/> 
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="FLAC Manager 0.8.0 documentation" href="#"/>
+        <link rel="next" title="Prerequisites for running FLACManager" href="prerequisites.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -61,7 +64,7 @@
             
             
               <div class="version">
-                0.7.2
+                0.8.0
               </div>
             
           
@@ -83,10 +86,10 @@
             
             
                 <ul>
-<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLACManager API reference</a></li>
 </ul>
 
             
@@ -117,7 +120,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="#">Docs</a> &raquo;</li>
       
-    <li>FLAC Manager &#8212; an audio metadata aggregator and FLAC+MP3 encoder</li>
+    <li>FLACManager &#8212; an audio metadata aggregator and FLAC+MP3 encoder</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -129,71 +132,87 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="flac-manager-an-audio-metadata-aggregator-and-flac-mp3-encoder">
-<h1>FLAC Manager &#8212; an audio metadata aggregator and FLAC+MP3 encoder<a class="headerlink" href="#flac-manager-an-audio-metadata-aggregator-and-flac-mp3-encoder" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="flacmanager-an-audio-metadata-aggregator-and-flac-mp3-encoder">
+<h1>FLACManager &#8212; an audio metadata aggregator and FLAC+MP3 encoder<a class="headerlink" href="#flacmanager-an-audio-metadata-aggregator-and-flac-mp3-encoder" title="Permalink to this headline">¶</a></h1>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.2</td>
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.8.0</td>
 </tr>
 </tbody>
 </table>
-<p>FLAC Manager is a plain <a class="reference external" href="https://docs.python.org/3/library/tkinter.html#module-tkinter" title="(in Python v3.5)"><code class="xref py py-mod docutils literal"><span class="pre">tkinter</span></code></a> GUI (i.e. no <a class="reference external" href="https://docs.python.org/3/library/tkinter.tix.html#module-tkinter.tix" title="(in Python v3.5)"><code class="xref py py-mod docutils literal"><span class="pre">tkinter.tix</span></code></a> or
-<a class="reference external" href="https://docs.python.org/3/library/tkinter.ttk.html#module-tkinter.ttk" title="(in Python v3.5)"><code class="xref py py-mod docutils literal"><span class="pre">tkinter.ttk</span></code></a>) that aggregates metadata for a CD-DA disc from the
-<a class="reference external" href="https://developer.gracenote.com/web-api">Gracenote Web API</a> and the
+<p>FLACManager is a plain <a class="reference external" href="https://docs.python.org/3/library/tkinter.html#module-tkinter" title="(in Python v3.6)"><code class="xref py py-mod docutils literal"><span class="pre">tkinter</span></code></a> GUI application that
+aggregates metadata for a CD-DA disc from the <a class="reference external" href="https://developer.gracenote.com/web-api">Gracenote Web API</a> and the
 <a class="reference external" href="http://musicbrainz.org/doc/Development/XML_Web_Service/Version_2">MusicBrainz XML Web Service</a>,
-allows the user to choose metadata values from the aggregated data (or enter
-freeform values), and then rips tracks to FLAC and MP3. The encoding options
-for FLAC and MP3 are fully configurable, and the directory/file naming scheme
-is customizable.</p>
+allows the user to choose metadata values from the aggregated data (or
+enter freeform values), and then rips tracks to FLAC and MP3.</p>
+<p>All aspects of tagging and encoding are fully configurable via the
+<em>flacmanager.ini</em> configuration file:</p>
+<ul class="simple">
+<li>Vorbis comments and ID3v2 tags can be mapped to specific metadata
+fields (by default, the mapping is compatible with iTunes and
+Google Play)</li>
+<li>encoding options for FLAC (flac) and MP3 (lame)</li>
+<li>file system directory and file name templates for encoded files
+(including the option to generate safe, cross-platform names)</li>
+</ul>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 0.8.0: </span>Custom Vorbis comments and/or ID3v2 tags can be specified on a
+per-album and per-track basis.</p>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 0.8.0: </span>FLACManager now auto-detects clipping in MP3s and will re-encode
+with scaled PCM data until no clipping occurs.</p>
+</div>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p>FLAC Manager was not originally intended for release; it was written as a
-personal utility to address an immediate need - to rip and tag my entire
-music collection to FLAC (for archiving) and MP3 (for import into
-<a class="reference external" href="http://www.apple.com/itunes/">iTunes</a> and upload to
-<a class="reference external" href="https://play.google.com/store/music">Google play Music</a>).</p>
-<p>As such, FLAC Manager is developed specifically to run on my personal Mac,
-and to contain only the features/functions I need to achieve my goal. I
-have no plans to release bugfixes or new features unless they directly
-impact my ability to achieve my goal. Once my library has been ripped in
-its entirety, it is unlikely that I will maintain FLAC Manager.</p>
-<p>In light of this, FLAC Manager has some limitations:</p>
+<p>FLACManager was not originally intended for release; it was written
+as a personal utility to address an immediate need - to rip and tag
+my entire music collection to FLAC (for archiving) and MP3 (for
+import into <a class="reference external" href="http://www.apple.com/itunes/">iTunes</a> and upload to
+<a class="reference external" href="https://play.google.com/store/music">Google Play Music</a>).</p>
+<p>As such, FLACManager is developed specifically to run on my personal
+Mac, and to contain only the features/functions I need to achieve my
+goal. I have no plans to release bugfixes or new features unless they
+directly impact my ability to achieve my goal. Once my library has
+been ripped in its entirety, it is unlikely that I will maintain
+FLACManager.</p>
+<p>In light of this, FLACManager has some limitations:</p>
 <ol class="arabic simple">
-<li>FLAC Manager is a Mac OS X-<strong>only</strong> application. It will not run on
-Windows or Linux, and <em>may</em> not run on versions of Mac OS X earlier than
-10.6.8.</li>
-<li>The UI is not &#8220;polished.&#8221; There are some quirks, and the UI is anything
-but attractive. Function outweighs form for FLAC Manager, and that isn&#8217;t
-going to change; as long as the application allows me to rip and tag
-my CDs, I&#8217;m not concerned at all with aesthetics, and only marginally
-concerned with usability.</li>
-<li>FLAC Manager requires Python <strong>3.3+</strong> to run. It is not backward-
+<li>FLACManager is a Mac OS X-<strong>only</strong> application. It will not run on
+Windows or Linux, and <em>may</em> not run on versions of Mac OS X
+earlier than 10.6.8.</li>
+<li>The UI is not &#8220;polished.&#8221; There are some quirks, and the UI is
+anything but attractive. Function outweighs form for FLACManager,
+and that isn&#8217;t going to change; as long as the application allows
+me to rip and tag my CDs, I&#8217;m not concerned at all with
+aesthetics, and only marginally concerned with usability.</li>
+<li>FLACManager requires Python <strong>3.3+</strong> to run. It is not backward-
 compatible, and no attempt will be made to make it so.</li>
 </ol>
-<p class="last">Despite these limitations, the source code includes working examples of
-using <a class="reference external" href="https://docs.python.org/3/library/ctypes.html#module-ctypes" title="(in Python v3.5)"><code class="xref py py-mod docutils literal"><span class="pre">ctypes</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/queue.html#module-queue" title="(in Python v3.5)"><code class="xref py py-mod docutils literal"><span class="pre">queue</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/threading.html#module-threading" title="(in Python v3.5)"><code class="xref py py-mod docutils literal"><span class="pre">threading</span></code></a>,
-<a class="reference external" href="https://docs.python.org/3/library/tkinter.html#module-tkinter" title="(in Python v3.5)"><code class="xref py py-mod docutils literal"><span class="pre">tkinter</span></code></a>, and other standard Python modules under
-<a class="reference external" href="http://docs.python.org/3">Python 3.3+</a> , so I have chosen to make the
-source code available for reference.</p>
+<p class="last">Despite these limitations, the source code includes working examples
+of using <a class="reference external" href="https://docs.python.org/3/library/ctypes.html#module-ctypes" title="(in Python v3.6)"><code class="xref py py-mod docutils literal"><span class="pre">ctypes</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/queue.html#module-queue" title="(in Python v3.6)"><code class="xref py py-mod docutils literal"><span class="pre">queue</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/threading.html#module-threading" title="(in Python v3.6)"><code class="xref py py-mod docutils literal"><span class="pre">threading</span></code></a>,
+<a class="reference external" href="https://docs.python.org/3/library/tkinter.html#module-tkinter" title="(in Python v3.6)"><code class="xref py py-mod docutils literal"><span class="pre">tkinter</span></code></a>, and other standard Python modules under
+<a class="reference external" href="http://docs.python.org/3">Python 3.3+</a> , so I have chosen to make
+the source code available for reference.</p>
 </div>
 <div class="section" id="table-of-contents">
 <h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="whats-new.html#current-release-release">Current release: 0.7.2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLACManager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="whats-new.html#current-release-release">Current release: 0.8.0</a></li>
 <li class="toctree-l2"><a class="reference internal" href="whats-new.html#previous-releases">Previous releases</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#configuring-flac-manager">Configuring FLAC Manager</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage.html#running-flac-manager">Running FLAC Manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLACManager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#configuring-flacmanager">Configuring FLACManager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#running-flacmanager">Running FLACManager</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLACManager API reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="user-interface.html">User interface API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="disc-info.html">Disc information API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="metadata-aggregation.html">Metadata aggregation API</a></li>
@@ -212,7 +231,9 @@ source code available for reference.</p>
 </div>
 <p>Alternatively, download a <em>.tar.gz</em> or <em>.zip</em> source archive from
 <a class="reference external" href="https://github.com/mzipay/FLACManager/releases">https://github.com/mzipay/FLACManager/releases</a>.</p>
-<p>There is no installation process; simply run <code class="docutils literal"><span class="pre">python</span> <span class="pre">flacmanager.py</span></code>.</p>
+<p>There is no installation process; simply run <code class="docutils literal"><span class="pre">python</span> <span class="pre">flacmanager.py</span></code>.
+This will create the default <em>flacmanager.ini</em> configuration file and
+prompt you to provide several required values.</p>
 <div class="section" id="indices-and-tables">
 <h3>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
@@ -231,7 +252,7 @@ source code available for reference.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="prerequisites.html" class="btn btn-neutral float-right" title="Prerequisites for running FLAC Manager" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="prerequisites.html" class="btn btn-neutral float-right" title="Prerequisites for running FLACManager" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
     </div>
@@ -241,7 +262,7 @@ source code available for reference.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2013 - 2016, Matthew Zipay.
+        &copy; Copyright 2013 - 2017, Matthew Zipay.
 
     </p>
   </div>
@@ -263,7 +284,7 @@ source code available for reference.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.7.2',
+            VERSION:'0.8.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

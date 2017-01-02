@@ -3,4 +3,5 @@ __pycache__/
 doc/
 flacmanager.ini
 flacmanager.log
+*.bak
 

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Metadata aggregation API &mdash; FLAC Manager 0.7.2 documentation</title>
+  <title>Metadata aggregation API &mdash; FLAC Manager 0.8.0 documentation</title>
   
 
   
@@ -19,7 +19,7 @@
   
   
     
-      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.2 documentation" href="_static/opensearch.xml"/>
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.8.0 documentation" href="_static/opensearch.xml"/>
     
 
   
@@ -32,8 +32,11 @@
   
 
   
-    <link rel="top" title="FLAC Manager 0.7.2 documentation" href="index.html"/>
-        <link rel="up" title="FLAC Manager API reference" href="api-ref.html"/>
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="FLAC Manager 0.8.0 documentation" href="index.html"/>
+        <link rel="up" title="FLACManager API reference" href="api-ref.html"/>
         <link rel="next" title="Audio tagging and encoding API" href="tagging-and-encoding.html"/>
         <link rel="prev" title="Disc information API" href="disc-info.html"/> 
 
@@ -63,7 +66,7 @@
             
             
               <div class="version">
-                0.7.2
+                0.8.0
               </div>
             
           
@@ -85,10 +88,10 @@
             
             
                 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLACManager</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="api-ref.html">FLACManager API reference</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="user-interface.html">User interface API</a></li>
 <li class="toctree-l2"><a class="reference internal" href="disc-info.html">Disc information API</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Metadata aggregation API</a></li>
@@ -126,7 +129,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-          <li><a href="api-ref.html">FLAC Manager API reference</a> &raquo;</li>
+          <li><a href="api-ref.html">FLACManager API reference</a> &raquo;</li>
       
     <li>Metadata aggregation API</li>
       <li class="wy-breadcrumbs-aside">
@@ -146,7 +149,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.2</td>
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.8.0</td>
 </tr>
 </tbody>
 </table>
@@ -160,9 +163,9 @@
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>message</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><em>str</em></a>) &#8211; error message for logging or display</li>
+<li><strong>message</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) &#8211; error message for logging or display</li>
 <li><strong>context_hint</strong> &#8211; describes the error context</li>
-<li><strong>cause</strong> (<a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.5)"><em>Exception</em></a>) &#8211; the exception that caused this error</li>
+<li><strong>cause</strong> (<a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.6)"><em>Exception</em></a>) &#8211; the exception that caused this error</li>
 </ul>
 </td>
 </tr>
@@ -179,7 +182,7 @@ hint, or may ignore it.</p>
 <dl class="class">
 <dt id="flacmanager.MetadataCollector">
 <em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">MetadataCollector</code><span class="sig-paren">(</span><em>toc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#MetadataCollector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.MetadataCollector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <p>Base class for collecting album and track metadata.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -206,7 +209,7 @@ hint, or may ignore it.</p>
 <dl class="class">
 <dt id="flacmanager.GracenoteCDDBMetadataCollector">
 <em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">GracenoteCDDBMetadataCollector</code><span class="sig-paren">(</span><em>toc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#GracenoteCDDBMetadataCollector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.GracenoteCDDBMetadataCollector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#flacmanager.MetadataCollector" title="flacmanager.MetadataCollector"><code class="xref py py-class docutils literal"><span class="pre">flacmanager.MetadataCollector</span></code></a></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">flacmanager._HTTPMetadataCollector</span></code></p>
 <p>A Gracenote CDDB client that populates album and track metadata
 choices for a disc identified by its offsets.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -258,7 +261,7 @@ choices for a disc identified by its offsets.</p>
 <dl class="class">
 <dt id="flacmanager.MusicBrainzMetadataCollector">
 <em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">MusicBrainzMetadataCollector</code><span class="sig-paren">(</span><em>toc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#MusicBrainzMetadataCollector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.MusicBrainzMetadataCollector" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#flacmanager.MetadataCollector" title="flacmanager.MetadataCollector"><code class="xref py py-class docutils literal"><span class="pre">flacmanager.MetadataCollector</span></code></a></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">flacmanager._HTTPMetadataCollector</span></code></p>
 <p>A MusicBrainz client that populates album and track metadata
 choices for a disc identified by its MusicBrainz ID.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -289,7 +292,7 @@ choices for a disc identified by its MusicBrainz ID.</p>
 
 <dl class="attribute">
 <dt id="flacmanager.MusicBrainzMetadataCollector.USER_AGENT_TEMPLATE">
-<code class="descname">USER_AGENT_TEMPLATE</code><em class="property"> = 'FLACManager/0.7.2 Python/3.5 ( %s )'</em><a class="headerlink" href="#flacmanager.MusicBrainzMetadataCollector.USER_AGENT_TEMPLATE" title="Permalink to this definition">¶</a></dt>
+<code class="descname">USER_AGENT_TEMPLATE</code><em class="property"> = 'FLACManager/0.8.0 Python/3.5.2 ( %s )'</em><a class="headerlink" href="#flacmanager.MusicBrainzMetadataCollector.USER_AGENT_TEMPLATE" title="Permalink to this definition">¶</a></dt>
 <dd><p>HTTP User-Agent format string for MusicBrainz requests.</p>
 </dd></dl>
 
@@ -317,7 +320,7 @@ choices for a disc identified by its MusicBrainz ID.</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a MusicBrainz Disc ID for <em>toc</em></td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.5)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><code class="xref py py-obj docutils literal"><span class="pre">str</span></code></a></td>
 </tr>
 </tbody>
 </table>
@@ -365,7 +368,7 @@ metadata choices for a disc.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.5)"><em>dict</em></a>) &#8211; the finalized metadata for a disc</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)"><em>dict</em></a>) &#8211; the finalized metadata for a disc</td>
 </tr>
 </tbody>
 </table>
@@ -392,7 +395,8 @@ the field.</p>
 <dl class="class">
 <dt id="flacmanager.MetadataAggregator">
 <em class="property">class </em><code class="descclassname">flacmanager.</code><code class="descname">MetadataAggregator</code><span class="sig-paren">(</span><em>toc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#MetadataAggregator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.MetadataAggregator" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#flacmanager.MetadataCollector" title="flacmanager.MetadataCollector"><code class="xref py py-class docutils literal"><span class="pre">flacmanager.MetadataCollector</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.5)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#flacmanager.MetadataCollector" title="flacmanager.MetadataCollector"><code class="xref py py-class docutils literal"><span class="pre">flacmanager.MetadataCollector</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/threading.html#threading.Thread" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></code></a></p>
+<p>The thread that aggregates metadata from multiple sources.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -410,7 +414,25 @@ the field.</p>
 <dl class="method">
 <dt id="flacmanager.MetadataAggregator.collect">
 <code class="descname">collect</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#MetadataAggregator.collect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.MetadataAggregator.collect" title="Permalink to this definition">¶</a></dt>
-<dd><p>Populate metadata from all music databases.</p>
+<dd><p>Collect metadata from all music databases.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Persisted metadata, if it exists, is also collected by this
+method.</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="flacmanager.MetadataAggregator.aggregate">
+<code class="descname">aggregate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/flacmanager.html#MetadataAggregator.aggregate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#flacmanager.MetadataAggregator.aggregate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine metadata from all music databases into a single
+mapping.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If persisted metadata was collected, the persisted value for
+each metadata field will take precedence over any other
+collected values.</p>
+</div>
 </dd></dl>
 
 </dd></dl>
@@ -436,7 +458,7 @@ the field.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2013 - 2016, Matthew Zipay.
+        &copy; Copyright 2013 - 2017, Matthew Zipay.
 
     </p>
   </div>
@@ -458,7 +480,7 @@ the field.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.7.2',
+            VERSION:'0.8.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

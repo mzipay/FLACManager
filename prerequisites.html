@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Prerequisites for running FLAC Manager &mdash; FLAC Manager 0.7.2 documentation</title>
+  <title>Prerequisites for running FLACManager &mdash; FLAC Manager 0.8.0 documentation</title>
   
 
   
@@ -19,7 +19,7 @@
   
   
     
-      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.2 documentation" href="_static/opensearch.xml"/>
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.8.0 documentation" href="_static/opensearch.xml"/>
     
 
   
@@ -32,9 +32,12 @@
   
 
   
-    <link rel="top" title="FLAC Manager 0.7.2 documentation" href="index.html"/>
-        <link rel="next" title="What’s new in FLAC Manager" href="whats-new.html"/>
-        <link rel="prev" title="FLAC Manager — an audio metadata aggregator and FLAC+MP3 encoder" href="index.html"/> 
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="FLAC Manager 0.8.0 documentation" href="index.html"/>
+        <link rel="next" title="What’s new in FLACManager" href="whats-new.html"/>
+        <link rel="prev" title="FLACManager — an audio metadata aggregator and FLAC+MP3 encoder" href="index.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -62,7 +65,7 @@
             
             
               <div class="version">
-                0.7.2
+                0.8.0
               </div>
             
           
@@ -84,10 +87,10 @@
             
             
                 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Prerequisites for running FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Prerequisites for running FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLACManager API reference</a></li>
 </ul>
 
             
@@ -118,7 +121,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Prerequisites for running FLAC Manager</li>
+    <li>Prerequisites for running FLACManager</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -130,31 +133,33 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="prerequisites-for-running-flac-manager">
-<h1>Prerequisites for running FLAC Manager<a class="headerlink" href="#prerequisites-for-running-flac-manager" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="prerequisites-for-running-flacmanager">
+<h1>Prerequisites for running FLACManager<a class="headerlink" href="#prerequisites-for-running-flacmanager" title="Permalink to this headline">¶</a></h1>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.2</td>
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.8.0</td>
 </tr>
 </tbody>
 </table>
-<p>FLAC Manager requires <a class="reference external" href="https://www.python.org/downloads/mac-osx/">Python 3.3+</a> and the <a class="reference external" href="https://docs.python.org/3/library/tkinter.html#module-tkinter" title="(in Python v3.5)"><code class="xref py py-mod docutils literal"><span class="pre">tkinter</span></code></a> module
-to run.</p>
+<p>FLACManager requires <a class="reference external" href="https://www.python.org/downloads/mac-osx/">Python 3.3+</a> and the <a class="reference external" href="https://docs.python.org/3/library/tkinter.html#module-tkinter" title="(in Python v3.6)"><code class="xref py py-mod docutils literal"><span class="pre">tkinter</span></code></a>
+module (including <a class="reference external" href="https://docs.python.org/3/library/tkinter.ttk.html#module-tkinter.ttk" title="(in Python v3.6)"><code class="xref py py-mod docutils literal"><span class="pre">tkinter.ttk</span></code></a>) to run.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last"><a class="reference external" href="https://support.apple.com/en-us/HT201341">Apple no longer includes X11 with OS X</a>. If you encounter an error
-message indicating that the <code class="docutils literal"><span class="pre">DISPLAY</span></code> environment variable is undefined
-when attempting to run FLAC Manager, you will need to install <a class="reference external" href="http://xquartz.macosforge.org/">XQuartz</a>.</p>
+<p class="last"><a class="reference external" href="https://support.apple.com/en-us/HT201341">Apple no longer includes X11 with OS X</a>. If you encounter an
+error message indicating that the <code class="docutils literal"><span class="pre">DISPLAY</span></code> environment variable is
+undefined when attempting to run FLACManager, you will need to
+install <a class="reference external" href="http://xquartz.macosforge.org/">XQuartz</a>.</p>
 </div>
 <p>Additionally, you <strong>must</strong> register for a
-<a class="reference external" href="https://developer.gracenote.com/">Gracenote Developer</a> account to obtain a
-user ID and client ID (which you must then provide in the <em>flacmanager.ini</em>
-configuration file).</p>
-<p>FLAC Manager also has several software prerequisites. Each of the following can
-be installed via <a class="reference external" href="http://www.macports.org/">MacPorts</a>, or follow the links to
-the original project pages to download sources and build/install yourself.</p>
+<a class="reference external" href="https://developer.gracenote.com/">Gracenote Developer</a> account to
+obtain a user ID and client ID (which you must then provide in the
+<em>flacmanager.ini</em> configuration file).</p>
+<p>FLACManager also has several software prerequisites. Each of the
+following can be installed via <a class="reference external" href="http://www.macports.org/">MacPorts</a>,
+or follow the links to the original project pages to download sources
+and build/install yourself.</p>
 <ul class="simple">
 <li><a class="reference external" href="http://flac.sourceforge.net/">flac - Command-line FLAC encoder/decoder</a></li>
 <li><a class="reference external" href="http://lame.sourceforge.net/">lame - Command-line MP3 encoder</a></li>
@@ -164,10 +169,12 @@ the original project pages to download sources and build/install yourself.</p>
 <p class="first admonition-title">Note</p>
 <p class="last">The <code class="docutils literal"><span class="pre">flac</span></code> and <code class="docutils literal"><span class="pre">lame</span></code> executables must be on your <code class="docutils literal"><span class="pre">$PATH</span></code>. The
 location of the <code class="docutils literal"><span class="pre">libdiscid</span></code> shared library must be specified in the
-<em>flacmanager.ini</em> configuration file (e.g. <em>/opt/local/lib/libdiscid.dylib</em>).</p>
+<em>flacmanager.ini</em> configuration file (e.g.
+<em>/opt/local/lib/libdiscid.dylib</em>).</p>
 </div>
-<p>Additionally, FLAC Manager calls the following programs which are available in
-Mac OS X and should not require any special/additional configuration:</p>
+<p>Additionally, FLACManager calls the following programs which are
+available in Mac OS X and should not require any special/additional
+configuration:</p>
 <ul class="simple">
 <li><a class="reference external" href="https://developer.apple.com/library/mac/documentation/Darwin/Reference/Manpages/man8/diskutil.8.html">diskutil - manage local disks and volumes</a></li>
 <li><a class="reference external" href="https://developer.apple.com/library/mac/documentation/Darwin/Reference/Manpages/man1/open.1.html">open - open files and directories</a></li>
@@ -182,10 +189,10 @@ Mac OS X and should not require any special/additional configuration:</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="whats-new.html" class="btn btn-neutral float-right" title="What’s new in FLAC Manager" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="whats-new.html" class="btn btn-neutral float-right" title="What’s new in FLACManager" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="index.html" class="btn btn-neutral" title="FLAC Manager — an audio metadata aggregator and FLAC+MP3 encoder" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="index.html" class="btn btn-neutral" title="FLACManager — an audio metadata aggregator and FLAC+MP3 encoder" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -194,7 +201,7 @@ Mac OS X and should not require any special/additional configuration:</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2013 - 2016, Matthew Zipay.
+        &copy; Copyright 2013 - 2017, Matthew Zipay.
 
     </p>
   </div>
@@ -216,7 +223,7 @@ Mac OS X and should not require any special/additional configuration:</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.7.2',
+            VERSION:'0.8.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

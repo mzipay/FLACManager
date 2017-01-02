@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>What’s new in FLAC Manager &mdash; FLAC Manager 0.7.2 documentation</title>
+  <title>What’s new in FLACManager &mdash; FLAC Manager 0.8.0 documentation</title>
   
 
   
@@ -19,7 +19,7 @@
   
   
     
-      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.2 documentation" href="_static/opensearch.xml"/>
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.8.0 documentation" href="_static/opensearch.xml"/>
     
 
   
@@ -32,9 +32,12 @@
   
 
   
-    <link rel="top" title="FLAC Manager 0.7.2 documentation" href="index.html"/>
-        <link rel="next" title="Using FLAC Manager" href="usage.html"/>
-        <link rel="prev" title="Prerequisites for running FLAC Manager" href="prerequisites.html"/> 
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="FLAC Manager 0.8.0 documentation" href="index.html"/>
+        <link rel="next" title="Using FLACManager" href="usage.html"/>
+        <link rel="prev" title="Prerequisites for running FLACManager" href="prerequisites.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -62,7 +65,7 @@
             
             
               <div class="version">
-                0.7.2
+                0.8.0
               </div>
             
           
@@ -84,10 +87,11 @@
             
             
                 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">What&#8217;s new in FLAC Manager</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#current-release-release">Current release: 0.7.2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLACManager</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">What&#8217;s new in FLACManager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#current-release-release">Current release: 0.8.0</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#previous-releases">Previous releases</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#release-0-7-2">Release 0.7.2</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#release-0-7-1">Release 0.7.1</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#release-0-7-0">Release 0.7.0</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#release-0-6-0">Release 0.6.0</a></li>
@@ -101,8 +105,8 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLACManager API reference</a></li>
 </ul>
 
             
@@ -133,7 +137,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>What&#8217;s new in FLAC Manager</li>
+    <li>What&#8217;s new in FLACManager</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -145,18 +149,47 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="what-s-new-in-flac-manager">
-<h1>What&#8217;s new in FLAC Manager<a class="headerlink" href="#what-s-new-in-flac-manager" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="what-s-new-in-flacmanager">
+<h1>What&#8217;s new in FLACManager<a class="headerlink" href="#what-s-new-in-flacmanager" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="current-release-release">
-<h2>Current release: 0.7.2<a class="headerlink" href="#current-release-release" title="Permalink to this headline">¶</a></h2>
+<h2>Current release: 0.8.0<a class="headerlink" href="#current-release-release" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>standardized the application menubar
+(now has conventional File, Edit and Help menus)</li>
+<li>directory and file naming for music library can now be configured via
+the Edit menu (rather than needing to edit the source code)</li>
+<li>comprehensive tag management: you can now configure<sup>†</sup> (via the
+Edit menu) how metadata fields in the UI map to Vorbis comments for
+FLAC files and ID3v2 tags for MP3 files</li>
+<li>custom Vorbis comments and ID3v2 tags can now be added on a per-album
+and per-track basis</li>
+<li>clipping is now detected automatically when encoding MP3s, and
+FLACManager will re-encode with scaled PCM data until no clipping
+occurs</li>
+<li>the selected/entered metadata can now be persisted at any time using
+the File | Save metadata menu command (metadata is <strong>always</strong>
+persisted automatically when the [Rip and Tag] button is clicked)</li>
+<li>the UI now formally includes an input field for an album&#8217;s record
+label<sup>††</sup></li>
+</ul>
+<p><sup>†</sup> defaults have been tuned to produce sane results for Apple
+iTunes, Google Play Music, and any FLAC player that respects
+<a class="reference external" href="https://xiph.org/vorbis/doc/v-comment.html">Ogg Vorbis I format specification: comment field and header
+specification</a></p>
+<p><sup>††</sup> be aware that neither Gracenote nor MusicBrainz currently
+include an album&#8217;s record label in their respective metadata; a value
+must be provided by hand</p>
+</div>
+<div class="section" id="previous-releases">
+<h2>Previous releases<a class="headerlink" href="#previous-releases" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="release-0-7-2">
+<h3>Release 0.7.2<a class="headerlink" href="#release-0-7-2" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li>now persists metadata <em>before</em> preparing to encode the CD-DA data
 (see <a class="reference external" href="https://github.com/mzipay/FLACManager/issues/1">https://github.com/mzipay/FLACManager/issues/1</a>)</li>
 <li>tested on Mac OS X 10.11.5</li>
 </ul>
 </div>
-<div class="section" id="previous-releases">
-<h2>Previous releases<a class="headerlink" href="#previous-releases" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="release-0-7-1">
 <h3>Release 0.7.1<a class="headerlink" href="#release-0-7-1" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
@@ -172,8 +205,8 @@ for metadata or cover images</li>
 <ul class="simple">
 <li>fixed a priority queueing bug where relatively small encoded files would
 misreport their actual statuses</li>
-<li>the wait time between all <a class="reference external" href="https://docs.python.org/3/library/queue.html#queue.Queue.get_nowait" title="(in Python v3.5)"><code class="xref py py-meth docutils literal"><span class="pre">queue.Queue.get_nowait()</span></code></a> calls is now
-configurable via <a class="reference internal" href="miscellaneous.html#flacmanager.QUEUE_GET_NOWAIT_AFTER" title="flacmanager.QUEUE_GET_NOWAIT_AFTER"><code class="xref py py-data docutils literal"><span class="pre">flacmanager.QUEUE_GET_NOWAIT_AFTER</span></code></a></li>
+<li>the wait time between all <a class="reference external" href="https://docs.python.org/3/library/queue.html#queue.Queue.get_nowait" title="(in Python v3.6)"><code class="xref py py-meth docutils literal"><span class="pre">queue.Queue.get_nowait()</span></code></a> calls is now
+configurable via <code class="xref py py-data docutils literal"><span class="pre">flacmanager.QUEUE_GET_NOWAIT_AFTER</span></code></li>
 <li>tested on Mac OS X 10.10.1</li>
 </ul>
 </div>
@@ -196,7 +229,7 @@ upgrade</li>
 <div class="section" id="release-0-4-2">
 <h3>Release 0.4.2<a class="headerlink" href="#release-0-4-2" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>added a note in <a class="reference internal" href="usage.html"><span class="doc">Using FLAC Manager</span></a> regarding metadata persistence</li>
+<li>added a note in <a class="reference internal" href="usage.html"><span class="doc">Using FLACManager</span></a> regarding metadata persistence</li>
 <li>fixed a bug in FLAC encoding status reporting where the status updates would
 accumulate, incrementally growing the status line in length rather than
 &#8220;refreshing&#8221; the percent complete and ratio display (caused by recent updates
@@ -228,13 +261,13 @@ uploading via Google Play Music Manager)</li>
 <div class="section" id="release-0-2-0">
 <h3>Release 0.2.0<a class="headerlink" href="#release-0-2-0" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>fixed missing blockquote of configuration sample on the <a class="reference internal" href="usage.html"><span class="doc">Using FLAC Manager</span></a> page</li>
-<li>fixed a bug in <a class="reference internal" href="disc-info.html#flacmanager.get_disc_info" title="flacmanager.get_disc_info"><code class="xref py py-func docutils literal"><span class="pre">flacmanager.get_disc_info()</span></code></a> (faulty regex) where an
+<li>fixed missing blockquote of configuration sample on the <a class="reference internal" href="usage.html"><span class="doc">Using FLACManager</span></a> page</li>
+<li>fixed a bug in <code class="xref py py-func docutils literal"><span class="pre">flacmanager.get_disc_info()</span></code> (faulty regex) where an
 inserted disc with an apostrophe in the disc title would cause the mountpoint
 to be misreported</li>
 <li>new default naming for album folder and file names based on disc number,
 track number, compilation</li>
-<li>fixed <a class="reference internal" href="user-interface.html#flacmanager.AboutDialog" title="flacmanager.AboutDialog"><code class="xref py py-class docutils literal"><span class="pre">flacmanager.AboutDialog</span></code></a> to read license from <em>LICENSE.txt</em>
+<li>fixed <code class="xref py py-class docutils literal"><span class="pre">flacmanager.AboutDialog</span></code> to read license from <em>LICENSE.txt</em>
 instead of <code class="docutils literal"><span class="pre">flacmanager.__doc__</span></code></li>
 </ul>
 </div>
@@ -248,10 +281,10 @@ instead of <code class="docutils literal"><span class="pre">flacmanager.__doc__<
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="usage.html" class="btn btn-neutral float-right" title="Using FLAC Manager" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="usage.html" class="btn btn-neutral float-right" title="Using FLACManager" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="prerequisites.html" class="btn btn-neutral" title="Prerequisites for running FLAC Manager" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="prerequisites.html" class="btn btn-neutral" title="Prerequisites for running FLACManager" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -260,7 +293,7 @@ instead of <code class="docutils literal"><span class="pre">flacmanager.__doc__<
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2013 - 2016, Matthew Zipay.
+        &copy; Copyright 2013 - 2017, Matthew Zipay.
 
     </p>
   </div>
@@ -282,7 +315,7 @@ instead of <code class="docutils literal"><span class="pre">flacmanager.__doc__<
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.7.2',
+            VERSION:'0.8.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

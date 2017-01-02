@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Using FLAC Manager &mdash; FLAC Manager 0.7.2 documentation</title>
+  <title>Using FLACManager &mdash; FLAC Manager 0.8.0 documentation</title>
   
 
   
@@ -19,7 +19,7 @@
   
   
     
-      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.7.2 documentation" href="_static/opensearch.xml"/>
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.8.0 documentation" href="_static/opensearch.xml"/>
     
 
   
@@ -32,9 +32,12 @@
   
 
   
-    <link rel="top" title="FLAC Manager 0.7.2 documentation" href="index.html"/>
-        <link rel="next" title="FLAC Manager API reference" href="api-ref.html"/>
-        <link rel="prev" title="What’s new in FLAC Manager" href="whats-new.html"/> 
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="FLAC Manager 0.8.0 documentation" href="index.html"/>
+        <link rel="next" title="FLACManager API reference" href="api-ref.html"/>
+        <link rel="prev" title="What’s new in FLACManager" href="whats-new.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -62,7 +65,7 @@
             
             
               <div class="version">
-                0.7.2
+                0.8.0
               </div>
             
           
@@ -84,17 +87,17 @@
             
             
                 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLAC Manager</a></li>
-<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLAC Manager</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Using FLAC Manager</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#configuring-flac-manager">Configuring FLAC Manager</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#running-flac-manager">Running FLAC Manager</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#mapping-of-flac-manager-metadata-fields-to-itunes-metadata-fields">Mapping of FLAC Manager metadata fields to iTunes metadata fields</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLACManager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whats-new.html">What&#8217;s new in FLACManager</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Using FLACManager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuring-flacmanager">Configuring FLACManager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-flacmanager">Running FLACManager</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#mapping-flacmanager-metadata-fields-to-itunes-and-google-play-music">Mapping FLACManager metadata fields to iTunes and Google Play Music</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLAC Manager API reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api-ref.html">FLACManager API reference</a></li>
 </ul>
 
             
@@ -125,7 +128,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Using FLAC Manager</li>
+    <li>Using FLACManager</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -137,145 +140,350 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="using-flac-manager">
-<h1>Using FLAC Manager<a class="headerlink" href="#using-flac-manager" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="using-flacmanager">
+<h1>Using FLACManager<a class="headerlink" href="#using-flacmanager" title="Permalink to this headline">¶</a></h1>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.7.2</td>
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.8.0</td>
 </tr>
 </tbody>
 </table>
-<div class="section" id="configuring-flac-manager">
-<h2>Configuring FLAC Manager<a class="headerlink" href="#configuring-flac-manager" title="Permalink to this headline">¶</a></h2>
-<p>FLAC Manager depends on a configuration file, <em>flacmanager.ini</em>, which resides
-alongside the <em>flacmanager.py</em> script in the file system.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">If <em>flacmanager.ini</em> does not exist when FLAC Manager is run (e.g. on the
-first run), it will be created with default/empty values. In this case, a
-configuration editor dialog will be opened immediately.</p>
-</div>
+<div class="section" id="configuring-flacmanager">
+<h2>Configuring FLACManager<a class="headerlink" href="#configuring-flacmanager" title="Permalink to this headline">¶</a></h2>
+<p>FLACManager depends on a configuration file, <em>flacmanager.ini</em>, which
+resides alongside the <em>flacmanager.py</em> script in the file system.</p>
+<p>If <em>flacmanager.ini</em> does not exist when FLACManager is run (e.g. on the
+first run), it will be created with default/empty values. In this case,
+FLACManager will not allow you to proceed until you provide several
+required configuration values:</p>
+<img alt="_images/missingconf.png" src="_images/missingconf.png" />
 <p>The default configuration looks like this:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">Logging</span><span class="p">]</span>
-<span class="nb">format</span> <span class="o">=</span> <span class="o">%%</span><span class="p">(</span><span class="n">asctime</span><span class="p">)</span><span class="n">s</span> <span class="o">%%</span><span class="p">(</span><span class="n">levelname</span><span class="p">)</span><span class="n">s</span> <span class="o">%%</span><span class="p">(</span><span class="n">threadName</span><span class="p">)</span><span class="n">s</span> <span class="o">%%</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="n">s</span> <span class="o">%%</span><span class="p">(</span><span class="n">funcName</span><span class="p">)</span><span class="n">s</span> <span class="o">%%</span><span class="p">(</span><span class="n">message</span><span class="p">)</span><span class="n">s</span>
-<span class="n">level</span> <span class="o">=</span> <span class="n">WARNING</span>
-<span class="n">filemode</span> <span class="o">=</span> <span class="n">w</span>
-<span class="n">filename</span> <span class="o">=</span> <span class="n">flacmanager</span><span class="o">.</span><span class="n">log</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span>[FLACManager]
+__version__ = 0.8.0
+title = FLACManager ${__version__}
 
-<span class="p">[</span><span class="n">HTTP</span><span class="p">]</span>
-<span class="n">timeout</span> <span class="o">=</span> <span class="mf">5.0</span>
-<span class="n">debuglevel</span> <span class="o">=</span> <span class="mi">0</span>
+[UI]
+minwidth = 1024
+minheight = 768
+padx = 7
+pady = 5
+disable_editing_excluded_tracks = no
+encoding_max_visible_tracks = 29
 
-<span class="p">[</span><span class="n">Gracenote</span><span class="p">]</span>
-<span class="n">client_id</span> <span class="o">=</span>
-<span class="n">user_id</span> <span class="o">=</span>
+[Logging]
+level = WARNING
+filename = flacmanager.log
+filemode = w
+format = %(asctime)s %(levelname)s [%(threadName)s %(name)s.%(funcName)s] %(message)s
 
-<span class="p">[</span><span class="n">MusicBrainz</span><span class="p">]</span>
-<span class="n">libdiscid_location</span> <span class="o">=</span>
-<span class="n">contact_url_or_email</span> <span class="o">=</span>
+[HTTP]
+debuglevel = 0
+timeout = 5.0
 
-<span class="p">[</span><span class="n">FLAC</span><span class="p">]</span>
-<span class="n">library_root</span> <span class="o">=</span>
-<span class="n">flac_encode_options</span> <span class="o">=</span> <span class="o">--</span><span class="n">force</span> <span class="o">--</span><span class="n">keep</span><span class="o">-</span><span class="n">foreign</span><span class="o">-</span><span class="n">metadata</span> <span class="o">--</span><span class="n">verify</span>
-<span class="n">flac_decode_options</span> <span class="o">=</span> <span class="o">--</span><span class="n">force</span>
+[Gracenote]
+client_id =
+user_id =
 
-<span class="p">[</span><span class="n">MP3</span><span class="p">]</span>
-<span class="n">library_root</span> <span class="o">=</span>
-<span class="n">lame_encode_options</span> <span class="o">=</span> <span class="o">--</span><span class="n">replaygain</span><span class="o">-</span><span class="n">accurate</span> <span class="o">--</span><span class="n">clipdetect</span> <span class="o">-</span><span class="n">q</span> <span class="mi">2</span> <span class="o">-</span><span class="n">V2</span> <span class="o">-</span><span class="n">b</span> <span class="mi">224</span>
+[MusicBrainz]
+contact_url_or_email =
+libdiscid_location =
+
+[Organize]
+library_root =
+library_subroot_trie_key = album_artist
+library_subroot_compilation_trie_key = album_title
+library_subroot_trie_level = 1
+album_folder = {album_artist}/{album_title}
+ndisc_album_folder = ${album_folder}
+compilation_album_folder = {album_title}
+ndisc_compilation_album_folder = ${compilation_album_folder}
+track_filename = {track_number:02d} {track_title}
+ndisc_track_filename = {album_discnumber:02d}-${track_filename}
+compilation_track_filename = ${track_filename} ({track_artist})
+ndisc_compilation_track_filename = {album_discnumber:02d}-${compilation_track_filename}
+use_xplatform_safe_names = yes
+
+[FLAC]
+library_root = ${Organize:library_root}/FLAC
+library_subroot_trie_key = ${Organize:library_subroot_trie_key}
+library_subroot_compilation_trie_key = ${Organize:library_subroot_compilation_trie_key}
+library_subroot_trie_level = ${Organize:library_subroot_trie_level}
+album_folder = ${Organize:album_folder}
+ndisc_album_folder = ${Organize:ndisc_album_folder}
+compilation_album_folder = ${Organize:compilation_album_folder}
+ndisc_compilation_album_folder = ${Organize:ndisc_compilation_album_folder}
+track_filename = ${Organize:track_filename}
+ndisc_track_filename = ${Organize:ndisc_track_filename}
+compilation_track_filename = ${Organize:compilation_track_filename}
+ndisc_compilation_track_filename = ${Organize:ndisc_compilation_track_filename}
+track_fileext = .flac
+use_xplatform_safe_names = ${Organize:use_xplatform_safe_names}
+flac_encode_options = --force --keep-foreign-metadata --verify
+flac_decode_options = --force
+
+[Vorbis]
+ALBUM = album_title
+ALBUMARTIST = album_artist
+ORGANIZATION = album_label
+LABEL = ${ORGANIZATION}
+DISCNUMBER = {album_discnumber:d}
+DISCTOTAL = {album_disctotal:d}
+TRACKNUMBER = {track_number:d}
+TRACKTOTAL = {album_tracktotal:d}
+TITLE = track_title
+ARTIST = track_artist
+GENRE = track_genre
+DATE = track_year
+COMPILATION = {album_compilation:d}
+
+[MP3]
+library_root = ${Organize:library_root}/MP3
+library_subroot_trie_key = ${Organize:library_subroot_trie_key}
+library_subroot_trie_level = ${Organize:library_subroot_trie_level}
+library_subroot_compilation_trie_key = ${Organize:library_subroot_compilation_trie_key}
+album_folder = ${Organize:album_folder}
+ndisc_album_folder = ${Organize:ndisc_album_folder}
+compilation_album_folder = ${Organize:compilation_album_folder}
+ndisc_compilation_album_folder = ${Organize:ndisc_compilation_album_folder}
+track_filename = ${Organize:track_filename}
+ndisc_track_filename = ${Organize:ndisc_track_filename}
+compilation_track_filename = ${Organize:compilation_track_filename}
+ndisc_compilation_track_filename = ${Organize:ndisc_compilation_track_filename}
+track_fileext = .mp3
+use_xplatform_safe_names = ${Organize:use_xplatform_safe_names}
+lame_encode_options = --clipdetect -q 2 -V2 -b 224
+
+[ID3v2]
+TALB = album_title
+TPE2 = album_artist
+TPUB = album_label
+TPOS = {album_discnumber:d}/{album_disctotal:d}
+TRCK = {track_number:d}/{album_tracktotal:d}
+TIT2 = track_title
+TIT1 = ${TPE1}
+TPE1 = track_artist
+TCON = track_genre
+TYER = track_year
+TDRC = ${TYER}
+TCMP = {album_compilation:d}
 </pre></div>
 </div>
-<p>You <strong>must</strong> provide values for the Gracenote <em>client_id</em>, MusicBrainz
-<em>libdiscid_location</em> and <em>contact_url_or_email</em>, FLAC <em>library_root</em>, and MP3
-<em>library_root</em>. All other configuration settings may be left as-is or changed
-to your preferences.</p>
+<p>You <strong>must</strong> provide values for your music <em>library_root</em> directory; the
+Gracenote <em>client_id</em>; and MusicBrainz <em>contact_url_or_email</em> and
+<em>libdiscid_location</em>. All other configuration settings may be left as-is
+or changed to your preferences.</p>
 <p>To obtain a Gracenote <em>client_id</em>, you must register for a
-<a class="reference external" href="https://developer.gracenote.com/">Gracenote Developer</a> account and create an
-application (you can call it &#8220;FLAC Manager&#8221;). Copy the Client ID for the
-created application and paste it into the <em>flacmanager.ini</em> file. FLAC Manager
-will take care of registering the application and persisting the <em>user_id</em> for
-you.</p>
+<a class="reference external" href="https://developer.gracenote.com/">Gracenote Developer</a> account and
+create an application (you can call it &#8220;FLACManager&#8221;). Copy the Client
+ID for the created application and paste it into the <em>flacmanager.ini</em>
+file. FLACManager will take care of registering the application and
+persisting the <em>user_id</em> for you.</p>
 </div>
-<div class="section" id="running-flac-manager">
-<h2>Running FLAC Manager<a class="headerlink" href="#running-flac-manager" title="Permalink to this headline">¶</a></h2>
-<p>When you launch FLAC Manager (assuming you have already created/populated the
-<em>flacmanager.ini</em> file with valid values), it looks for an inserted CD-DA disc:</p>
+<div class="section" id="running-flacmanager">
+<h2>Running FLACManager<a class="headerlink" href="#running-flacmanager" title="Permalink to this headline">¶</a></h2>
+<p>When you launch FLACManager (assuming you have already created/populated
+the <em>flacmanager.ini</em> file with valid values), it looks for an inserted
+CD-DA disc:</p>
 <img alt="_images/waiting.png" src="_images/waiting.png" />
-<p>FLAC Manager is polling your optical drive in the background, and will continue
-to do so until it detects that a disc has been inserted.</p>
-<p>Once a disc has been detected, FLAC Manager begins aggregating metadata from
-Gracenote and MusicBrainz:</p>
+<p>FLACManager is polling your optical drive in the background, and will
+continue to do so until it detects that a disc has been inserted.</p>
+<p>Once a disc has been detected, FLACManager begins aggregating metadata
+from Gracenote and MusicBrainz:</p>
 <img alt="_images/aggregating.png" src="_images/aggregating.png" />
 <p>You can abort the aggregation process by ejecting the disc.</p>
-<div class="versionadded">
-<p><span class="versionmodified">New in version 0.5: </span>If aggregation fails, an error dialog will describe the failure. Once this
-dialog is dismissed, you will be presented with options to either retry the
-metadata aggregation or edit the metadata offline:</p>
-<img alt="_images/aggregation-failure.png" src="_images/aggregation-failure.png" /><p>If you choose to edit the metadata offline, the editor will not contain any
-information other than the number of tracks:</p>
-<img alt="_images/offline-editing.png" src="_images/offline-editing.png" /></div>
-<p>If metadata aggregation completes successfully, you will be presented with the
-editor interface prepopulated with the aggregated metadata values:</p>
+<p>If aggregation fails, an error dialog will describe the failure. Once
+this dialog is dismissed, you will be presented with options to either
+retry the metadata aggregation or edit the metadata as-is:</p>
+<img alt="_images/aggregation-failure.png" src="_images/aggregation-failure.png" />
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">If you choose to edit the metadata as-is, the editor may not contain
+all aggregated metadata (or any at all).</p>
+</div>
+<p>If metadata aggregation completes successfully, you will be presented
+with the editor interface prepopulated with the aggregated metadata
+values:</p>
 <img alt="_images/tagging.png" src="_images/tagging.png" />
-<p>Here you can select from the aggregated metadata values or enter your own. Some
-fields present the option to &#8220;Apply to all tracks,&#8221; which does exactly as it
-suggests - copies the current value to the corresponding field of every track.</p>
-<p>By default, all tracks are &#8220;included,&#8221; which means they will be ripped to FLAC
-and MP3. To exclude a track, simply uncheck the box.</p>
-<p>When you are satisfied with the metadata values, click the &#8220;Rip and tag&#8221; button
-to begin the encoding process:</p>
-<div class="versionadded">
-<p><span class="versionmodified">New in version 0.4: </span>As soon as the &#8220;Rip and tag&#8221; button is clicked to begin the encoding
+<p>Here you can select from the aggregated metadata values or enter your
+own. Some fields present the option to &#8220;Apply to all tracks,&#8221; which does
+exactly as it suggests - copies the current value to the corresponding
+field of every track.</p>
+<p>By default, all tracks are &#8220;included,&#8221; which means they will be ripped
+to FLAC and MP3. To exclude a track, simply uncheck the box.</p>
+<p>A custom comment/tag added at the album level will be copied to all
+tracks. If it is later deleted from the album level, it will also be
+deleted from all tracks <strong>unless the value was changed for a particular
+track</strong> (in which case the custom comment/tag will remain for that track
+only).</p>
+<img alt="_images/albumcustom.png" src="_images/albumcustom.png" />
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Custom comments/tags at the album level cannot be modified once
+created; they must be deleted and re-added to change the value.</p>
+</div>
+<img alt="_images/trackcustom.png" src="_images/trackcustom.png" />
+<p>When you are satisfied with the metadata values, click the &#8220;Rip and tag&#8221;
+button to begin the encoding process:</p>
+<img alt="_images/ripping.png" src="_images/ripping.png" />
+<p>As soon as the &#8220;Rip and tag&#8221; button is clicked to begin the encoding
 process, all album and track metadata field values are automatically
 saved. If ripping fails for any reason, re-inserting the disc will cause
-that persisted metadata to be restored so that you don&#8217;t have to re-enter
-the information by hand. If a cover image was persisted, it will be
-opened in Preview automatically when the metadata is restored.</p>
-</div>
-<img alt="_images/ripping.png" src="_images/ripping.png" />
-<p>Once all included tracks have been encoded to FLAC and MP3, the &#8220;Eject&#8221; button
-is enabled and you can eject the disc. FLAC Manager then waits for another
-disc to be inserted.</p>
-<div class="section" id="mapping-of-flac-manager-metadata-fields-to-itunes-metadata-fields">
-<h3>Mapping of FLAC Manager metadata fields to iTunes metadata fields<a class="headerlink" href="#mapping-of-flac-manager-metadata-fields-to-itunes-metadata-fields" title="Permalink to this headline">¶</a></h3>
+that persisted metadata to be restored so that you don&#8217;t have to
+re-enter the information by hand. If a cover image was persisted, it
+will be opened in Preview automatically when the metadata is restored.</p>
+<p>Once all included tracks have been encoded to FLAC and MP3, the &#8220;Eject&#8221;
+button is enabled and you can eject the disc. FLACManager then waits for
+another disc to be inserted.</p>
+<div class="section" id="mapping-flacmanager-metadata-fields-to-itunes-and-google-play-music">
+<h3>Mapping FLACManager metadata fields to iTunes and Google Play Music<a class="headerlink" href="#mapping-flacmanager-metadata-fields-to-itunes-and-google-play-music" title="Permalink to this headline">¶</a></h3>
+<p>This table describes how FLACManager maps metadata fields<sup>†</sup> to
+iTunes and Google Play Music <strong>in the default configuration</strong>:</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="46%" />
-<col width="54%" />
+<col width="10%" />
+<col width="10%" />
+<col width="21%" />
+<col width="19%" />
+<col width="12%" />
+<col width="13%" />
+<col width="15%" />
 </colgroup>
 <thead valign="bottom">
-<tr class="row-odd"><th class="head">FLAC Manager field</th>
-<th class="head">iTunes metadata field</th>
+<tr class="row-odd"><th class="head">FLACManager
+UI Editor</th>
+<th class="head">FLACManager
+UI Field</th>
+<th class="head">FLACManager metadata key</th>
+<th class="head">FLAC Vorbis comment</th>
+<th class="head">MP3 ID3v2 tag</th>
+<th class="head">iTunes field</th>
+<th class="head">Google Play Music
+field</th>
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-even"><td>Album</td>
+<tr class="row-even"><td rowspan="11">Album</td>
+<td>Title</td>
+<td>album_title</td>
+<td>ALBUM</td>
+<td>TALB</td>
+<td>album</td>
 <td>Album</td>
 </tr>
-<tr class="row-odd"><td>Disc # of #</td>
-<td>Disc Number</td>
+<tr class="row-odd"><td rowspan="2">Disc</td>
+<td>album_discnumber</td>
+<td>DISCNUMBER</td>
+<td>TPOS</td>
+<td>disc number</td>
+<td>Disc #</td>
 </tr>
-<tr class="row-even"><td>Album Artist</td>
-<td>Album Artist</td>
+<tr class="row-even"><td>album_disctotal</td>
+<td>DISCTOTAL</td>
+<td>TPOS</td>
+<td>disc number of</td>
+<td>Discs</td>
 </tr>
-<tr class="row-odd"><td>Track Title</td>
+<tr class="row-odd"><td>Compilation</td>
+<td>album_compilation</td>
+<td>COMPILATION</td>
+<td>TCMP</td>
+<td>compilation</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td rowspan="2">Artist</td>
+<td rowspan="2">album_artist</td>
+<td rowspan="2">ALBUMARTIST</td>
+<td rowspan="2">TPE2</td>
+<td rowspan="2">album artist</td>
+<td rowspan="2">Album Artist</td>
+</tr>
+<tr class="row-odd"></tr>
+<tr class="row-even"><td rowspan="2">Label</td>
+<td rowspan="2">album_label</td>
+<td rowspan="2">ORGANIZATION, LABEL</td>
+<td rowspan="2">TPUB</td>
+<td rowspan="2">&nbsp;</td>
+<td rowspan="2">&nbsp;</td>
+</tr>
+<tr class="row-odd"></tr>
+<tr class="row-even"><td>Genre</td>
+<td>album_genre</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>Year</td>
+<td>album_year</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>Cover</td>
+<td>album_cover</td>
+<td>METADATA_BLOCK_PICTURE</td>
+<td>APIC</td>
+<td>Artwork</td>
+<td><em>(image)</em></td>
+</tr>
+<tr class="row-odd"><td rowspan="7">Track</td>
+<td rowspan="2">Track</td>
+<td>track_number</td>
+<td>TRACKNUMBER</td>
+<td>TRCK</td>
+<td>track</td>
+<td>Track #</td>
+</tr>
+<tr class="row-even"><td>track_total</td>
+<td>TRACKTOTAL</td>
+<td>TRCK</td>
+<td>track of</td>
+<td>Tracks</td>
+</tr>
+<tr class="row-odd"><td>Include</td>
+<td>track_include</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>Title</td>
+<td>track_title</td>
+<td>TITLE</td>
+<td>TIT2</td>
+<td>song name</td>
 <td>Name</td>
 </tr>
-<tr class="row-even"><td>Track # of #</td>
-<td>Track Number</td>
-</tr>
-<tr class="row-odd"><td>Track Artist</td>
+<tr class="row-odd"><td>Artist</td>
+<td>track_artist</td>
+<td>ARTIST</td>
+<td>TIT1, TPE1</td>
+<td>artist</td>
 <td>Artist</td>
 </tr>
-<tr class="row-even"><td>Track Genre</td>
+<tr class="row-even"><td>Genre</td>
+<td>track_genre</td>
+<td>GENRE</td>
+<td>TCON</td>
+<td>genre</td>
 <td>Genre</td>
 </tr>
-<tr class="row-odd"><td>Track Year</td>
+<tr class="row-odd"><td>Year</td>
+<td>track_year</td>
+<td>DATE</td>
+<td>TYER, TDRC</td>
+<td>year</td>
 <td>Year</td>
 </tr>
 </tbody>
 </table>
+<p><sup>†</sup> if FLACManager finds a barcode for the disc in the aggregated
+metadata (MusicBrainz includes this value when it is known), then a
+custom Vorbis &#8220;BARCODE&#8221; comment is added at the album level and copied
+to all tracks</p>
 </div>
 </div>
 </div>
@@ -287,10 +495,10 @@ disc to be inserted.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="api-ref.html" class="btn btn-neutral float-right" title="FLAC Manager API reference" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="api-ref.html" class="btn btn-neutral float-right" title="FLACManager API reference" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="whats-new.html" class="btn btn-neutral" title="What’s new in FLAC Manager" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="whats-new.html" class="btn btn-neutral" title="What’s new in FLACManager" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -299,7 +507,7 @@ disc to be inserted.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2013 - 2016, Matthew Zipay.
+        &copy; Copyright 2013 - 2017, Matthew Zipay.
 
     </p>
   </div>
@@ -321,7 +529,7 @@ disc to be inserted.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.7.2',
+            VERSION:'0.8.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
