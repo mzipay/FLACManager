@@ -4,7 +4,10 @@ Disc information API
 
 :Release: |release|
 
-.. autofunction:: flacmanager.get_disc_info
+.. autoclass:: flacmanager.DiscCheck
+
+.. autofunction:: flacmanager.identify_cdda_device
+.. autofunction:: flacmanager.identify_cdda_mount_point
 .. autofunction:: flacmanager.read_disc_toc
 
 .. class:: flacmanager.TOC
@@ -19,6 +22,4 @@ Disc information API
    .. autoattribute:: flacmanager.TOC.track_offsets
 
    .. autoattribute:: flacmanager.TOC.leadout_track_offset
-
-.. autoclass:: flacmanager.DiscCheck
 

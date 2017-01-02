@@ -1,11 +1,11 @@
-==========================
-FLAC Manager API reference
-==========================
+=========================
+FLACManager API reference
+=========================
 
 :Release: |release|
 
-FLAC Manager consists of a single module (``flacmanager``). The API is broken
-down into logical groupings as listed below.
+FLACManager consists of a single module (``flacmanager``). The API is
+broken down into logical groupings as listed below.
 
 .. toctree::
    :maxdepth: 2

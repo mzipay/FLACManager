@@ -156,7 +156,7 @@ class _TracingLogger(logging.getLoggerClass()):
     def return_(self, value=None):
         """Log return from a callable with severity :attr:`TRACE`.
 
-        :key value: the value returned from the callable
+        :keyword value: the value returned from the callable
 
         """
         if self.isEnabledFor(TRACE):
@@ -192,7 +192,7 @@ QUEUE_GET_NOWAIT_AFTER = 625
 def identify_cdda_device():
     """Locate the file system device for an inserted CD-DA.
 
-    :return: the CD-DA file system device ("/dev/*")
+    :return: the CD-DA file system device ("/dev/<device>")
     :rtype: :obj:`str`
 
     """
@@ -224,7 +224,7 @@ def identify_cdda_device():
 def identify_cdda_mount_point(device):
     """Locate the file system mount point for the CD-DA *device*.
 
-    :arg str device: the CD-DA device ("/dev/*")
+    :arg str device: the CD-DA device ("/dev/<device>")
     :return: the *device* mount point
     :rtype: :obj:`str`
 
@@ -591,8 +591,8 @@ def save_config():
 def make_tempfile(suffix=".tmp", prefix="fm"):
     """Create a temporary file.
 
-    :key str suffix: the default file extenstion
-    :key str prefix: prepended to the beginning of the filename
+    :keyword str suffix: the default file extenstion
+    :keyword str prefix: prepended to the beginning of the filename
     :return: the temporary file name
     :rtype: :obj:`str`
 
@@ -615,8 +615,8 @@ class FLACManagerError(Exception):
     def __init__(self, message, context_hint=None, cause=None):
         """
         :arg str message: error message for logging or display
-        :key context_hint: describes the error context
-        :key Exception cause: the exception that caused this error
+        :keyword context_hint: describes the error context
+        :keyword Exception cause: the exception that caused this error
 
         The optional *context_hint* is not part of the message, and may
         take any type or form. Exception handlers that catch
@@ -871,7 +871,7 @@ class FLACManager(Tk):
     def persist_metadata_snapshot(self, showinfo=True):
         """Serialize the current metadata field values to JSON.
 
-        :key bool showinfo:
+        :keyword bool showinfo:
            whether or not to display a messagebox with the persisted
            metadata file path
 
@@ -1494,10 +1494,10 @@ class _FMEditorFrame(Frame):
         :arg parent: parent object of the editor
         :arg str editor_name: either "album" or "track"
         :arg str field_name: the metadata field name
-        :key bool tracks_apply:
+        :keyword bool tracks_apply:
            whether or not to create an "Apply to all tracks" button that
            corresponds to *field_name*
-        :key VarType:
+        :keyword VarType:
            the :mod:`tkinter` variable type that will hold the value of
            the metadata field
         :return: the metadata field entry/selection widget
@@ -1812,7 +1812,7 @@ class _FMEditorFrame(Frame):
         """Add an entry for *filename* to the album cover dropdown.
 
         :arg str filename: absolute path to an album cover image file
-        :key bool showinfo:
+        :keyword bool showinfo:
            whether or not to open a dialog confirming the addition of
            *filename*
 
@@ -2622,7 +2622,7 @@ class TrackEncodingStatus:
     def __init__(self, track_label, pending=True):
         """
         :arg str track_label: the track's display label
-        :key bool pending:
+        :keyword bool pending:
            the default ``True`` initializes status as
            :data:`TRACK_PENDING`; set to ``False`` to initialize status
            as :data:`TRACK_EXCLUDED`
@@ -2823,7 +2823,7 @@ def _xplatform_safe(path, fileext=""):
 
     :arg path:
        a :obj:`list` of folder names, or a file basename
-    :key str fileext:
+    :keyword str fileext:
        if *path* is a file basename, this is the file extension that
        will be appended to form the complete file name
     :return: the transformed *path*
@@ -3023,7 +3023,7 @@ class _EditConfigurationDialog(simpledialog.Dialog):
         :arg str section_name: the name of the configuration section
         :arg str option_name: the name of the configuration option
         :arg value: the default/initial value of the option
-        :key int width:
+        :keyword int width:
            the display width of the entry box for this option's value
 
         """
@@ -3734,9 +3734,9 @@ class EditCustomMetadataTaggingDialog(simpledialog.Dialog):
         """Render a custom field in the dialog body.
 
         :arg parent: the object that contains the field controls
-        :key str vorbis_comment: the custom Vorbis comment
-        :key str id3v2_tag: the custom ID3v2 tag
-        :key list values: the value(s) for the custom comment/tag
+        :keyword str vorbis_comment: the custom Vorbis comment
+        :keyword str id3v2_tag: the custom ID3v2 tag
+        :keyword list values: the value(s) for the custom comment/tag
 
         """
         self.__log.call(
@@ -3868,9 +3868,9 @@ class EditAlbumCustomMetadataTaggingDialog(EditCustomMetadataTaggingDialog):
         """Render a custom field in the dialog body.
 
         :arg parent: the object that contains the field controls
-        :key str vorbis_comment: the custom Vorbis comment
-        :key str id3v2_tag: the custom ID3v2 tag
-        :key list values: the value(s) for the custom comment/tag
+        :keyword str vorbis_comment: the custom Vorbis comment
+        :keyword str id3v2_tag: the custom ID3v2 tag
+        :keyword list values: the value(s) for the custom comment/tag
 
         If adding an already-populated field, the entry widgets will be
         disabled. This is a bit ugly, but it greatly simplifies change
@@ -3989,7 +3989,7 @@ def encode_flac(
     :arg str cdda_filename: absolute CD-DA file name
     :arg str flac_filename: absolute *.flac* file name
     :arg dict track_metadata: tagging fields for this track
-    :key str stdout_filename:
+    :keyword str stdout_filename:
        absolute file name for redirected stdout
 
     """
@@ -4029,7 +4029,7 @@ def decode_wav(flac_filename, wav_filename, stdout_filename=None):
 
     :arg str flac_filename: absolute *.flac* file name
     :arg str wav_filename: absolute *.wav* file name
-    :key str stdout_filename:
+    :keyword str stdout_filename:
        absolute file name for redirected stdout
 
     """
@@ -4060,9 +4060,9 @@ def encode_mp3(
     :arg str wav_filename: absolute *.wav* file name
     :arg str mp3_filename: absolute *.mp3* file name
     :arg dict track_metadata: tagging fields for this track
-    :key float scale:
+    :keyword float scale:
       multiply PCM data by this factor
-    :key str stdout_filename:
+    :keyword str stdout_filename:
        absolute file name for redirected stdout
 
     """
@@ -4385,7 +4385,7 @@ class FLACEncoder(threading.Thread):
         :arg int track_index: index (**not** ordinal) of the track
         :arg str cdda_filename: absolute CD-DA file name
         :arg str flac_filename: absolute .flac file name
-        :key str stdout_filename:
+        :keyword str stdout_filename:
            absolute file name for redirected stdout
 
         .. note::
@@ -4612,7 +4612,7 @@ class _HTTPMetadataCollector(MetadataCollector):
         """
         :arg flacmanager.TOC toc: a disc's table of contents
         :arg str api_host: the API host name
-        :key bool use_ssl: whether or not to use an SSL connection
+        :keyword bool use_ssl: whether or not to use an SSL connection
 
         """
         self.__log.call(toc, api_host, use_ssl=use_ssl)
@@ -4656,9 +4656,9 @@ class _HTTPMetadataCollector(MetadataCollector):
         """Make an HTTP GET or POST API request.
 
         :arg str path: the request path and optional query string
-        :key body: the HTTP request body
+        :keyword body: the HTTP request body
         :type body: :obj:`str` or :obj:`bytes`
-        :key additional_headers:
+        :keyword additional_headers:
            additional request headers (User-Agent is default)
         :type additional_headers:
            :obj:`dict` or :class:`http.client.HTTPMessage`
@@ -4964,7 +4964,7 @@ class GracenoteCDDBMetadataCollector(_HTTPMetadataCollector):
         """Make a Gracenote 'ALBUM_FETCH' request.
 
         :arg str gn_id: the Gracenote ID of an album
-        :key bool is_last_album:
+        :keyword bool is_last_album:
            whether or not this is the last album to fetch
         :return: a Gracenote <ALBUM>
         :rtype: :class:`xml.etree.ElementTree.Element`
@@ -5005,7 +5005,7 @@ class GracenoteCDDBMetadataCollector(_HTTPMetadataCollector):
 
         :arg xml.etree.ElementTree.Element gn_queries:
            a Gracenote <QUERIES> document
-        :key bool http_keep_alive:
+        :keyword bool http_keep_alive:
            whether or not to keep the Gracenote HTTP connection alive
         :return: a Gracenote <RESPONSES> document
         :rtype: :class:`xml.etree.ElementTree.Element`
@@ -5370,7 +5370,7 @@ class MusicBrainzMetadataCollector(_HTTPMetadataCollector):
 
         :arg str request_path: a MusicBrainz HTTP request path
         :arg dict nsmap: namespace prefixes to URIs
-        :key bool http_keep_alive:
+        :keyword bool http_keep_alive:
            whether or not to keep the MusicBrainz HTTP connection alive
         :return: the MusicBrainz <metadata> response document
         :rtype: :class:`xml.etree.ElementTree.Element`
@@ -5878,7 +5878,7 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
 
         :arg dict source: metadata being merged from
         :arg dict target: metadata being merged into
-        :key list keys:
+        :keyword list keys:
            specific keys to merge (if not specified, **all** keys from
            *source* are merged into *target*)
 
@@ -5965,7 +5965,7 @@ def show_exception_dialog(e, aborting=False):
     """Open a dialog to display exception information.
 
     :arg Exception e: a caught exception
-    :key bool aborting: ``True`` if the application will terminate
+    :keyword bool aborting: ``True`` if the application will terminate
 
     """
     title = e.__class__.__name__

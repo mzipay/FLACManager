@@ -4,51 +4,61 @@ Audio tagging and encoding API
 
 :Release: |release|
 
-The ``FLAC_*_TEMPLATE`` and ``MP3_*_TEMPLATE`` string formats are used to
-create the directory and file names for *.flac* and *.mp3* files, respectively.
-These string formats take their substitution values from a dictionary of
-metadata items containing the following keys:
-
-* album_title
-* album_artist
-* album_performer
-* album_genre
-* album_year
-* album_cover
-* is_compilation
-* disc_number
-* disc_total
-* track_number
-* track_total
-* track_title
-* track_artist
-* track_performer
-* track_genre
-* track_year
-
-The default string formats are chosen based on whether or not the album is a
-compilation (affects directory and file names), and whether or not the album
-spans two or more physical discs (affects file names only).
-
-.. autodata:: flacmanager.FLAC_FOLDERS_TEMPLATE
-.. autodata:: flacmanager.FLAC_FOLDERS_COMPILATION_TEMPLATE
 .. autofunction:: flacmanager.generate_flac_dirname
-
-.. autodata:: flacmanager.FLAC_FILENAME_TEMPLATE
-.. autodata:: flacmanager.FLAC_FILENAME_COMPILATION_TEMPLATE
-.. autodata:: flacmanager.FLAC_FILENAME_DISCN_TEMPLATE
-.. autodata:: flacmanager.FLAC_FILENAME_DISCN_COMPILATION_TEMPLATE
 .. autofunction:: flacmanager.generate_flac_basename
 
-.. autodata:: flacmanager.MP3_FOLDERS_TEMPLATE
-.. autodata:: flacmanager.MP3_FOLDERS_COMPILATION_TEMPLATE
 .. autofunction:: flacmanager.generate_mp3_dirname
-
-.. autodata:: flacmanager.MP3_FILENAME_TEMPLATE
-.. autodata:: flacmanager.MP3_FILENAME_COMPILATION_TEMPLATE
-.. autodata:: flacmanager.MP3_FILENAME_DISCN_TEMPLATE
-.. autodata:: flacmanager.MP3_FILENAME_DISCN_COMPILATION_TEMPLATE
 .. autofunction:: flacmanager.generate_mp3_basename
+
+The directory and file names are configurable via the *flacmanager.ini*
+file. Here are the relevant excerpts (default)::
+
+   [Organize]
+   library_root =
+   library_subroot_trie_key = album_artist
+   library_subroot_compilation_trie_key = album_title
+   library_subroot_trie_level = 1
+   album_folder = {album_artist}/{album_title}
+   ndisc_album_folder = ${album_folder}
+   compilation_album_folder = {album_title}
+   ndisc_compilation_album_folder = ${compilation_album_folder}
+   track_filename = {track_number:02d} {track_title}
+   ndisc_track_filename = {album_discnumber:02d}-${track_filename}
+   compilation_track_filename = ${track_filename} ({track_artist})
+   ndisc_compilation_track_filename = {album_discnumber:02d}-${compilation_track_filename}
+   use_xplatform_safe_names = yes
+
+   [FLAC]
+   library_root = ${Organize:library_root}/FLAC
+   library_subroot_trie_key = ${Organize:library_subroot_trie_key}
+   library_subroot_compilation_trie_key = ${Organize:library_subroot_compilation_trie_key}
+   library_subroot_trie_level = ${Organize:library_subroot_trie_level}
+   album_folder = ${Organize:album_folder}
+   ndisc_album_folder = ${Organize:ndisc_album_folder}
+   compilation_album_folder = ${Organize:compilation_album_folder}
+   ndisc_compilation_album_folder = ${Organize:ndisc_compilation_album_folder}
+   track_filename = ${Organize:track_filename}
+   ndisc_track_filename = ${Organize:ndisc_track_filename}
+   compilation_track_filename = ${Organize:compilation_track_filename}
+   ndisc_compilation_track_filename = ${Organize:ndisc_compilation_track_filename}
+   track_fileext = .flac
+   use_xplatform_safe_names = ${Organize:use_xplatform_safe_names}
+
+   [MP3]
+   library_root = ${Organize:library_root}/MP3
+   library_subroot_trie_key = ${Organize:library_subroot_trie_key}
+   library_subroot_trie_level = ${Organize:library_subroot_trie_level}
+   library_subroot_compilation_trie_key = ${Organize:library_subroot_compilation_trie_key}
+   album_folder = ${Organize:album_folder}
+   ndisc_album_folder = ${Organize:ndisc_album_folder}
+   compilation_album_folder = ${Organize:compilation_album_folder}
+   ndisc_compilation_album_folder = ${Organize:ndisc_compilation_album_folder}
+   track_filename = ${Organize:track_filename}
+   ndisc_track_filename = ${Organize:ndisc_track_filename}
+   compilation_track_filename = ${Organize:compilation_track_filename}
+   ndisc_compilation_track_filename = ${Organize:ndisc_compilation_track_filename}
+   track_fileext = .mp3
+   use_xplatform_safe_names = ${Organize:use_xplatform_safe_names}
 
 .. autoclass:: flacmanager.TrackState
 .. autodata:: flacmanager.TRACK_EXCLUDED
@@ -56,6 +66,7 @@ spans two or more physical discs (affects file names only).
 .. autodata:: flacmanager.TRACK_ENCODING_FLAC
 .. autodata:: flacmanager.TRACK_DECODING_WAV
 .. autodata:: flacmanager.TRACK_ENCODING_MP3
+.. autodata:: flacmanager.TRACK_REENCODING_MP3
 .. autodata:: flacmanager.TRACK_FAILED
 .. autodata:: flacmanager.TRACK_COMPLETE
 .. autoclass:: flacmanager.TrackEncodingStatus
@@ -68,6 +79,16 @@ spans two or more physical discs (affects file names only).
 .. autofunction:: flacmanager.decode_wav
 .. autofunction:: flacmanager.make_id3v2_tags
 .. autofunction:: flacmanager.encode_mp3
+
+Settings for the ``flac`` and ``lame`` encoders are configurable via the
+*flacmanager.ini* file. Here are the relevant excerpts (default)::
+
+   [FLAC]
+   flac_encode_options = --force --keep-foreign-metadata --verify
+   flac_decode_options = --force
+
+   [MP3]
+   lame_encode_options = --clipdetect -q 2 -V2 -b 224
 
 .. autofunction:: flacmanager.get_lame_genres
 

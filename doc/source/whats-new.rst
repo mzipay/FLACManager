@@ -1,21 +1,35 @@
-==========================
-What's new in FLAC Manager
-==========================
+=========================
+What's new in FLACManager
+=========================
 
 Current release: |release|
 ==========================
 * standardized the application menubar
   (now has conventional File, Edit and Help menus)
-* directory and file naming for music library can now be configured via the
-  Edit menu (rather than needing to edit the source code)
-* comprehensive tag management: you can now configure\ :sup:`†` (via the Edit menu)
-  how metadata fields in the UI map to Vorbis comments for FLAC files and ID3v2
-  tags for MP3 files
+* directory and file naming for music library can now be configured via
+  the Edit menu (rather than needing to edit the source code)
+* comprehensive tag management: you can now configure\ :sup:`†` (via the
+  Edit menu) how metadata fields in the UI map to Vorbis comments for
+  FLAC files and ID3v2 tags for MP3 files
+* custom Vorbis comments and ID3v2 tags can now be added on a per-album
+  and per-track basis
+* clipping is now detected automatically when encoding MP3s, and
+  FLACManager will re-encode with scaled PCM data until no clipping
+  occurs
+* the selected/entered metadata can now be persisted at any time using
+  the File | Save metadata menu command (metadata is **always**
+  persisted automatically when the [Rip and Tag] button is clicked)
+* the UI now formally includes an input field for an album's record
+  label\ :sup:`††`
 
-:sup:`†` defaults have been tuned to produce sane results for Apple iTunes,
-Google Play, and any FLAC player that respects
-`Ogg Vorbis I format specification: comment field and header specification
-<https://xiph.org/vorbis/doc/v-comment.html>`_
+:sup:`†` defaults have been tuned to produce sane results for Apple
+iTunes, Google Play Music, and any FLAC player that respects
+`Ogg Vorbis I format specification: comment field and header
+specification <https://xiph.org/vorbis/doc/v-comment.html>`_
+
+:sup:`††` be aware that neither Gracenote nor MusicBrainz currently
+include an album's record label in their respective metadata; a value
+must be provided by hand
 
 Previous releases
 =================
