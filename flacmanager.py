@@ -5249,8 +5249,8 @@ class MusicBrainzMetadataCollector(_HTTPMetadataCollector):
             # NOTE: MusicBrainz does not support genre information.
 
             barcode_node = mb_release.find("mb:barcode", namespaces=nsmap)
-            if barcode_node and barcode_node.text:
-                barcode = barcode_node.text
+            barcode = barcode_node.text if barcode_node is not None else None
+            if barcode:
                 k = ("BARCODE", "")
                 metadata["__custom"].setdefault(k, [])
                 if barcode not in metadata["__custom"][k]:
@@ -5824,10 +5824,10 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
 
                 t += 1
 
-        for aggregated_track_metadata in self.metadata["__tracks"][1:]:
-            for (key, value) in self.metadata["__custom"].items():
-                if key not in aggregated_track_metadata["__custom"]:
-                    aggregated_track_metadata["__custom"][key] = value
+        for (key, value) in self.metadata["__custom"].items():
+            for track_metadata in self.metadata["__tracks"][1:]:
+                if key not in track_metadata["__custom"]:
+                    track_metadata["__custom"][key] = value
 
         # add LAME genres to album and track metadata
         self.__add_lame_genres(self.metadata["album_genre"])
