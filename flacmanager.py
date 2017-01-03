@@ -39,7 +39,7 @@ http://mzipay.github.io/FLACManager/usage.html
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.info>"
-__version__ = "0.8.0"
+__version__ = "0.8.1-beta"
 __license__ = """\
 FLAC Manager -- audio metadata aggregator and FLAC+MP3 encoder
 http://ninthtest.info/flac-mp3-audio-manager/
@@ -374,7 +374,9 @@ def get_config():
                         "updating to version %s",
                     __version__)
 
-                fm = dict(_config.pop("FLACManager", {}))
+                fm = {}
+                if "FLACManager" in _config:
+                    fm.update(_config["FLACManager"])
 
                 # always make sure this is accurate
                 _config["FLACManager"] = OrderedDict(__version__=__version__)
@@ -452,6 +454,7 @@ def get_config():
                         ("library_subroot_compilation_trie_key",
                             "album_title"),
                         ("library_subroot_trie_level", '1'),
+                        ("trie_ignore_leading_article", "a an the"),
                         ("album_folder", "{album_artist}/{album_title}"),
                         ("ndisc_album_folder", "${album_folder}"),
                         ("compilation_album_folder", "{album_title}"),
@@ -478,6 +481,8 @@ def get_config():
                             "${Organize:library_subroot_compilation_trie_key}"),
                         ("library_subroot_trie_level",
                             "${Organize:library_subroot_trie_level}"),
+                        ("trie_ignore_leading_article",
+                            "${Organize:trie_ignore_leading_article}"),
                         ("album_folder", "${Organize:album_folder}"),
                         ("ndisc_album_folder",
                             "${Organize:ndisc_album_folder}"),
@@ -526,10 +531,12 @@ def get_config():
                         ("library_root", "${Organize:library_root}/MP3"),
                         ("library_subroot_trie_key",
                             "${Organize:library_subroot_trie_key}"),
-                        ("library_subroot_trie_level",
-                            "${Organize:library_subroot_trie_level}"),
                         ("library_subroot_compilation_trie_key",
                             "${Organize:library_subroot_compilation_trie_key}"),
+                        ("library_subroot_trie_level",
+                            "${Organize:library_subroot_trie_level}"),
+                        ("trie_ignore_leading_article",
+                            "${Organize:trie_ignore_leading_article}"),
                         ("album_folder", "${Organize:album_folder}"),
                         ("ndisc_album_folder",
                             "${Organize:ndisc_album_folder}"),
@@ -2881,7 +2888,20 @@ def _subroot_trie(section, metadata):
         _log.trace("RETURN []")
         return []
 
-    term = re.sub(r"[^0-9a-zA-Z]", "", metadata[key]).upper()
+    term = metadata[key]
+
+    # issues/3
+    trie_ignore_leading_article = config[section].get(
+        "trie_ignore_leading_article", "")
+    if trie_ignore_leading_article:
+        articles = trie_ignore_leading_article.upper().split()
+        words = term.split()
+        if words[0].upper() in articles:
+            # do not simply join on space; remaining white space may be
+            # significant (e.g. NIN "THE S L  I   P" -> "S L  I   P")
+            term = term[len(words[0]):].lstrip()
+
+    term = re.sub(r"[^0-9a-zA-Z]", "", term).upper()
     # use len(term) - 1 so trie prefixes never include the full term
     nodes = [term[:n + 1] for n in range(min(level, len(term) - 1))]
     # edge case - any non-alphanumeric key falls into the special '_' node
