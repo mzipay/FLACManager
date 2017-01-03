@@ -5269,6 +5269,7 @@ class MusicBrainzMetadataCollector(_HTTPMetadataCollector):
             # NOTE: MusicBrainz does not support genre information.
 
             barcode_node = mb_release.find("mb:barcode", namespaces=nsmap)
+            # issues/2
             barcode = barcode_node.text if barcode_node is not None else None
             if barcode:
                 k = ("BARCODE", "")
