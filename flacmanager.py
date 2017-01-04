@@ -5608,6 +5608,10 @@ class MetadataPersistence(MetadataCollector):
                 disc_metadata[new_key] = \
                     value[0] if type(value) is list else value
 
+            # issues/4
+            if "__custom" not in disc_metadata:
+                disc_metadata["__custom"] = OrderedDict()
+
             t = 1
             for track_metadata in disc_metadata["__tracks"][t:]:
                 # sanity check
@@ -5624,6 +5628,10 @@ class MetadataPersistence(MetadataCollector):
                     value = track_metadata.pop(old_key, None)
                     track_metadata[new_key] = \
                         value[0] if type(value) is list else value
+
+                    # issues/4
+                    if "__custom" not in track_metadata:
+                        track_metadata["__custom"] = OrderedDict()
 
                 t += 1
 
