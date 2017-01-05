@@ -5274,7 +5274,10 @@ class MusicBrainzMetadataCollector(_HTTPMetadataCollector):
             if barcode:
                 k = ("BARCODE", "")
                 metadata["__custom"].setdefault(k, [])
-                if barcode not in metadata["__custom"][k]:
+                normalized_barcode = re.sub(r"[^\d]", "", barcode)
+                normalized_barcodes = [
+                    re.sub(r"[^\d]", "", b) for b in metadata["__custom"][k]]
+                if normalized_barcode not in normalized_barcodes:
                     metadata["__custom"][k].append(barcode)
 
             cover_art_front = mb_release.find(
@@ -5827,7 +5830,10 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                 ])
 
             self._merge_metadata(
-                collector.metadata["__custom"], self.metadata["__custom"])
+                collector.metadata["__custom"], self.metadata["__custom"],
+                keys=[
+                    key for key in collector.metadata["__custom"].keys()
+                    if key not in self.metadata["__custom"]])
 
             # not terribly useful, but not sure what else could possibly be
             # done here if there are discrepancies; best to just leave it up to
@@ -5849,7 +5855,11 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
 
                 self._merge_metadata(
                     track_metadata["__custom"],
-                    self.metadata["__tracks"][t]["__custom"])
+                    self.metadata["__tracks"][t]["__custom"],
+                    keys=[
+                        key for key in track_metadata["__custom"].keys()
+                        if key not in
+                            self.metadata["__tracks"][t]["__custom"]])
 
                 t += 1
 
