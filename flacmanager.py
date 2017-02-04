@@ -468,6 +468,7 @@ def get_config():
                         ("ndisc_compilation_track_filename",
                             "{album_discnumber:02d}-${compilation_track_filename}"),
                         ("use_xplatform_safe_names", "yes"),
+                        ("save_cover_image", "yes"),
                         ]:
                     _config["Organize"].setdefault(key, default_value)
 
@@ -500,6 +501,7 @@ def get_config():
                         ("track_fileext", ".flac"),
                         ("use_xplatform_safe_names",
                             "${Organize:use_xplatform_safe_names}"),
+                        ("save_cover_image", "${Organize:save_cover_image}"),
                         ("flac_encode_options",
                             "--force --keep-foreign-metadata --verify"),
                         ("flac_decode_options", "--force"),
@@ -554,6 +556,7 @@ def get_config():
                         ("track_fileext", ".mp3"),
                         ("use_xplatform_safe_names",
                             "${Organize:use_xplatform_safe_names}"),
+                        ("save_cover_image", "${Organize:save_cover_image}"),
                         ("lame_encode_options",
                             "--clipdetect -q 2 -V2 -b 224"),
                         ]:
@@ -949,15 +952,24 @@ class FLACManager(Tk):
             if not track_metadata["track_include"]:
                 continue
 
+            save_cover_image = ((i == 0)
+                and self._editor_frame.is_save_cover_image)
+
             cdda_filename = os.path.join(self.mountpoint, disc_filenames[i])
 
             flac_dirname = generate_flac_dirname(
                 flac_library_root, track_metadata)
+            if (save_cover_image
+                    and get_config().getboolean("FLAC", "save_cover_image")):
+                _save_cover_image(flac_dirname, track_metadata["album_cover"])
             flac_basename = generate_flac_basename(track_metadata)
             flac_filename = os.path.join(flac_dirname, flac_basename)
 
             mp3_dirname = generate_mp3_dirname(
                 mp3_library_root, track_metadata)
+            if (save_cover_image
+                    and get_config().getboolean("MP3", "save_cover_image")):
+                _save_cover_image(mp3_dirname, track_metadata["album_cover"])
             mp3_basename = generate_mp3_basename(track_metadata)
             mp3_filename = os.path.join(mp3_dirname, mp3_basename)
 
@@ -1664,6 +1676,16 @@ class _FMEditorFrame(Frame):
             command=self._add_album_cover_from_file
         ).pack(side=LEFT, padx=_PADX)
 
+        save_cover_var = BooleanVar(
+            name="album_save_cover_var",
+            value=get_config().getboolean("Organize", "save_cover_image"))
+        Checkbutton(
+            frame, name="album_cover_save_checkbutton",
+            text="Save to file?",
+            variable=save_cover_var, onvalue=True, offvalue=False
+        ).pack(side=RIGHT, padx=_PADX)
+        album_cover.save_cover_var = save_cover_var
+
         frame.grid(
             row=self.__row, column=1, columnspan=2, padx=_PADX, pady=_PADY,
             sticky=W)
@@ -1843,6 +1865,10 @@ class _FMEditorFrame(Frame):
 
         self.__log.return_(label)
         return label
+
+    @property
+    def is_save_cover_image(self):
+        return self.__metadata_editors["album_cover"].save_cover_var.get()
 
     def _create_album_custom_metadata_editor(self, parent):
         """Create the UI editing controls for editing custom metadata
@@ -2912,6 +2938,30 @@ def _subroot_trie(section, metadata):
     return nodes
 
 
+def _save_cover_image(dirname, filename):
+    """Save the cover image to the album folder.
+
+    :arg str dirname: the album folder name
+    :arg str filename: the cover image file name
+
+    """
+    image_ext = os.path.splitext(filename)[1]
+    if image_ext.lower() in [".jpg", ".jpeg"]:
+        cover_filename = os.path.join(dirname, "cover.jpg")
+    elif image_ext.lower() == ".png":
+        cover_filename = os.path.join(dirname, "cover.png")
+    else:
+        _log.warning("not saving cover image %r (not a JPEG or PNG)!")
+        return
+
+    status = subprocess.call(["cp", "-f", filename, cover_filename])
+    if status == 0:
+        _log.info("copied %s to %s", filename, cover_filename)
+    else:
+        _log.warning(
+            "unable to copy %s to %s (error code %s)",
+            filename, cover_filename, status)
+
 def _styled(widget, **options):
     """Apply `Ttk Styling
     <https://docs.python.org/3/library/tkinter.ttk.html#ttkstyling>`_ to
@@ -3210,6 +3260,9 @@ class EditOrganizationConfigurationDialog(_EditConfigurationDialog):
         option(
             "Organize", "use_xplatform_safe_names",
             config["Organize"].getboolean("use_xplatform_safe_names"))
+        option(
+            "Organize", "save_cover_image",
+            config["Organize"].getboolean("save_cover_image"))
 
 
 class EditFLACEncodingConfigurationDialog(_EditConfigurationDialog):
@@ -3310,6 +3363,16 @@ class EditFLACOrganizationConfigurationDialog(_EditConfigurationDialog):
             ).grid(row=self._row, column=1, sticky=W)
         self._row += 1
 
+        # there won't be any validation if this is set to a non-interpolated,
+        # non-boolean ("yes"/"no") value!
+        option(
+            "FLAC", "save_cover_image",
+            config["FLAC"].getboolean("save_cover_image"))
+        Label(
+            frame, text="${Organize:save_cover_image}, yes, or no"
+            ).grid(row=self._row, column=1, sticky=W)
+        self._row += 1
+
 
 class EditMP3EncodingConfigurationDialog(_EditConfigurationDialog):
     """A dialog that allows the user to edit MP3 encoding options from
@@ -3405,6 +3468,16 @@ class EditMP3OrganizationConfigurationDialog(_EditConfigurationDialog):
             config["MP3"].get("use_xplatform_safe_names", raw=True))
         Label(
             frame, text="${Organize:use_xplatform_safe_names}, yes, or no"
+            ).grid(row=self._row, column=1, sticky=W)
+        self._row += 1
+
+        # there won't be any validation if this is set to a non-interpolated,
+        # non-boolean ("yes"/"no") value!
+        option(
+            "MP3", "save_cover_image",
+            config["MP3"].getboolean("save_cover_image"))
+        Label(
+            frame, text="${Organize:save_cover_image}, yes, or no"
             ).grid(row=self._row, column=1, sticky=W)
         self._row += 1
 
