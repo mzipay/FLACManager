@@ -1451,6 +1451,180 @@ class _FMEditorFrame(Frame):
         self.__init_album_editors()
         self.__init_track_editors()
 
+        # issues/5
+        self.__init_naming_editors()
+        self.__album_disctotal_observer_name = None
+
+    # issues/5
+    def __init_naming_editors(self):
+        """Create the entry widgets for album and track naming fields.
+
+        """
+        naming_editor_frame = LabelFrame(
+            self, name="naming_editor_frame", text="Folder & File Naming")
+
+        self.__row = 0  # relative to naming_editor_frame
+
+        self._create_naming_editor(naming_editor_frame, "FLAC")
+        self._create_naming_editor(naming_editor_frame, "MP3")
+
+        config = get_config()
+        mp3_naming_same_as_flac_var = BooleanVar(
+            name="mp3_naming_same_as_flac_var",
+            value=all((
+                config["FLAC"][option] == config["MP3"][option]
+                for option in [
+                    "album_folder",
+                    "ndisc_album_folder",
+                    "compilation_album_folder",
+                    "ndisc_compilation_album_folder",
+                    "library_subroot_trie_key",
+                    "library_subroot_compilation_trie_key",
+                    "track_filename",
+                    "ndisc_track_filename",
+                    "compilation_track_filename",
+                    "ndisc_compilation_track_filename",
+                    ]
+                )))
+        mp3_naming_same_as_flac_checkbutton = Checkbutton(
+            naming_editor_frame, name="mp3_naming_same_as_flac_checkbutton",
+            text="Use the same templates for both FLAC and MP3",
+            variable=mp3_naming_same_as_flac_var, onvalue=True, offvalue=False,
+            command=self.__update_mp3_naming_editor_state
+        )
+        mp3_naming_same_as_flac_checkbutton.grid(
+            row=self.__row, column=1, columnspan=5, padx=0, pady=_PADY,
+            sticky=W)
+        self.__mp3_naming_same_as_flac_var = mp3_naming_same_as_flac_var
+
+        # collapse the labels and allow the entry fields to expand
+        for i in range(8):
+            naming_editor_frame.grid_columnconfigure(i, weight=0)
+        naming_editor_frame.grid_columnconfigure(2, weight=1) # trie key
+        naming_editor_frame.grid_columnconfigure(4, weight=1) # album folder
+        naming_editor_frame.grid_columnconfigure(6, weight=2) # track filename
+
+        if mp3_naming_same_as_flac_var.get():
+            for editor_name in [
+                    "__mp3_subroot_trie",
+                    "__mp3_album_folder",
+                    "__mp3_track_filename",
+                    ]:
+                self.__metadata_editors[editor_name].config(state=DISABLED)
+
+        naming_editor_frame.pack(anchor=N, pady=11, fill=BOTH)
+
+    def _create_naming_editor(self, parent, encoding_section):
+        """Create entry widgets for the album folder and track filename
+        templates.
+
+        :arg parent: parent object of the widgets
+        :arg str encoding_section: either "FLAC" or "MP3"
+
+        """
+        trie_field = "%s_subroot_trie" % encoding_section.lower()
+        folder_field = "%s_album_folder" % encoding_section.lower()
+        track_field = "%s_track_filename" % encoding_section.lower()
+
+        config_section = get_config()[encoding_section]
+
+        _styled(
+            Label(parent, text=encoding_section), font="-weight bold"
+        ).grid(row=self.__row, column=0, padx=_PADX, pady=_PADY, sticky=E)
+
+        Label(
+            parent, text=config_section["library_root"] + '/'
+        ).grid(row=self.__row, column=1, padx=0, pady=_PADY, sticky=E)
+
+        subroot_trie_var = StringVar(name=trie_field + "_var")
+        subroot_trie = Entry(
+            parent, name=trie_field, textvariable=subroot_trie_var)
+        subroot_trie.var = subroot_trie_var
+        subroot_trie.grid(
+            row=self.__row, column=2, padx=0, pady=_PADY, sticky=W + E)
+
+        Label(parent, text='/').grid(
+            row=self.__row, column=3, padx=0, pady=_PADY, sticky=W)
+
+        album_folder_var = StringVar(name=folder_field + "_var")
+        album_folder = Entry(
+            parent, name=folder_field, textvariable=album_folder_var)
+        album_folder.var = album_folder_var
+        album_folder.grid(
+            row=self.__row, column=4, padx=0, pady=_PADY, sticky=W + E)
+
+        Label(parent, text='/').grid(
+            row=self.__row, column=5, padx=0, pady=_PADY, sticky=W)
+
+        track_filename_var = StringVar(name=track_field + "_var")
+        track_filename = Entry(
+            parent, name=track_field, textvariable=track_filename_var)
+        track_filename.var = track_filename_var
+        track_filename.grid(
+            row=self.__row, column=6, padx=0, pady=_PADY, sticky=W + E)
+
+        Label(parent, text=config_section["track_fileext"]).grid(
+            row=self.__row, column=7, padx=0, pady=_PADY, sticky=W)
+
+        self.__metadata_editors["__%s" % trie_field] = subroot_trie
+        self.__metadata_editors["__%s" % folder_field] = album_folder
+        self.__metadata_editors["__%s" % track_field] = track_filename
+
+        self.__row += 1
+
+    # issues/5
+    def _apply_naming_defaults(self, *args):
+        """Update the folder and file name templates based on the
+        current values for ``album_disctotal`` and
+        ``album_compilation``.
+
+        :arg tuple args:
+           positional arguments (empty except when this method is
+           invoked as the variable trace callback for
+           ``album_disctotal_var``)
+
+        """
+        metadata_editors = self.__metadata_editors
+
+        # yuck... but when changing the value, we get TWO traces:
+        # 1. the variable value changes from the old value to empty (""),
+        #    causing `metadata_editors["album_disctotal"].var.get()` to result
+        #    in TclError since album_disctotal_var is an IntVar
+        # 2. the variable value changes from empty ("") to the new value
+        try:
+            metadata_editors["album_disctotal"].var.get()
+        except TclError:
+            return
+
+        ndisc = (
+            "ndisc_" if metadata_editors["album_disctotal"].var.get() > 1
+            else "")
+        compilation = (
+            "compilation_" if metadata_editors["album_compilation"].var.get()
+            else "")
+        default_key_prefix = ndisc + compilation
+
+        config = get_config()
+        for encoding in ["FLAC", "MP3"]:
+            for field_suffix in [
+                    "subroot_trie", "album_folder", "track_filename"]:
+                default_key = (
+                    "library_subroot_%strie_key" % compilation
+                    if field_suffix == "subroot_trie"
+                    else default_key_prefix + field_suffix)
+                custom_key = "__%s_%s" % (encoding.lower(), field_suffix)
+                metadata_editors[custom_key].var.set(
+                    config[encoding][default_key])
+
+    # issues/5
+    def __update_mp3_naming_editor_state(self):
+        """Enable or disable the MP3 naming entry widgets."""
+        state = \
+            DISABLED if self.__mp3_naming_same_as_flac_var.get() else NORMAL
+        self.__metadata_editors["__mp3_subroot_trie"].config(state=state)
+        self.__metadata_editors["__mp3_album_folder"].config(state=state)
+        self.__metadata_editors["__mp3_track_filename"].config(state=state)
+
     def __init_album_editors(self):
         """Create the entry/selection widgets for album metadata fields.
 
@@ -1477,7 +1651,7 @@ class _FMEditorFrame(Frame):
         album_editor_frame.grid_columnconfigure(1, weight=1)
         album_editor_frame.grid_columnconfigure(2, weight=0)
 
-        album_editor_frame.pack(anchor=N, fill=BOTH)
+        album_editor_frame.pack(anchor=N, pady=11, fill=BOTH)
 
     def __init_track_editors(self):
         """Create the entry/selection widgets for track metadata fields.
@@ -1632,7 +1806,8 @@ class _FMEditorFrame(Frame):
         var = BooleanVar()
         album_compilation = Checkbutton(
             parent, name="album_compilation_checkbutton", variable=var,
-            onvalue=True, offvalue=False)
+            onvalue=True, offvalue=False,
+            command=self._apply_naming_defaults) # issues/5
         album_compilation.var = var
         album_compilation.grid(
             row=self.__row, column=1, columnspan=2, padx=_PADX, pady=_PADY,
@@ -2040,6 +2215,21 @@ class _FMEditorFrame(Frame):
                 self.__add_album_cover_option(filepath, showinfo=False)
             album_cover_editor.config(state=NORMAL)
 
+        # issues/5
+        self._apply_naming_defaults()
+        for encoding in ["flac", "mp3"]:
+            for field_suffix in [
+                    "subroot_trie", "album_folder", "track_filename"]:
+                custom_key = "__%s_%s" % (encoding, field_suffix)
+                custom_spec = aggregated_metadata.get(custom_key)
+                if custom_spec is not None:
+                    metadata_editors[custom_key].var.set(custom_spec)
+
+        # issues/5
+        self.__album_disctotal_observer_name = \
+            metadata_editors["album_disctotal"].var.trace(
+                'w', self._apply_naming_defaults)
+
         self.__aggregated_metadata = deepcopy(aggregated_metadata)
 
         self._initialize_track_vars()
@@ -2124,6 +2314,26 @@ class _FMEditorFrame(Frame):
         # expected
         aggregated_metadata = self.__aggregated_metadata
         snapshot["__custom"] = aggregated_metadata["__custom"].copy()
+
+        # issues/5
+        snapshot["__flac_subroot_trie"] = \
+            metadata_editors["__flac_subroot_trie"].var.get()
+        snapshot["__flac_album_folder"] = \
+            metadata_editors["__flac_album_folder"].var.get()
+        snapshot["__flac_track_filename"] = \
+            metadata_editors["__flac_track_filename"].var.get()
+        if self.__mp3_naming_same_as_flac_var.get():
+            snapshot["__mp3_subroot_trie"] = snapshot["__flac_subroot_trie"]
+            snapshot["__mp3_album_folder"] = snapshot["__flac_album_folder"]
+            snapshot["__mp3_track_filename"] = \
+                snapshot["__flac_track_filename"]
+        else:
+            snapshot["__mp3_subroot_trie"] = \
+                metadata_editors["__mp3_subroot_trie"].var.get()
+            snapshot["__mp3_album_folder"] = \
+                metadata_editors["__mp3_album_folder"].var.get()
+            snapshot["__mp3_track_filename"] = \
+                metadata_editors["__mp3_track_filename"].var.get()
 
         snapshot["__tracks"] = [None]
         for t in range(1, len(track_vars)):
@@ -2312,6 +2522,11 @@ class _FMEditorFrame(Frame):
                 textvariable=metadata_editors[track_field_name].var)
 
         metadata_editors["album_discnumber"].var.set(0)
+        # issues/5
+        if self.__album_disctotal_observer_name is not None:
+            metadata_editors["album_disctotal"].var.trace_vdelete(
+                'w', self.__album_disctotal_observer_name)
+            self.__album_disctotal_observer_name = None
         metadata_editors["album_disctotal"].var.set(0)
 
         metadata_editors["album_compilation"].var.set(False)
@@ -2345,6 +2560,10 @@ class _FMEditorFrame(Frame):
         track_include_editor.var.set(True)
         track_include_editor.apply_button.config(text="Include all tracks")
         _styled(track_include_editor.apply_button, foreground="Blue")
+
+        # issues/5
+        self._apply_naming_defaults()
+        self.__mp3_naming_same_as_flac_var.set(True)
 
         # finally clear all cached data
         self.__aggregated_metadata = None
@@ -2781,11 +3000,8 @@ def _generate_dirname(section, library_root, metadata):
 
     config = get_config()
 
-    ndisc = "ndisc_" if metadata["album_disctotal"] > 1 else ""
-    is_compilation = metadata["album_compilation"]
-    folder_format_spec = (
-        config[section][ndisc + "album_folder"] if not is_compilation
-        else config[section][ndisc + "compilation_album_folder"])
+    # issues/5
+    folder_format_spec = metadata["__%s_album_folder" % section.lower()]
     _log.debug("using template %r", folder_format_spec)
 
     folder_names = [
@@ -2826,11 +3042,8 @@ def _generate_basename(section, metadata):
 
     config = get_config()
 
-    ndisc = "ndisc_" if metadata["album_disctotal"] > 1 else ""
-    is_compilation = metadata["album_compilation"]
-    track_format_spec = (
-        config[section][ndisc + "track_filename"] if not is_compilation
-        else config[section][ndisc + "compilation_track_filename"])
+    # issues/5
+    track_format_spec = metadata["__%s_track_filename" % section.lower()]
     _log.debug("using template %r", track_format_spec)
 
     basename = track_format_spec.format(**metadata)
@@ -2902,10 +3115,8 @@ def _subroot_trie(section, metadata):
 
     config = get_config()
 
-    key = (
-        config[section]["library_subroot_trie_key"]
-        if not metadata["album_compilation"] else
-        config[section]["library_subroot_compilation_trie_key"])
+    # issues/5
+    key = metadata["__%s_subroot_trie" % section.lower()]
     level = config[section].getint("library_subroot_trie_level")
 
     # to skip building a directory trie structure, the key can be left empty or
@@ -5781,6 +5992,26 @@ class MetadataPersistence(MetadataCollector):
 
         self._xform_custom_keys(repr, disc_metadata)
 
+        # issues/5
+        config = get_config()
+        ndisc = "ndisc_" if disc_metadata["album_disctotal"] > 1 else ""
+        compilation = \
+            "compilation_" if disc_metadata["album_compilation"] else ""
+        default_key_prefix = ndisc + compilation
+        # only persist the specs if they differ from the defaults; that way,
+        # changing the defaults will take effect for any reinserted disc
+        for encoding in ["FLAC", "MP3"]:
+            for field_suffix in [
+                    "subroot_trie", "album_folder", "track_filename"]:
+                default_key = (
+                    "library_subroot_%strie_key" % compilation
+                    if field_suffix == "subroot_trie"
+                    else default_key_prefix + field_suffix)
+                default_spec = config[encoding][default_key]
+                custom_key = "__%s_%s" % (encoding.lower(), field_suffix)
+                if disc_metadata[custom_key] == default_spec:
+                    del disc_metadata[custom_key]
+
         for track_metadata in disc_metadata["__tracks"][1:]:
             self._xform_custom_keys(repr, track_metadata)
 
@@ -5967,9 +6198,21 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
             self.metadata["album_disctotal"] = \
                 self.persistence.metadata["album_disctotal"]
 
-            # regular collectors do not store the "album_compilation" flag
+            # regular collectors do not track the following fields
             self.metadata["album_compilation"] = \
                 self.persistence.metadata["album_compilation"]
+            # issues/5
+            for naming_field in [
+                    "__flac_subroot_trie",
+                    "__flac_album_folder",
+                    "__flac_track_filename",
+                    "__mp3_subroot_trie",
+                    "__mp3_album_folder",
+                    "__mp3_track_filename",
+                    ]:
+                if naming_field in self.persistence.metadata:
+                    self.metadata[naming_field] = \
+                        self.persistence.metadata[naming_field]
 
             t = 1
             for track_metadata in self.persistence.metadata["__tracks"][t:]:
