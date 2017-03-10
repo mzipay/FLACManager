@@ -2551,6 +2551,9 @@ class _FMEditorFrame(Frame):
         album_cover_editor.var.set("")
         album_cover_editor.config(state=DISABLED)
 
+        album_cover_editor.save_cover_var.set(
+            get_config().getboolean("Organize", "save_cover_image"))
+
         track_number_editor = metadata_editors["track_number"]
         track_number_editor.config(from_=0, to=0)
         track_number_editor.var.set(0)
