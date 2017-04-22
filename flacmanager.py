@@ -6105,6 +6105,11 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
         self.__log.call()
         super().collect()
 
+        # feature/toc-and-mbdiscid-tagging
+        self.metadata["__custom"][("MUSICBRAINZ_DISCID", "")] = [
+            self.persistence.disc_id]
+        #TODO: self.metadata["__custom"][("", "MCDI")] = []
+
         for collector in self._collectors:
             try:
                 collector.collect()
