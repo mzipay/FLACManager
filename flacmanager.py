@@ -948,28 +948,31 @@ class FLACManager(Tk):
                 context_hint="MP3 encoding", cause=e)
 
         encoder = FLACEncoder()
+        flac_cover_image_saved = False
+        mp3_cover_image_saved = False
         for (i, track_metadata) in enumerate(per_track_metadata):
             if not track_metadata["track_include"]:
                 continue
-
-            save_cover_image = ((i == 0)
-                and self._editor_frame.is_save_cover_image)
 
             cdda_filename = os.path.join(self.mountpoint, disc_filenames[i])
 
             flac_dirname = generate_flac_dirname(
                 flac_library_root, track_metadata)
-            if (save_cover_image
-                    and get_config().getboolean("FLAC", "save_cover_image")):
-                _save_cover_image(flac_dirname, track_metadata["album_cover"])
+            if (self._editor_frame.is_save_cover_image
+                    and get_config().getboolean("FLAC", "save_cover_image")
+                    and (not flac_cover_image_saved)):
+                flac_cover_image_saved = _save_cover_image(
+                    flac_dirname, track_metadata["album_cover"])
             flac_basename = generate_flac_basename(track_metadata)
             flac_filename = os.path.join(flac_dirname, flac_basename)
 
             mp3_dirname = generate_mp3_dirname(
                 mp3_library_root, track_metadata)
-            if (save_cover_image
-                    and get_config().getboolean("MP3", "save_cover_image")):
-                _save_cover_image(mp3_dirname, track_metadata["album_cover"])
+            if (self._editor_frame.is_save_cover_image
+                    and get_config().getboolean("MP3", "save_cover_image")
+                    and (not mp3_cover_image_saved)):
+                mp3_cover_image_saved = _save_cover_image(
+                    mp3_dirname, track_metadata["album_cover"])
             mp3_basename = generate_mp3_basename(track_metadata)
             mp3_filename = os.path.join(mp3_dirname, mp3_basename)
 
@@ -3157,6 +3160,7 @@ def _save_cover_image(dirname, filename):
 
     :arg str dirname: the album folder name
     :arg str filename: the cover image file name
+    :return: ``True`` if the cover image was saved, otherwise ``False``
 
     """
     image_ext = os.path.splitext(filename)[1]
@@ -3166,15 +3170,18 @@ def _save_cover_image(dirname, filename):
         cover_filename = os.path.join(dirname, "cover.png")
     else:
         _log.warning("not saving cover image %r (not a JPEG or PNG)!")
-        return
+        return False
 
     status = subprocess.call(["cp", "-f", filename, cover_filename])
     if status == 0:
         _log.info("copied %s to %s", filename, cover_filename)
+        return True
     else:
         _log.warning(
             "unable to copy %s to %s (error code %s)",
             filename, cover_filename, status)
+        return False
+
 
 def _styled(widget, **options):
     """Apply `Ttk Styling
