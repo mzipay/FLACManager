@@ -6172,6 +6172,13 @@ class MetadataAggregator(MetadataCollector, threading.Thread):
                         "track_year",
                     ])
 
+                # it is possible for collectors to not find track artist and/or
+                # genre, so make sure those fields have value(s)
+                for field in ["artist", "genre"]:
+                    if not self.metadata["__tracks"][t]["track_" + field]:
+                        self.metadata["__tracks"][t]["track_" + field] = list(
+                            self.metadata["album_" + field])
+
                 self._merge_metadata(
                     track_metadata["__custom"],
                     self.metadata["__tracks"][t]["__custom"],
