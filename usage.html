@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Using FLACManager &mdash; FLAC Manager 0.8.0 documentation</title>
+  <title>Using FLACManager &mdash; FLAC Manager 0.8.1 documentation</title>
   
 
   
@@ -19,7 +19,7 @@
   
   
     
-      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.8.0 documentation" href="_static/opensearch.xml"/>
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.8.1 documentation" href="_static/opensearch.xml"/>
     
 
   
@@ -35,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="FLAC Manager 0.8.0 documentation" href="index.html"/>
+    <link rel="top" title="FLAC Manager 0.8.1 documentation" href="index.html"/>
         <link rel="next" title="FLACManager API reference" href="api-ref.html"/>
         <link rel="prev" title="What’s new in FLACManager" href="whats-new.html"/> 
 
@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.0
+                0.8.1
               </div>
             
           
@@ -146,7 +146,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.8.0</td>
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.8.1</td>
 </tr>
 </tbody>
 </table>
@@ -161,7 +161,7 @@ required configuration values:</p>
 <img alt="_images/missingconf.png" src="_images/missingconf.png" />
 <p>The default configuration looks like this:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span>[FLACManager]
-__version__ = 0.8.0
+__version__ = 0.8.1
 title = FLACManager ${__version__}
 
 [UI]
@@ -195,6 +195,7 @@ library_root =
 library_subroot_trie_key = album_artist
 library_subroot_compilation_trie_key = album_title
 library_subroot_trie_level = 1
+trie_ignore_leading_article = a an the
 album_folder = {album_artist}/{album_title}
 ndisc_album_folder = ${album_folder}
 compilation_album_folder = {album_title}
@@ -204,12 +205,14 @@ ndisc_track_filename = {album_discnumber:02d}-${track_filename}
 compilation_track_filename = ${track_filename} ({track_artist})
 ndisc_compilation_track_filename = {album_discnumber:02d}-${compilation_track_filename}
 use_xplatform_safe_names = yes
+save_cover_image = yes
 
 [FLAC]
 library_root = ${Organize:library_root}/FLAC
 library_subroot_trie_key = ${Organize:library_subroot_trie_key}
 library_subroot_compilation_trie_key = ${Organize:library_subroot_compilation_trie_key}
 library_subroot_trie_level = ${Organize:library_subroot_trie_level}
+trie_ignore_leading_article = ${Organize:trie_ignore_leading_article}
 album_folder = ${Organize:album_folder}
 ndisc_album_folder = ${Organize:ndisc_album_folder}
 compilation_album_folder = ${Organize:compilation_album_folder}
@@ -220,6 +223,7 @@ compilation_track_filename = ${Organize:compilation_track_filename}
 ndisc_compilation_track_filename = ${Organize:ndisc_compilation_track_filename}
 track_fileext = .flac
 use_xplatform_safe_names = ${Organize:use_xplatform_safe_names}
+save_cover_image = ${Organize:save_cover_image}
 flac_encode_options = --force --keep-foreign-metadata --verify
 flac_decode_options = --force
 
@@ -241,8 +245,9 @@ COMPILATION = {album_compilation:d}
 [MP3]
 library_root = ${Organize:library_root}/MP3
 library_subroot_trie_key = ${Organize:library_subroot_trie_key}
-library_subroot_trie_level = ${Organize:library_subroot_trie_level}
 library_subroot_compilation_trie_key = ${Organize:library_subroot_compilation_trie_key}
+library_subroot_trie_level = ${Organize:library_subroot_trie_level}
+trie_ignore_leading_article = ${Organize:trie_ignore_leading_article}
 album_folder = ${Organize:album_folder}
 ndisc_album_folder = ${Organize:ndisc_album_folder}
 compilation_album_folder = ${Organize:compilation_album_folder}
@@ -253,6 +258,7 @@ compilation_track_filename = ${Organize:compilation_track_filename}
 ndisc_compilation_track_filename = ${Organize:ndisc_compilation_track_filename}
 track_fileext = .mp3
 use_xplatform_safe_names = ${Organize:use_xplatform_safe_names}
+save_cover_image = ${Organize:save_cover_image}
 lame_encode_options = --clipdetect -q 2 -V2 -b 224
 
 [ID3v2]
@@ -312,6 +318,16 @@ exactly as it suggests - copies the current value to the corresponding
 field of every track.</p>
 <p>By default, all tracks are &#8220;included,&#8221; which means they will be ripped
 to FLAC and MP3. To exclude a track, simply uncheck the box.</p>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 0.8.1: </span>You can now change the folder/file naming templates for the current
+album directly from the UI. If you specify templates that differ from
+the defaults (defined in <em>flacmanager.ini</em>), then those custom naming
+templates will be included in the persisted metadata for this album.</p>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 0.8.0: </span>Custom Vorbis comments and ID3v2 tags may be added at the album or
+track level.</p>
+</div>
 <p>A custom comment/tag added at the album level will be copied to all
 tracks. If it is later deleted from the album level, it will also be
 deleted from all tracks <strong>unless the value was changed for a particular
@@ -390,7 +406,7 @@ field</th>
 <td>COMPILATION</td>
 <td>TCMP</td>
 <td>compilation</td>
-<td>&nbsp;</td>
+<td>&#160;</td>
 </tr>
 <tr class="row-even"><td rowspan="2">Artist</td>
 <td rowspan="2">album_artist</td>
@@ -404,23 +420,23 @@ field</th>
 <td rowspan="2">album_label</td>
 <td rowspan="2">ORGANIZATION, LABEL</td>
 <td rowspan="2">TPUB</td>
-<td rowspan="2">&nbsp;</td>
-<td rowspan="2">&nbsp;</td>
+<td rowspan="2">&#160;</td>
+<td rowspan="2">&#160;</td>
 </tr>
 <tr class="row-odd"></tr>
 <tr class="row-even"><td>Genre</td>
 <td>album_genre</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
 </tr>
 <tr class="row-odd"><td>Year</td>
 <td>album_year</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
 </tr>
 <tr class="row-even"><td>Cover</td>
 <td>album_cover</td>
@@ -445,10 +461,10 @@ field</th>
 </tr>
 <tr class="row-odd"><td>Include</td>
 <td>track_include</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>&#160;</td>
 </tr>
 <tr class="row-even"><td>Title</td>
 <td>track_title</td>
@@ -529,7 +545,7 @@ to all tracks</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.8.0',
+            VERSION:'0.8.1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

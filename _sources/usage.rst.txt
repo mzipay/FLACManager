@@ -20,7 +20,7 @@ required configuration values:
 The default configuration looks like this::
 
    [FLACManager]
-   __version__ = 0.8.0
+   __version__ = 0.8.1
    title = FLACManager ${__version__}
 
    [UI]
@@ -42,18 +42,19 @@ The default configuration looks like this::
    timeout = 5.0
 
    [Gracenote]
-   client_id =
-   user_id =
+   client_id = 
+   user_id = 
 
    [MusicBrainz]
-   contact_url_or_email =
-   libdiscid_location =
+   contact_url_or_email = 
+   libdiscid_location = 
 
    [Organize]
-   library_root =
+   library_root = 
    library_subroot_trie_key = album_artist
    library_subroot_compilation_trie_key = album_title
    library_subroot_trie_level = 1
+   trie_ignore_leading_article = a an the
    album_folder = {album_artist}/{album_title}
    ndisc_album_folder = ${album_folder}
    compilation_album_folder = {album_title}
@@ -63,12 +64,14 @@ The default configuration looks like this::
    compilation_track_filename = ${track_filename} ({track_artist})
    ndisc_compilation_track_filename = {album_discnumber:02d}-${compilation_track_filename}
    use_xplatform_safe_names = yes
+   save_cover_image = yes
 
    [FLAC]
    library_root = ${Organize:library_root}/FLAC
    library_subroot_trie_key = ${Organize:library_subroot_trie_key}
    library_subroot_compilation_trie_key = ${Organize:library_subroot_compilation_trie_key}
    library_subroot_trie_level = ${Organize:library_subroot_trie_level}
+   trie_ignore_leading_article = ${Organize:trie_ignore_leading_article}
    album_folder = ${Organize:album_folder}
    ndisc_album_folder = ${Organize:ndisc_album_folder}
    compilation_album_folder = ${Organize:compilation_album_folder}
@@ -79,6 +82,7 @@ The default configuration looks like this::
    ndisc_compilation_track_filename = ${Organize:ndisc_compilation_track_filename}
    track_fileext = .flac
    use_xplatform_safe_names = ${Organize:use_xplatform_safe_names}
+   save_cover_image = ${Organize:save_cover_image}
    flac_encode_options = --force --keep-foreign-metadata --verify
    flac_decode_options = --force
 
@@ -100,8 +104,9 @@ The default configuration looks like this::
    [MP3]
    library_root = ${Organize:library_root}/MP3
    library_subroot_trie_key = ${Organize:library_subroot_trie_key}
-   library_subroot_trie_level = ${Organize:library_subroot_trie_level}
    library_subroot_compilation_trie_key = ${Organize:library_subroot_compilation_trie_key}
+   library_subroot_trie_level = ${Organize:library_subroot_trie_level}
+   trie_ignore_leading_article = ${Organize:trie_ignore_leading_article}
    album_folder = ${Organize:album_folder}
    ndisc_album_folder = ${Organize:ndisc_album_folder}
    compilation_album_folder = ${Organize:compilation_album_folder}
@@ -112,6 +117,7 @@ The default configuration looks like this::
    ndisc_compilation_track_filename = ${Organize:ndisc_compilation_track_filename}
    track_fileext = .mp3
    use_xplatform_safe_names = ${Organize:use_xplatform_safe_names}
+   save_cover_image = ${Organize:save_cover_image}
    lame_encode_options = --clipdetect -q 2 -V2 -b 224
 
    [ID3v2]
@@ -183,7 +189,13 @@ field of every track.
 By default, all tracks are "included," which means they will be ripped
 to FLAC and MP3. To exclude a track, simply uncheck the box.
 
-.. versionadded: 0.8.0
+.. versionadded:: 0.8.1
+   You can now change the folder/file naming templates for the current
+   album directly from the UI. If you specify templates that differ from
+   the defaults (defined in *flacmanager.ini*), then those custom naming
+   templates will be included in the persisted metadata for this album.
+
+.. versionadded:: 0.8.0
    Custom Vorbis comments and ID3v2 tags may be added at the album or
    track level.
 

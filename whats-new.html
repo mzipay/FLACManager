@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>What’s new in FLACManager &mdash; FLAC Manager 0.8.0 documentation</title>
+  <title>What’s new in FLACManager &mdash; FLAC Manager 0.8.1 documentation</title>
   
 
   
@@ -19,7 +19,7 @@
   
   
     
-      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.8.0 documentation" href="_static/opensearch.xml"/>
+      <link rel="search" type="application/opensearchdescription+xml" title="Search within FLAC Manager 0.8.1 documentation" href="_static/opensearch.xml"/>
     
 
   
@@ -35,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="FLAC Manager 0.8.0 documentation" href="index.html"/>
+    <link rel="top" title="FLAC Manager 0.8.1 documentation" href="index.html"/>
         <link rel="next" title="Using FLACManager" href="usage.html"/>
         <link rel="prev" title="Prerequisites for running FLACManager" href="prerequisites.html"/> 
 
@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.8.0
+                0.8.1
               </div>
             
           
@@ -89,8 +89,9 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="prerequisites.html">Prerequisites for running FLACManager</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">What&#8217;s new in FLACManager</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#current-release-release">Current release: 0.8.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#current-release-release">Current release: 0.8.1</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#previous-releases">Previous releases</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#release-0-8-0">Release 0.8.0</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#release-0-7-2">Release 0.7.2</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#release-0-7-1">Release 0.7.1</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#release-0-7-0">Release 0.7.0</a></li>
@@ -152,7 +153,29 @@
   <div class="section" id="what-s-new-in-flacmanager">
 <h1>What&#8217;s new in FLACManager<a class="headerlink" href="#what-s-new-in-flacmanager" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="current-release-release">
-<h2>Current release: 0.8.0<a class="headerlink" href="#current-release-release" title="Permalink to this headline">¶</a></h2>
+<h2>Current release: 0.8.1<a class="headerlink" href="#current-release-release" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/mzipay/FLACManager/issues/2">issues/2</a>: barcode(s) found
+in MusicBrainz responses are now collected properly</li>
+<li><a class="reference external" href="https://github.com/mzipay/FLACManager/issues/3">issues/3</a>: ignore
+leading articles (a, an, the) when generating trie subdirectory names</li>
+<li><a class="reference external" href="https://github.com/mzipay/FLACManager/issues/4">issues/4</a>: fixed a bug
+where the UI would hang when aggregating metadata for a CD whose metadata
+had already been persisted prior to release 0.8.0</li>
+<li>barcodes are now normalized (all non-numeric characters removed) before
+aggregating the values</li>
+<li><a class="reference external" href="https://github.com/mzipay/FLACManager/issues/5">issues/5</a>: the templates
+for folder and file naming can now be specified on a per-album basis (the
+default templates are defined in <em>flacmanager.ini</em>)</li>
+<li><a class="reference external" href="https://github.com/mzipay/FLACManager/issues/7">issues/7</a>: the cover image
+can now be saved as <em>cover.jpg</em> or <em>cover.png</em> in the album folder</li>
+<li>tested on Mac OS X 10.11.6</li>
+</ul>
+</div>
+<div class="section" id="previous-releases">
+<h2>Previous releases<a class="headerlink" href="#previous-releases" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="release-0-8-0">
+<h3>Release 0.8.0<a class="headerlink" href="#release-0-8-0" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li>standardized the application menubar
 (now has conventional File, Edit and Help menus)</li>
@@ -171,6 +194,7 @@ the File | Save metadata menu command (metadata is <strong>always</strong>
 persisted automatically when the [Rip and Tag] button is clicked)</li>
 <li>the UI now formally includes an input field for an album&#8217;s record
 label<sup>††</sup></li>
+<li>tested on Mac OS X 10.11.6</li>
 </ul>
 <p><sup>†</sup> defaults have been tuned to produce sane results for Apple
 iTunes, Google Play Music, and any FLAC player that respects
@@ -180,8 +204,6 @@ specification</a></p>
 include an album&#8217;s record label in their respective metadata; a value
 must be provided by hand</p>
 </div>
-<div class="section" id="previous-releases">
-<h2>Previous releases<a class="headerlink" href="#previous-releases" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="release-0-7-2">
 <h3>Release 0.7.2<a class="headerlink" href="#release-0-7-2" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
@@ -315,7 +337,7 @@ instead of <code class="docutils literal"><span class="pre">flacmanager.__doc__<
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.8.0',
+            VERSION:'0.8.1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
