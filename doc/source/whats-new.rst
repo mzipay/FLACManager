@@ -4,6 +4,27 @@ What's new in FLACManager
 
 Current release: |release|
 ==========================
+* `issues/2 <https://github.com/mzipay/FLACManager/issues/2>`_: barcode(s) found
+  in MusicBrainz responses are now collected properly
+* `issues/3 <https://github.com/mzipay/FLACManager/issues/3>`_: ignore
+  leading articles (a, an, the) when generating trie subdirectory names
+* `issues/4 <https://github.com/mzipay/FLACManager/issues/4>`_: fixed a bug
+  where the UI would hang when aggregating metadata for a CD whose metadata
+  had already been persisted prior to release 0.8.0
+* barcodes are now normalized (all non-numeric characters removed) before
+  aggregating the values
+* `issues/5 <https://github.com/mzipay/FLACManager/issues/5>`_: the templates
+  for folder and file naming can now be specified on a per-album basis (the
+  default templates are defined in *flacmanager.ini*)
+* `issues/7 <https://github.com/mzipay/FLACManager/issues/7>`_: the cover image
+  can now be saved as *cover.jpg* or *cover.png* in the album folder
+* tested on Mac OS X 10.11.6
+
+Previous releases
+=================
+
+Release 0.8.0
+-------------
 * standardized the application menubar
   (now has conventional File, Edit and Help menus)
 * directory and file naming for music library can now be configured via
@@ -21,6 +42,7 @@ Current release: |release|
   persisted automatically when the [Rip and Tag] button is clicked)
 * the UI now formally includes an input field for an album's record
   label\ :sup:`††`
+* tested on Mac OS X 10.11.6
 
 :sup:`†` defaults have been tuned to produce sane results for Apple
 iTunes, Google Play Music, and any FLAC player that respects
@@ -30,9 +52,6 @@ specification <https://xiph.org/vorbis/doc/v-comment.html>`_
 :sup:`††` be aware that neither Gracenote nor MusicBrainz currently
 include an album's record label in their respective metadata; a value
 must be provided by hand
-
-Previous releases
-=================
 
 Release 0.7.2
 -------------

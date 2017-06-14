@@ -39,7 +39,7 @@ http://mzipay.github.io/FLACManager/usage.html
 """
 
 __author__ = "Matthew Zipay <mattz@ninthtest.info>"
-__version__ = "0.8.1-beta"
+__version__ = "0.8.1"
 __license__ = """\
 FLAC Manager -- audio metadata aggregator and FLAC+MP3 encoder
 http://ninthtest.info/flac-mp3-audio-manager/

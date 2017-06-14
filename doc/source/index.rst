@@ -22,6 +22,10 @@ All aspects of tagging and encoding are fully configurable via the
 * file system directory and file name templates for encoded files
   (including the option to generate safe, cross-platform names)
 
+.. versionadded:: 0.8.1
+   Folder and file name patterns can now be specified on a per-album basis.
+   (Non-default patterns are persisted with metadata.)
+
 .. versionadded:: 0.8.0
    Custom Vorbis comments and/or ID3v2 tags can be specified on a
    per-album and per-track basis.
@@ -29,6 +33,40 @@ All aspects of tagging and encoding are fully configurable via the
 .. versionadded:: 0.8.0
    FLACManager now auto-detects clipping in MP3s and will re-encode
    with scaled PCM data until no clipping occurs.
+
+.. note::
+   **In all likelihood, this is the FINAL release of FLACManager.**
+   I am moving to Linux as my OS of choice, so my Mac's (and therefore
+   FLACManager's) days are numbered.
+   
+   Thanks to everyone who used FLACManager, and especially to those who
+   provided feedback since its initial release. I hope it was useful, whether
+   as an audio collection management tool, just as a source code reference, or
+   anything in between.
+
+   I had considered an attempt to make FLACManager portable, but ultimately
+   I have decided against that for several reasons:
+
+   * I am unhappy with the quality of metadata provided by the
+     Gracenote CDDB and MusicBrainz services. Over the years I grew
+     tired of having to correct numerous spelling/grammar/accuracy
+     errors in the metadata and of having to hunt for reasonable
+     cover artwork. (I'm a cover art snob, admittedly.)
+   * Having to renew my Gracenote developer account every year has been a
+     pain, and requiring anyone who uses FLACManager to endure the same is
+     a regret that I'm happy to leave behind :)
+   * My service of choice (for both metadata accuracy and cataloguing my
+     collection) is now `Discogs <https://www.discogs.com/>`_, but the
+     FLACManager approach to metadata aggregation doesn't mesh well with the
+     design of the Discogs API.
+   * My collection includes a substantial amount of vinyl and cassettes,
+     neither of which are accounted for in CD databases.
+
+   I am currently working on a successor to FLACManager that will support more
+   encoding choices, even more robust tagging capabilities, and full
+   integration with the `Discogs <https://www.discogs.com/>`_ service. It will be
+   made available on `github.com/mzipay <https://github.com/mzipay>`_ as soon as
+   an alpha version is ready.
 
 .. warning::
    FLACManager was not originally intended for release; it was written
